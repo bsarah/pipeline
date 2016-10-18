@@ -79,11 +79,10 @@ all other parameters are required
 
      -r R                   please specify the path to where R is installed. Version should be >= 3.2.0
 
-     -i Infernal             please specify the path to where Infernal is installed. Version should be >= 1.1.1
-   
+     -i Infernal            please specify the path to where Infernal is installed. Version should be >= 1.1.1
 
-   
-##Further parameters:
+     -k 		    for contact information and citation
 
-choose -k for contact information and citation, -v to see the
-version information and -h to display this help message.
+     -v 		    see version information
+
+     -h 		    display that help message
