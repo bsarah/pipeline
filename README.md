@@ -1,3 +1,5 @@
+![Pipeline](http://www.bioinf.uni-leipzig.de/~bsarah/tRNAinsertion.png "")
+
 ##Pipeline
 
 This is the README of our pipeline (still need to find a name).
