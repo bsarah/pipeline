@@ -1,0 +1,60 @@
+Author: Cameron Murray
+Project: Sequence evolution data prep
+
+To Run Program:
+
+  type into terminal: 'python3 main.py [Flag OptionalARG] [ARG1] [ARG2] [ARG3] [ARG4]'
+
+ex: python3 Desktop/main.py -og Desktop/Genes Desktop/Genomes Desktop/Allignments Desktop/Output dm6
+            path to main.py  flag optionalARG      ARG1         ARG2                ARG3         ARG4
+
+Args:
+  ARG1: Directory where genomes are stored
+  ARG2: Directory where multiple sequence allignments are stored
+  ARG3: Directory where output and temp files will be
+  ARG4: name of the reference species as it appears in the allignments and genomes
+
+
+Flags:
+
+  Mutually Exclusive and Necessary Flags
+    -sg: Search for genes with infernal
+      ARG: file path to a RNA model that infernal can use
+    -og: Use own genes in anaylsis
+      ARG: path to directory of BED files that contain the genes 
+
+  Optional Flag
+  -q: Remove a percentage of the lowest scoring blocks based on the MAF scores 
+    ARG: a number between 0 and 100
+
+File Locations:
+  dataStructures.py should be in the same directory as main.py
+  parser_genes.py should be in the same directory as main.py
+  parser_infernal.py should be in the same directory as main.py
+  parser_MAF.py should be in the same directory as main.py
+
+File Formats:
+
+  Allignment Files:
+    -MAF (file extension '.maf')
+       -uncompressed OR
+       -compressed with gzip (file extension '.maf.gz', '.maf.Z', '.maf.bz2')
+
+  Genomes:
+    -FASTA (file extension '.fasta' or '.fa')
+      -uncompressed OR
+      -compressed with gzip (file extension '.fa.gz', '.fasta.gz')
+
+  Gene Files:
+    -modified BED format (file extension '.bed')
+      -uncompressed OR
+      -compressed with gzip (file extension '.bed.gz', '.bed.Z', '.bed.bz2')
+
+      -Heading (optional):
+          -line must start with a '#'
+      -Body:
+          -one line = one gene
+          -tab separated elements
+          -chromosome     species     startCoord     endCoord     '+'or'-'     sequence     secondary_structure(optional)
+
+

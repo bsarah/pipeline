@@ -1,0 +1,106 @@
+As an input parameter for the program, the user needs to specify an output
+folder. Let's assume that this folder was called 'Output'.
+
+After the program terminated you should see this subfolders and files:
+
+folders:
+bed		: TODO ask Cameron
+genes		: folder containing bed files whereas each file contains
+		  sequences of interest that where detected with infernal
+		  or given as input. For each entry, the chromosome, start, end,
+		  strand, sequence, secondary structure (optional) and the left
+		  and right block numbers are given
+infernalIn	: folder containing infernal output, one file per species. The
+		  files contain tables of putative sequences fitting the
+		  covariance model. Sequences marked with '!' were included
+		  in the further analysis. To include more or less sequences,
+		  please use parameters -w or -b when running the pipeline.
+temp		: folder containing temporary files while the program is running
+unzippedMAF	: TODO ask Cameron
+clusters	: each file (.clus) in this folder represents a cluster,
+		  thus sequences of all species that are located between
+		  the same anchors.
+		  There also exists several subfolders: a folder called
+		  'NoneCluster' where all cluster files are located for which
+		  at least one of the anchors could not be specified and a
+		  folder called 'singletons' where all clusters are contained
+		  that only include one single element.
+graphs		: The files (.edli) in this folder contain edgelists whereas
+ 		  each file corresponds to a .clus file in the clusters folder.
+		  The edgelists are weighted, thus there is an entry for each
+		  pair of nodes (genes) in the cluster. Each pair of nodes has
+		  two weights, the first one is the sequence similarity, the
+		  second one the secondary structure similarity. The values are
+		  between 0 and 1, whereas 1 means the sequences are the same.
+
+                  Following subfolders are contained in graphs:
+		  The first folder is called 'showGraphs' and contains .edli
+		  files where only edges were added that fit to the similarity
+		  thresholds. Additionally, this folder contains .pdf files for
+		  each of the graphs where the graphs are depicted in a simple
+		  manner.
+		  A second folder is called 'alignments' containing files that
+		  show pairwise alignments of elements in the clusters. The
+		  alignments are constructed using cluster sequences from two
+		  different species. Here, all elements in the clusters that
+		  fulfill the similarity threshold are represented by the same
+		  letter such that they can be aligned. The alignments contain
+		  '-' showing gaps but also '~' which stands for a duplication
+		  of the previous letter. For each cluster and combination of
+		  species, the number of duplications, matches, insertions,
+		  deletions and mismatche is counted and reported in the file
+		  geneticEvents.txt.
+		  These subfolders only contain information if there were clusters
+		  fulfilling the similarity thresholds.
+
+additional files:
+
+in Output:
+allClusters.bed		:  bed file listing all elements sorted by clusters
+errorsPart1.txt		:  file listing all errors thrown by the first part
+			   of the pipeline, thus the definition of the clusters
+			   reading the maf files and sorting the genetic
+			   elements into the clusters.
+			   the user can check this file to see, if there were
+			   misformatted input files.
+errorsPart2.txt		:  file listing all errors thrown by the second part
+			   of the pipeline.
+drawGraphs.Rout		:  output file of R, showing warnings and errors when
+			   drawing the graphs.
+geneticEvents.txt	:  for each combination of species and cluster, genetic
+			   events such as duplications, matches, mismatches,
+			   deletions, insertions and mismatches are counted and
+			   summarized in this file. Based on those numbers, a
+			   phylogenetic tree can be drawn.
+summary.txt		:  This file summarizes the complete run of the pipeline,
+			   including numbers of clusters, genes, graphs.
+			   Additionally paths to result files are given.
+
+in clusters:
+precluslist		: contains all the clusters that were created in the
+			  first step. 
+clusList		: contains all the clusters from precluslist without
+			  NoneClusters (clusters with unspecefied anchors)
+clusList_sorted		: same as above but now, the list is sorted by start
+			  coordinate
+cluslist_joined		: this list contains a list of clusters that exist after
+			  joining clusters that share anchors.
+joinlist		: output of the joining process, thus for debugging
+			  reasons
+cluslist_nosingles	: this list contains all the clusters after the joining
+			  process and after sorting out the singleton clusters
+			  (clusters that only contain one element)
+			  
+
+in graphs:
+cographs		: this file lists all the graph files that have a
+			  cograph structure
+noncographs		: this file lists all the graph files that do not have
+			  a cograph structure
+edlilist_edgegraphs	: this file list all edli files that are contained in
+			  the graphs folder, but it does not contain files from
+			  the noEdgeGraphs folder.
+noEdgeGraphs_list.txt	: list of all the clusters that resulted in graphs without
+			  any edges due to either too strict similarity thresholds,
+			  only elements of the same species or just one elements
+			  per cluster.

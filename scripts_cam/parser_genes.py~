@@ -1,0 +1,48 @@
+import subprocess
+from os import listdir
+from os.path import isfile, join
+from dataStructures_lessMem import Gene
+
+
+def catchExceptions(fileName, outputDir):
+    '''
+    checks if file is in correct format( '.maf', '.maf.gz', '.maf.Z', '.maf.bz2')
+    checks if file is zipped
+    checks if file can be opened
+    checks if file can be read
+
+    unzips file if zipped
+    '''
+    
+    name = fileName.split('/')[-1]#fileName without pathway ex: test1.maf.gz
+    
+    #proper extension
+    if fileName.endswith('.maf'):
+        pass
+
+    elif fileName.endswith(('.maf.gz','.maf.Z','.maf.bz2')):
+
+        unzippedDir = outputDir+'unzippedMAF/'
+        if 'unzippedMAF' in listdir(outputDir):
+            subprocess.call("rm -r "+unzippedDir, shell=True)
+        subprocess.call('mkdir '+unzippedDir,shell=True)
+        
+        #unzippedFileName = ('/'.join(fileName.split('/')[:-1]))+'/'+name.split('.')[0]+'.maf'
+        unzippedFileName = unzippedDir + name.split('.')[0]+'.maf'
+        print("unzipping maf file...")
+        subprocess.call('/usr/bin/zcat '+fileName+' > '+unzippedFileName, shell=True)
+        print("done")
+        fileName = unzippedFileName
+    else:
+        raise Exception("{} not of maf format. Use a .maf file or gziped .maf file('.maf.gz','.maf.Z','.maf.bz2')".format(fileName))
+
+    #can unzipped file be opened + read
+    try:
+        f = open(fileName, 'r')
+        #f.readline()
+    except IOError:
+        raise Exception("cannot open {}".format(fileName))
+#    except UnicodeDecodeError:
+#        raise Exception("File not of maf format. Use an unziped .maf file")
+    else:
+        return f
