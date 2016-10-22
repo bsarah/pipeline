@@ -1,0 +1,53 @@
+ToDo file for our pipeline project:
+
+#All
+- name!
+- look for ensembl msa's instead of multiz. they can be converted into each other, and ensembl msa seem to have better quality (see m. smith, australia)
+- think about how to handle introns
+- add parameter as a maximal or minimal threshold for cluster sizes (genomic distance between anchors)
+
+
+#Anne
+- newick tree to ePoPE format parser
+- ePoPE format to newick
+- sbRNAs cm
+- postscript script to draw trees
+- postscript script to draw graphs
+
+
+#Cameron
+- include reading of zipped data (do not unzipped files as we get memory issues)
+- delete bed files, temporary files (everything we don't need anymore)
+- optimize reading of multiz alns (ask fabian externbrink)
+- some elements are not sorted into anchors (sbRNAs, distant related species)
+- more detailed explanation for gene list input (README_cameron)
+- gene lists: be able to include unique IDs for elements such that they can be found later in the graphs
+
+
+#Sarah
+- getNumbers doesn't work
+- include counting of singletons/NoneCluster/edgeGraphs/noedgeGraphs in pipeline
+- change counting of total number of elements: it is minus 3 as the first 3 lines in the bed files do not stand for elements!!! 
+- if user provides the element list, do not count the lines in the bed files!!!
+- still mistakes in summary (no NoneCluster folder anymore?)
+- give input parameters for alignment (possible for altNW?)
+- do not print camerons output (too much)
+- for genetic events: always sort the species list alphabetically, such that the entries can be summarized easily! write the summary, ePoPE
+- check all 'list' files such that only the real names of the clusters are printed, not all the paths.
+- error in altNW, if aligning "AA" and "B", it outputs one mismatch and one duplication, or the strings donot have the same length, in case - is inserted
+- option to switch off camerons part because the data already exists (thus output folder has to exist with the genes folder in it) --> parameter to give path to camerons output to be able to run it again
+- accept a phylogenetic tree in newick format as input to add the genetic events directly to the tree (one tree for each event?)
+- only cographs used for count of genetic events? what about noncographs? if not included in genetic events, count them differently!!!
+- what happens to elements in edge graphs that themselves do not have an edge? do they get lost? count as insertion! --> compare counts for edge graphs when counting in cluster files or in graph files
+- do more statistics: in how many clusters is each species represented, percentages of elements in certain clusters/cographs/noncographs..., 
+  length of clusters, report cluster information when only looking at synteny!
+- parameter to set cluster length limits
+- give option for user to switch of several parts of the pipeline
+- option to include newick tree
+- solution for noncographs 
+
+
+
+#General ideas and keywords:
+- repeats: repeat masker
+- ePope usage: counting of events and ePoPE (run epope for each group of elements, summrize counts for to one resulting tree)
