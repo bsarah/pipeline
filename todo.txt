@@ -2,18 +2,22 @@ ToDo file for our pipeline project:
 
 #All
 - name!
-- look for ensembl msa's instead of multiz. they can be converted into each other, and ensembl msa seem to have better quality (see m. smith, australia)
-- think about how to handle introns
-- add parameter as a maximal or minimal threshold for cluster sizes (genomic distance between anchors)
+- look for ensembl msa's (EPO) instead of multiz. They can be converted into each other, and ensembl msa seem to have better quality (see m. smith, australia) (LATER!)
+- talk to Fabian for block clarification (LATER!)
+- think about how to handle introns (see Todd Lowe - search for paper from him or waiting of his email)
+- add parameter as a maximal or minimal threshold for cluster sizes (genomic distance between anchors) - see talk Todd Lowe
 
+#Sarah & Anne
+- search for a student to build up our GUI - meet Daniel for details
+- compare our results from Y RNAs with https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1074747/  and   https://www.ncbi.nlm.nih.gov/pubmed/17470436
 
 #Anne
 - newick tree to ePoPE format parser
 - ePoPE format to newick
-- sbRNAs cm
+- check sbRNAs cm and run again (single cm or cambination)
 - postscript script to draw trees
 - postscript script to draw graphs
-
+- create 4 other Y RNA models for testing
 
 #Cameron
 - include reading of zipped data (do not unzipped files as we get memory issues)
