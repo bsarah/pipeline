@@ -129,9 +129,9 @@ if args.search_genes != None:#if we need to search for genes
             infernalOptArgs = ' --incE '+str(args.incE)
         else:
             infernalOptArgs = ' --incE '+str(args.incE)+' --incT '+str(args.incT)
-    print("incE: {}".format(str(args.incE)))
-    print("incT: {}".format(str(args.incT)))
-    print("optArgs: {}".format(infernalOptArgs))
+    #print("incE: {}".format(str(args.incE)))
+    #print("incT: {}".format(str(args.incT)))
+    #print("optArgs: {}".format(infernalOptArgs))
             
     #search the genomes for genes
     for g_file in genomeFiles:
