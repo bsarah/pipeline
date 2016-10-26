@@ -47,11 +47,12 @@ def catchExceptions(fileName, outputDir):
     name = fileName.split('/')[-1]#fileName without pathway ex: test1.maf.gz
 
     #proper extension
-    if fileName.endswith('.maf'):
+    if fileName.endswith(('.maf.gz','.maf.Z','.maf.bz2','.maf')):
         pass
-
+    '''
     elif fileName.endswith(('.maf.gz','.maf.Z','.maf.bz2')):
 
+        
         unzippedDir = outputDir+'unzippedMAF/'
         if 'unzippedMAF' in listdir(outputDir):
             subprocess.call("rm -r "+unzippedDir, shell=True)
@@ -63,19 +64,18 @@ def catchExceptions(fileName, outputDir):
         subprocess.call('zcat '+fileName+' > '+unzippedFileName, shell=True)
         print("done")
         fileName = unzippedFileName
+     '''
     else:
         raise Exception("{} not of maf format. Use a .maf file or gziped .maf file('.maf.gz','.maf.Z','.maf.bz2')".format(fileName))
 
-    #can unzipped file be opened + read
+    #can file be opened
     try:
         f = open(fileName, 'r')
-        #f.readline()
     except IOError:
         raise Exception("cannot open {}".format(fileName))
-#    except UnicodeDecodeError:
-#        raise Exception("File not of maf format. Use an unziped .maf file")
     else:
-        return f
+        f.close()
+        return
 
 
 def maf2TempWrapper(mafFileNames, outputDir, listOfSpecies):
@@ -94,17 +94,17 @@ def maf2TempWrapper(mafFileNames, outputDir, listOfSpecies):
     subprocess.call("mkdir "+outputDir+'temp', shell = True)
     tempOutputDir = outputDir + 'temp/'
 
-    openMafs = list()
+    #openMafs = list()
     for mafFile in mafFileNames:
-        openMaf = catchExceptions(mafFile, outputDir)
-        openMafs.append(openMaf)
+        catchExceptions(mafFile, outputDir)
+        #openMafs.append(openMaf)
 
     speciesFiles = list()
     for species in listOfSpecies:
         tempBedFile = open(tempOutputDir+species+'_temp.bed', 'w')
         speciesFiles.append(tempBedFile)
 
-    maf2TempBed(openMafs, outputDir, speciesFiles)
+    maf2TempBed(mafFileNames, outputDir, speciesFiles)
     print("sorting temp files")
     for _file in speciesFiles:
         if _file.closed == False:
