@@ -83,7 +83,7 @@ if not args.outPutDir.endswith('/'):
 
 #returns a list of all the files in a given directory with the full file path
 genomeFiles = [join(args.genomes,f) for f in listdir(args.genomes) if isfile(join(args.genomes,f))]
-multiSeqFiles = [join(args.multiSeq,f) for f in listdir(args.multiSeq) if isfile(join(args.multiSeq,f))]
+#multiSeqFiles = [join(args.multiSeq,f) for f in listdir(args.multiSeq) if isfile(join(args.multiSeq,f))]
 
 listOfSpecies = [args.referenceSpecies]
 for f in listdir(args.genomes):
@@ -99,7 +99,7 @@ for f in listdir(args.genomes):
 #                 'droFic2', 'droGri2', 'droKik2', 'droMir2', 'droMoj3', 'droPer1', 'droPse3', 'droRho2', 'droSec1', 'droSim1',\
 #                 'droSuz1', 'droTak2', 'droVir3', 'droWil2', 'droYak3', 'musDom2', 'triCas2'] #------------------------Testing -----------------------------
 
-if len(multiSeqFiles) == 0:
+if len(listdir(args.multiSeq)) == 0:
     raise Exception("No multiple sequence alignments given")
 
 try:
@@ -157,15 +157,11 @@ elif args.own_genes != None:
 else:
     raise Exception("either own_genes or search_genes must be given")
 
-
-if len(multiSeqFiles) == 0:
-    raise Exception("No multiple sequence allignments given")
-
 print("sorting multiple sequence alignment files...")
-multiSeqFiles.sort()#makes the output files alphabetical
+#multiSeqFiles.sort()#makes the output files alphabetical
 print("done")
 print("parsing maf files, writing valid blocks in bed format...")
 
-maf2bed(multiSeqFiles, args.outPutDir, geneObjects, listOfSpecies, args.quality, versionInfo)
+maf2bed(args.multiSeq, args.outPutDir, geneObjects, listOfSpecies, args.quality, versionInfo)
 #print("done. Bed files stored in {}".format(('/'.join(multiSeqFiles[0].split('/')[:-2]))+'/bed'))
 

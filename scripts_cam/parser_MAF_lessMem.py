@@ -34,7 +34,7 @@ Procedure:
    Once that is done we remove all overlapping reference blocks / sequeces  and the sequences from non-reference
    species that are alligned with them.
 '''
-def catchExceptions(fileName, outputDir):
+def catchExceptions(fileName):#, outputDir):
     '''
     checks if file is in correct format( '.maf', '.maf.gz', '.maf.Z', '.maf.bz2')
     checks if file is zipped
@@ -78,7 +78,7 @@ def catchExceptions(fileName, outputDir):
         return
 
 
-def maf2TempWrapper(mafFileNames, outputDir, listOfSpecies):
+def maf2TempWrapper(mafDir, outputDir, listOfSpecies):
     '''
     outputDir = ../test/Insects/Output/
     Assumptions:
@@ -94,17 +94,29 @@ def maf2TempWrapper(mafFileNames, outputDir, listOfSpecies):
     subprocess.call("mkdir "+outputDir+'temp', shell = True)
     tempOutputDir = outputDir + 'temp/'
 
+    '''
     #openMafs = list()
     for mafFile in mafFileNames:
         catchExceptions(mafFile, outputDir)
+        
         #openMafs.append(openMaf)
+    '''
 
     speciesFiles = list()
     for species in listOfSpecies:
         tempBedFile = open(tempOutputDir+species+'_temp.bed', 'w')
         speciesFiles.append(tempBedFile)
+#NEW PIPING OPERATION
+    blockNum = 0
+    iteration = 0
+    
+    #tempName = mafFileNames[0].rstrip('/')
+    #mafDir = tempName[:tempName.rfind('/')+1]
+    mafFileNames = [(join(mafDir, f) for f in listDir(mafDir) if isfile((join(mafDir,f))]
 
-    maf2TempBed(mafFileNames, outputDir, speciesFiles)
+    subprocess.call("zcat "+mafFileNames[0]+" | python3 maf2TempBed.py "+str(blockNum)+" "+mafDir+" "+str(iteration))
+#End of piping operation
+
     print("sorting temp files")
     for _file in speciesFiles:
         if _file.closed == False:
@@ -357,12 +369,12 @@ def parseTemp(tempFile, finalFile, geneFile, listOfGenes, overlapSet, threshold)
     return overlapSet, listOfGenes
 
                         
-def maf2bed(fileNames, outputDir, geneObjs, listOfSpecies, threshold, infernalVersion):
+def maf2bed(mafDir, outputDir, geneObjs, listOfSpecies, threshold, infernalVersion):
     '''
     Assumptions:
         The first string in listOfSpecies must correspond to the reference species.
     '''
-    tempFiles = maf2TempWrapper(fileNames, outputDir, listOfSpecies)
+    tempFiles = maf2TempWrapper(mafDir, outputDir, listOfSpecies)
 
     parseTempWrapper(tempFiles, geneObjs, outputDir, threshold, infernalVersion)
 
