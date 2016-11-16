@@ -49,8 +49,8 @@ def catchExceptions(fileName):#, outputDir):
     #proper extension
     if fileName.endswith(('.maf.gz','.maf.Z','.maf.bz2','.maf')):
         pass
-    '''
-    elif fileName.endswith(('.maf.gz','.maf.Z','.maf.bz2')):
+        '''
+        elif fileName.endswith(('.maf.gz','.maf.Z','.maf.bz2')):
 
         
         unzippedDir = outputDir+'unzippedMAF/'
@@ -64,7 +64,7 @@ def catchExceptions(fileName):#, outputDir):
         subprocess.call('zcat '+fileName+' > '+unzippedFileName, shell=True)
         print("done")
         fileName = unzippedFileName
-     '''
+        '''
     else:
         raise Exception("{} not of maf format. Use a .maf file or gziped .maf file('.maf.gz','.maf.Z','.maf.bz2')".format(fileName))
 
@@ -89,40 +89,43 @@ def maf2TempWrapper(mafDir, outputDir, listOfSpecies):
     '''
 
     if 'temp' in listdir(outputDir):
-        print('temp: {}'.format(listdir(outputDir)))
         subprocess.call("rm -r "+outputDir+'temp', shell=True)
     subprocess.call("mkdir "+outputDir+'temp', shell = True)
     tempOutputDir = outputDir + 'temp/'
 
-    '''
-    #openMafs = list()
-    for mafFile in mafFileNames:
-        catchExceptions(mafFile, outputDir)
-        
-        #openMafs.append(openMaf)
-    '''
-
+    #Make temp files
     speciesFiles = list()
     for species in listOfSpecies:
         tempBedFile = open(tempOutputDir+species+'_temp.bed', 'w')
-        speciesFiles.append(tempBedFile)
-#NEW PIPING OPERATION
+        tempBedFile.close()
+        speciesFiles.append(tempBedFile.name)
+
+    #NEW PIPING OPERATION
+
     blockNum = 0
     iteration = 0
+
+    mafFileNames = [join(mafDir, f) for f in listdir(mafDir) if isfile(join(mafDir,f))]
+
+    for name in mafFileNames:
+        
+        #print("calling function")
+        catchExceptions(name)
+        
+        #use Popen to catch stdOutput of reading file, stdOutput being the current block number
+        proc = subprocess.Popen("zcat "+name+" | python3 maf2TempBed.py "+str(blockNum)+" "+tempOutputDir, shell=True, universal_newlines=True, stdout=subprocess.PIPE)
+        #print("done. File: {}".format(name))
+        stdOutput, errors = proc.communicate()
+
+        #print('output: {}'.format(stdOutput))
+        blockNum = int(stdOutput)
+
+    #End of piping operation
     
-    #tempName = mafFileNames[0].rstrip('/')
-    #mafDir = tempName[:tempName.rfind('/')+1]
-    mafFileNames = [(join(mafDir, f) for f in listDir(mafDir) if isfile((join(mafDir,f))]
-
-    subprocess.call("zcat "+mafFileNames[0]+" | python3 maf2TempBed.py "+str(blockNum)+" "+mafDir+" "+str(iteration))
-#End of piping operation
-
     print("sorting temp files")
     for _file in speciesFiles:
-        if _file.closed == False:
-            _file.close()
         #sort -k1,1 -k2,2n outputDir/dm6_temp.bed > outputDir/dm6_temp_sorted.bed
-        subprocess.call("sort -k1,1 "+_file.name+" > "+_file.name.replace('.bed','_sorted.bed', 1), shell=True)
+        subprocess.call("sort -k1,1 "+_file+" > "+_file.replace('.bed','_sorted.bed', 1), shell=True)
 
     #returnList is a list of file paths.
     #Initialized with the reference species as the first element
@@ -131,8 +134,9 @@ def maf2TempWrapper(mafDir, outputDir, listOfSpecies):
     for _file in listdir(tempOutputDir):
         if join(tempOutputDir, _file) not in sortedTempList and _file.endswith("_sorted.bed"):
             sortedTempList.append(join(tempOutputDir, _file))
-
+    
     return sortedTempList
+    
 
 def maf2TempBed(mafFiles, outputDir, listSpeciesFiles):
     '''
@@ -383,11 +387,14 @@ def maf2bed(mafDir, outputDir, geneObjs, listOfSpecies, threshold, infernalVersi
 #if this python file is called from the command line
 if __name__ == "__main__":
 
+    
     listOfSpecies = ['dm6', 'anoGam1', 'apiMel4', 'droAlb1', 'droAna3', 'droBia2', 'droBip2', 'droEle2', 'droEre2', 'droEug2',\
                      'droFic2', 'droGri2', 'droKik2', 'droMir2', 'droMoj3', 'droPer1', 'droPse3', 'droRho2', 'droSec1', 'droSim1',\
                      'droSuz1', 'droTak2', 'droVir3', 'droWil2', 'droYak3', 'musDom2', 'triCas2'] #------------------------Testing -----------------------------
 
-    
+    maf2TempWrapper("/homes/biertruck/cameron/Desktop/Project_May_June_2016/test/Insects/mafZipped/","/homes/biertruck/cameron/Desktop/Project_May_June_2016/test/Insects/Output8/",listOfSpecies) 
+
+    '''
     geneList, infernalVersion  = parseInfernal('../test/Insects/Output5/infernalIn')
     print(len(geneList))
     #multiSeqFiles = [join('../test/Insects/Output/unzippedMAF',f) for f in listdir('../test/Insects/Output/unzippedMAF') if isfile(join('../test/Insects/Output/unzippedMAF',f))]
@@ -397,14 +404,15 @@ if __name__ == "__main__":
     #maf2TempWrapper(multiSeqFiles, tempOutputDir, listOfSpecies)
     
     returnList = [join(tempOutputDir, 'dm6_temp_sorted.bed')]
-    '''
+    
     for _file in listdir(tempOutputDir):
         if join(tempOutputDir, _file) not in returnList and _file.endswith("_sorted.bed"):
             returnList.append(join(tempOutputDir, _file))
-    '''
+    
     
     parseTempWrapper(returnList, geneList, '../test/Insects/Output5/', 0, infernalVersion)
 
     #maf2bed(multiSeqFiles, '../test/Insects/Output4', geneList, listOfSpecies, 2
     
     print('all the way done')
+    '''
