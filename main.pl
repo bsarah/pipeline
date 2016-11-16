@@ -146,7 +146,7 @@ please specify the path to where perl is installed. Version should be >= 5.0\n";
     print "-r R:
 please specify the path to where R is installed. Version should be >= 3.2.0 \n";
     print "-i Infernal:
-please specify the path to where Infernal is installed. Version should be >= 1.1.1\n";
+please specify the path to where Infernal is installed. Version should be >= 1.1.1 . Infernal is only needed when using option -c. With option -l Infernal is not used. \n";
     print "\n";
     print "Further parameter:\n";
     print "choose -k for contact information and citation, -v to see the 
@@ -233,7 +233,9 @@ else{print "No path to perl given! (option -e)\n"; exit 1;}
 if ($options{r}){$rpath = $options{r};}
 else{print "No path to R given! (option -r)\n"; exit 1;}
 
+#infernal only needed when option -c
 if ($options{i}){$infernalpath = $options{i};}
+elsif($options{l}($infernalpath = "";)
 else{print "No path to infernal given! (option -i)\n"; exit 1;}
 
 my $optstr = "-o $outpath -g $genomes -m $mafs -f $refspecies -s $seqsim -t $strucsim $cmoptstr $perc $inclopt -y $pythonpath -e $perlpath -r $rpath -i $infernalpath";
@@ -412,29 +414,31 @@ my @out30 = readpipe("$cmd30");
 print "Done!\n";
 
 
+
+##commented draw graphs as this should go in an extra script to only print the graphs that the user wants to print
+
 #draw graphs
 ##packages required: qgraph, igraph
 
 ##pipe R output to another file
-system("touch $outpath\/drawGraphs.Rout");
-my $rout = "$outpath\/drawGraphs.Rout";
+#system("touch $outpath\/drawGraphs.Rout");
+#my $rout = "$outpath\/drawGraphs.Rout";
 
 
 my $numrealgraphs;
 my $realgraphspath = "$outpath\/graphs/showGraphs/graphsToDraw";
 if(-z $realgraphspath){ $numrealgraphs=0;}
 else{
-    print "draw graphs..";
-    open CF,"<$outpath\/graphs/showGraphs/graphsToDraw" or die "can't open $outpath\/graphs/showGraphs/graphsToDraw\n";
-    while(<CF>){
-	chomp;
-	my $line = $_;
-#	print "line: $line \n";
-	my $cmd32 = "Rscript --vanilla $scripts_sarah\/drawGraphs.R $line 2>>$rout";
-	my @out32 = readpipe("$cmd32");
-    }
-
-    print "Done!\n";
+#    print "draw graphs..";
+#    open CF,"<$outpath\/graphs/showGraphs/graphsToDraw" or die "can't open $outpath\/graphs/showGraphs/graphsToDraw\n";
+#    while(<CF>){
+#	chomp;
+#	my $line = $_;
+#	my $cmd32 = "Rscript --vanilla $scripts_sarah\/drawGraphs.R $line 2>>$rout";
+#	my @out32 = readpipe("$cmd32");
+#    }
+#
+#    print "Done!\n";
     my $cmd38b = "wc -l $outpath\/graphs/showGraphs/graphsToDraw 2>>$err";
     my @out38b = readpipe("$cmd38b");
 
@@ -496,7 +500,7 @@ print $outs "\n";
 close($outs);
 
 
-my $cmd34 = "$perlpath\/perl $scripts_sarah\/doSummary.pl $outpath\/summary.txt $outpath\/graphs/cographs $outpath\/graphs/noncographs $outpath\/genes\/specieslist $numClus $numJoinClus $numSingles $numnoEdgeGr $numGraphs $numnoneclus $numrealgraphs $outpath 2>>$err";
+my $cmd34 = "$perlpath\/perl $scripts_sarah\/doSummary.pl $outpath\/summary.txt $outpath\/graphs/cographs $outpath\/graphs/noncographs $outpath\/genes\/specieslist $numClus $numJoinClus $numSingles $numnoEdgeGr $numGraphs $numnoneclus $numrealgraphs $genefile $outpath 2>>$err";
 
 my @out34 = readpipe("$cmd34");
 print "Done!\n";

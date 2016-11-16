@@ -4,8 +4,8 @@ ToDo file for our pipeline project:
 - name!
 - look for ensembl msa's (EPO) instead of multiz. They can be converted into each other, and ensembl msa seem to have better quality (see m. smith, australia) (LATER!)
 - talk to Fabian for block clarification (LATER!)
-- think about how to handle introns (see Todd Lowe - search for paper from him or waiting of his email)
-- add parameter as a maximal or minimal threshold for cluster sizes (genomic distance between anchors) - see talk Todd Lowe
+- think about how to handle introns (see T. Lowe - search for paper from him or waiting of his email)
+- add parameter as a maximal or minimal threshold for cluster sizes (genomic distance between anchors) - see talk T. Lowe
 
 #Sarah & Anne
 - search for a student to build up our GUI - meet Daniel for details
@@ -16,7 +16,7 @@ ToDo file for our pipeline project:
 - ePoPE format to newick
 - check sbRNAs cm and run again (single cm or cambination)
 - postscript script to draw trees
-- postscript script to draw graphs
+- postscript script to draw graphs -> we need a drawing algorithm, so it might be better to use python/latex/perl instead of ps
 - create 4 other Y RNA models for testing
 
 #Cameron
@@ -31,14 +31,12 @@ ToDo file for our pipeline project:
 #Sarah
 - getNumbers doesn't work
 - include counting of singletons/NoneCluster/edgeGraphs/noedgeGraphs in pipeline
-- change counting of total number of elements: it is minus 3 as the first 3 lines in the bed files do not stand for elements!!! 
-- if user provides the element list, do not count the lines in the bed files!!!
 - still mistakes in summary (no NoneCluster folder anymore?)
 - give input parameters for alignment (possible for altNW?)
 - do not print camerons output (too much)
 - for genetic events: always sort the species list alphabetically, such that the entries can be summarized easily! write the summary, ePoPE
 - check all 'list' files such that only the real names of the clusters are printed, not all the paths.
-- error in altNW, if aligning "AA" and "B", it outputs one mismatch and one duplication, or the strings donot have the same length, in case - is inserted
+- error in altNW, if aligning "AA" and "B", it outputs one mismatch and one duplication, or the strings do not have the same length, in case - is inserted
 - option to switch off camerons part because the data already exists (thus output folder has to exist with the genes folder in it) --> parameter to give path to camerons output to be able to run it again
 - accept a phylogenetic tree in newick format as input to add the genetic events directly to the tree (one tree for each event?)
 - only cographs used for count of genetic events? what about noncographs? if not included in genetic events, count them differently!!!
@@ -49,9 +47,10 @@ ToDo file for our pipeline project:
 - give option for user to switch of several parts of the pipeline
 - option to include newick tree
 - solution for noncographs 
-
+- write drawGraphs.pl
 
 
 #General ideas and keywords:
 - repeats: repeat masker
-- ePope usage: counting of events and ePoPE (run epope for each group of elements, summrize counts for to one resulting tree)
+- ePope usage: counting of events and ePoPE (run epope for each group of elements, summarize counts for to one resulting tree)
+- think about distinguishing insertion events as: duplication, 'jumping' (where did it come from?) or completely new element 

@@ -1,6 +1,8 @@
 #!/usr/bin/perl -w
 
-## perl doSummary.pl summary_outfile cographs_file noncographs_file specieslist_file optstr numclus numjoinclus numsingle numnoedge numgraphs numnoneclus numrealgraphs outpath
+## perl doSummary.pl summary_outfile cographs_file noncographs_file specieslist_file numclus numjoinclus numsingle numnoedge numgraphs numnoneclus numrealgraphs genefile outpath
+
+#genefile is the path to the user provided gene lists. if empty, take gene folder created while infernal run
 
 use Data::Dumper;
 use strict;
@@ -21,6 +23,7 @@ my $numnoedge = shift;
 my $numgraphs = shift;
 my $numnone = shift;
 my $numrealgraphs = shift;
+my $genefile = shift;
 my $outpath = shift;
 
 open(my $outs,">>$outfile");
@@ -129,10 +132,19 @@ while(<SL>){
     my $spec = $F[(scalar @F)-1];
     push @species, $spec;
     $spcount++;
-    my $cmd = "wc -l $line";
+    my $cmd="";
+    my $diff = 0;
+    if($genefile eq ""){
+	$cmd = "wc -l $line";
+	$diff = 3;
+    }
+    else{
+	#user provided gene list
+	$cmd = "wc -l $genefile\/$spec";
+    }
     my @out = readpipe("$cmd");
     my @tmp = split " ", $out[0];
-    my $numGenes = $tmp[0];
+    my $numGenes = $tmp[0]-$diff;
     push @genenum, $numGenes;
 }
 
@@ -226,9 +238,9 @@ the similarity thresholds for sequence and/or structure. In this way, no graphs
 similarity thresholds can be lowered using parameters -s and/or -t. The default
  values are 0.9, meaning a similarity of 90%.\n";
 if($numrealgraphs > 0){
-    print $outs "Graph files used to visualize graphs (.gr) and their 
-visualization (.pdf) are located in 
-$outpath\/graphs/showGraphs \n";
+    print $outs "Graph files used to visualize graphs (.gr)"; #and their visualization (.pdf) 
+    print $outs "are located in $outpath\/graphs/showGraphs .\n";
+    print $outs "In case some graphs should be visualized, please use the extra script.\n";
     print $outs "\n";
     print $outs "Duplication alignments and genetic events information: \n";
     print $outs "The results for the analysis of genetic events are written to
