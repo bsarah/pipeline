@@ -5,7 +5,7 @@
 import subprocess
 import datetime #module that can give the current day month and year
 from os import listdir
-from os.path import isfile, join
+from os.path import isfile, isdir, join
 from bisect import bisect_right #binary search
 from dataStructures_lessMem import Block, Chromosome
 from parser_infernal import parseInfernal
@@ -135,7 +135,7 @@ def maf2TempWrapper(mafDir, outputDir, listOfSpecies):
         if join(tempOutputDir, _file) not in sortedTempList and _file.endswith("_sorted.bed"):
             sortedTempList.append(join(tempOutputDir, _file))
     
-    return sortedTempList
+    return sortedTempList, tempOutputDir
     
 
 def maf2TempBed(mafFiles, outputDir, listSpeciesFiles):
@@ -378,11 +378,12 @@ def maf2bed(mafDir, outputDir, geneObjs, listOfSpecies, threshold, infernalVersi
     Assumptions:
         The first string in listOfSpecies must correspond to the reference species.
     '''
-    tempFiles = maf2TempWrapper(mafDir, outputDir, listOfSpecies)
+    tempFiles, tempFileDir = maf2TempWrapper(mafDir, outputDir, listOfSpecies)
 
     parseTempWrapper(tempFiles, geneObjs, outputDir, threshold, infernalVersion)
 
-
+    if tempFileDir in [join(outputDir, dir) for dir in listdir(outputDir) if isdir(join(outputDir, dir))]:
+        subprocess.call("rm -r "+tempFileDir, shell=True)
 
 #if this python file is called from the command line
 if __name__ == "__main__":
@@ -392,27 +393,4 @@ if __name__ == "__main__":
                      'droFic2', 'droGri2', 'droKik2', 'droMir2', 'droMoj3', 'droPer1', 'droPse3', 'droRho2', 'droSec1', 'droSim1',\
                      'droSuz1', 'droTak2', 'droVir3', 'droWil2', 'droYak3', 'musDom2', 'triCas2'] #------------------------Testing -----------------------------
 
-    maf2TempWrapper("/homes/biertruck/cameron/Desktop/Project_May_June_2016/test/Insects/mafZipped/","/homes/biertruck/cameron/Desktop/Project_May_June_2016/test/Insects/Output8/",listOfSpecies) 
-
-    '''
-    geneList, infernalVersion  = parseInfernal('../test/Insects/Output5/infernalIn')
-    print(len(geneList))
-    #multiSeqFiles = [join('../test/Insects/Output/unzippedMAF',f) for f in listdir('../test/Insects/Output/unzippedMAF') if isfile(join('../test/Insects/Output/unzippedMAF',f))]
-    #tempFiles = [join('../test/Insects/Output/temp',f) for f in listdir('../test/Insects/Output/temp') if f.endswith("_sorted.bed")]
-    tempOutputDir = '../test/Insects/Output5/temp'
-
-    #maf2TempWrapper(multiSeqFiles, tempOutputDir, listOfSpecies)
-    
-    returnList = [join(tempOutputDir, 'dm6_temp_sorted.bed')]
-    
-    for _file in listdir(tempOutputDir):
-        if join(tempOutputDir, _file) not in returnList and _file.endswith("_sorted.bed"):
-            returnList.append(join(tempOutputDir, _file))
-    
-    
-    parseTempWrapper(returnList, geneList, '../test/Insects/Output5/', 0, infernalVersion)
-
-    #maf2bed(multiSeqFiles, '../test/Insects/Output4', geneList, listOfSpecies, 2
-    
-    print('all the way done')
-    '''
+    maf2TempWrapper("/homes/biertruck/cameron/Desktop/Project_May_June_2016/test/Insects/mafZipped/","/homes/biertruck/cameron/Desktop/Project_May_June_2016/test/Insects/Output8/",listOfSpecies)
