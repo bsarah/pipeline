@@ -108,18 +108,18 @@ def maf2TempWrapper(mafDir, outputDir, listOfSpecies):
     mafFileNames = [join(mafDir, f) for f in listdir(mafDir) if isfile(join(mafDir,f))]
 
     for name in mafFileNames:
-        
-        #print("calling function")
         catchExceptions(name)
         
         #use Popen to catch stdOutput of reading file, stdOutput being the current block number
         proc = subprocess.Popen("zcat "+name+" | python3 maf2TempBed.py "+str(blockNum)+" "+tempOutputDir, shell=True, universal_newlines=True, stdout=subprocess.PIPE)
-        #print("done. File: {}".format(name))
+
         stdOutput, errors = proc.communicate()
-
         #print('output: {}'.format(stdOutput))
-        blockNum = int(stdOutput)
-
+        try:
+            oldblockNum = blockNum
+            blockNum = int(stdOutput)
+        except ValueError:
+            blockNum = oldblockNum
     #End of piping operation
     
     print("sorting temp files")
