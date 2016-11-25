@@ -235,7 +235,7 @@ else{print "No path to R given! (option -r)\n"; exit 1;}
 
 #infernal only needed when option -c
 if ($options{i}){$infernalpath = $options{i};}
-elsif($options{l}($infernalpath = "";)
+elsif($options{l}){$infernalpath = "";}
 else{print "No path to infernal given! (option -i)\n"; exit 1;}
 
 my $optstr = "-o $outpath -g $genomes -m $mafs -f $refspecies -s $seqsim -t $strucsim $cmoptstr $perc $inclopt -y $pythonpath -e $perlpath -r $rpath -i $infernalpath";
