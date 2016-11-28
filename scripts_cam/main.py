@@ -69,7 +69,7 @@ if args.infernalPath.endswith('/'):
 else:
     locationInfernal = args.infernalPath
     
-args.quality = int(args.quality)
+args.quality = float(args.quality)
 if args.quality < 0 or args.quality > 99:
     raise Exception("quality value must be a number between 0 and 99 corresponding to the percentage of "\
                     "blocks that will be thrown away.")

@@ -49,22 +49,6 @@ def catchExceptions(fileName):#, outputDir):
     #proper extension
     if fileName.endswith(('.maf.gz','.maf.Z','.maf.bz2','.maf')):
         pass
-        '''
-        elif fileName.endswith(('.maf.gz','.maf.Z','.maf.bz2')):
-
-        
-        unzippedDir = outputDir+'unzippedMAF/'
-        if 'unzippedMAF' in listdir(outputDir):
-            subprocess.call("rm -r "+unzippedDir, shell=True)
-        subprocess.call('mkdir '+unzippedDir,shell=True)
-
-        #unzippedFileName = ('/'.join(fileName.split('/')[:-1]))+'/'+name.split('.')[0]+'.maf'
-        unzippedFileName = unzippedDir + name.split('.')[0]+'.maf'
-        print("unzipping maf file...")
-        subprocess.call('zcat '+fileName+' > '+unzippedFileName, shell=True)
-        print("done")
-        fileName = unzippedFileName
-        '''
     else:
         raise Exception("{} not of maf format. Use a .maf file or gziped .maf file('.maf.gz','.maf.Z','.maf.bz2')".format(fileName))
 
@@ -107,6 +91,9 @@ def maf2TempWrapper(mafDir, outputDir, listOfSpecies):
 
     mafFileNames = [join(mafDir, f) for f in listdir(mafDir) if isfile(join(mafDir,f))]
 
+    cwd = os.getcwd()
+    print("cwd: {}".format(cwd))
+    #if cwd.endswith(
     for name in mafFileNames:
         catchExceptions(name)
         
@@ -393,4 +380,4 @@ if __name__ == "__main__":
                      'droFic2', 'droGri2', 'droKik2', 'droMir2', 'droMoj3', 'droPer1', 'droPse3', 'droRho2', 'droSec1', 'droSim1',\
                      'droSuz1', 'droTak2', 'droVir3', 'droWil2', 'droYak3', 'musDom2', 'triCas2'] #------------------------Testing -----------------------------
 
-    maf2TempWrapper("/homes/biertruck/cameron/Desktop/Project_May_June_2016/test/Insects/mafZipped/","/homes/biertruck/cameron/Desktop/Project_May_June_2016/test/Insects/Output8/",listOfSpecies)
+    maf2TempWrapper("/scr/rum/cameron/maf","/homes/biertruck/cameron/Desktop/Project_May_June_2016/test/Insects/Output8/",listOfSpecies)
