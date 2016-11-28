@@ -98,7 +98,7 @@ def maf2TempWrapper(mafDir, outputDir, listOfSpecies):
         catchExceptions(name)
         
         #use Popen to catch stdOutput of reading file, stdOutput being the current block number
-        proc = subprocess.Popen("zcat "+name+" | python3 maf2TempBed.py "+str(blockNum)+" "+tempOutputDir, shell=True, universal_newlines=True, stdout=subprocess.PIPE)
+        proc = subprocess.Popen("zcat "+name+" | python3 ./maf2TempBed.py "+str(blockNum)+" "+tempOutputDir, shell=True, universal_newlines=True, stdout=subprocess.PIPE)
 
         stdOutput, errors = proc.communicate()
         #print('output: {}'.format(stdOutput))
