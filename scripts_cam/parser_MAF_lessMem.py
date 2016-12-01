@@ -62,7 +62,7 @@ def catchExceptions(fileName):#, outputDir):
         return
 
 
-def maf2TempWrapper(mafDir, outputDir, listOfSpecies):
+def maf2TempWrapper(mafDir, outputDir, repoDir, listOfSpecies):
     '''
     outputDir = ../test/Insects/Output/
     Assumptions:
@@ -91,14 +91,14 @@ def maf2TempWrapper(mafDir, outputDir, listOfSpecies):
 
     mafFileNames = [join(mafDir, f) for f in listdir(mafDir) if isfile(join(mafDir,f))]
 
-    cwd = os.getcwd()
-    print("cwd: {}".format(cwd))
+    #cwd = os.getcwd()
+    #print("cwd: {}".format(cwd))
     #if cwd.endswith(
     for name in mafFileNames:
         catchExceptions(name)
         
         #use Popen to catch stdOutput of reading file, stdOutput being the current block number
-        proc = subprocess.Popen("zcat "+name+" | python3 ./maf2TempBed.py "+str(blockNum)+" "+tempOutputDir, shell=True, universal_newlines=True, stdout=subprocess.PIPE)
+        proc = subprocess.Popen("zcat "+name+" | python3 "+repoDir+"pipeline/scripts_cam/maf2TempBed.py "+str(blockNum)+" "+tempOutputDir, shell=True, universal_newlines=True, stdout=subprocess.PIPE)
 
         stdOutput, errors = proc.communicate()
         #print('output: {}'.format(stdOutput))
@@ -271,46 +271,31 @@ def parseTemp(tempFile, finalFile, geneFile, listOfGenes, overlapSet, threshold)
         #remove overlaps from the last chromosome, write it to the bed file.
         #overwrite 'chromo' to the new chromosome object.
         else:
-            #print("{}".format(chromo.name))
-
             #determine what the threshold score is based on threshold
             if len(chromo.listOfScores) > 0:
                 chromo.listOfScores.sort()
                 thresholdIndex = int(len(chromo.listOfScores)/100*threshold)
                 if thresholdIndex < 0:
                     thresholdIndex = 0
-                    #print("less than 0: {}".format(thresholdIndex))
                 elif thresholdIndex >= len(chromo.listOfScores) and len(chromo.listOfScores) > 0:
                     thresholdIndex = len(chromo.listOfScores) -1
-                    #print("greater than len: {}".format(thresholdIndex))
-                #print("index: {}. length: {}".format(thresholdIndex, len(chromo.listOfScores)))
                 thresholdScore = chromo.listOfScores[thresholdIndex]
-                #print("score: {}".format(thresholdScore))
             else:
                 thresholdScore = float('-inf')#if threshold is 0 set thresholdScore to - infinity
                 
             #We check the entire gene list for every chromosome for every species but
             #we remove genes once we have wrote them to output so the list always gets
             #shorter with each iteration.
-            #print("chromosome: {}".format(chromo.name))
-            #print("species: {}".format(chromo.species))
-            '''
-            for i in range(10):
-                print("gene chromo: {}".format(listOfGenes[i].chromosome))
-                print("gene species: {}".format(listOfGenes[i].species))
-            '''
+
             for i in range(len(listOfGenes)):
                 gene = listOfGenes[i]
                 if gene.chromosome == chromo.name and gene.species == chromo.species:
-                    #numGenesWrote += 1
-                    #listOfGenes.pop(listOfGenes.index(gene))
                     chromo.checkGene(gene)
                     fivePrime, threePrime = chromo.getAdjBlock(gene)
                     geneFile.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(\
                                    chromo.name, chromo.species+"_"+str(gene.blockNum), gene.s,\
                                    gene.getEndPos(), gene.strand, fivePrime, threePrime, gene.structure, gene.sequence))
 
-            #print("genes written")
 
             #replaced deleting with creating new list. Remove had O(n) cost + n operations
             #making new list means appending O(1) + n operations
@@ -360,12 +345,12 @@ def parseTemp(tempFile, finalFile, geneFile, listOfGenes, overlapSet, threshold)
     return overlapSet, listOfGenes
 
                         
-def maf2bed(mafDir, outputDir, geneObjs, listOfSpecies, threshold, infernalVersion):
+def maf2bed(mafDir, outputDir, repoDir, geneObjs, listOfSpecies, threshold, infernalVersion):
     '''
     Assumptions:
         The first string in listOfSpecies must correspond to the reference species.
     '''
-    tempFiles, tempFileDir = maf2TempWrapper(mafDir, outputDir, listOfSpecies)
+    tempFiles, tempFileDir = maf2TempWrapper(mafDir, outputDir, repoDir, listOfSpecies)
 
     parseTempWrapper(tempFiles, geneObjs, outputDir, threshold, infernalVersion)
 

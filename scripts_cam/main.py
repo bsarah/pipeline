@@ -47,6 +47,7 @@ parser.add_argument("genomes", type=str, help="directory where the genomes are")
 parser.add_argument("multiSeq", type=str, help="directory where the multiple sequence allignments are")
 parser.add_argument("infernalPath", type=str, help="path to infernal")
 parser.add_argument("outPutDir", type=str, help="directory where you want the output files to be placed")
+parser.add_argument("pathToRepo", type=str, help="absolute path of the git repo")
 parser.add_argument("referenceSpecies", type=str, help="the name of the reference species as it appears in the "\
                     + "multiple sequence alignment.")
 parser.add_argument("-sg","--search_genes", action="store", help="search for genes using infernal cmsearch. "\
@@ -80,7 +81,9 @@ if args.own_genes != None and args.search_genes != None:
 if not args.outPutDir.endswith('/'):
     args.outPutDir = args.outPutDir + '/'
 
-
+if not args.pathToRepo.endswith('/'):
+    args.pathToRepo = args.pathToRepo + '/'
+    
 #returns a list of all the files in a given directory with the full file path
 genomeFiles = [join(args.genomes,f) for f in listdir(args.genomes) if isfile(join(args.genomes,f))]
 #multiSeqFiles = [join(args.multiSeq,f) for f in listdir(args.multiSeq) if isfile(join(args.multiSeq,f))]
@@ -91,13 +94,6 @@ for f in listdir(args.genomes):
         species = f.split('.')[0]
         if species != args.referenceSpecies:
             listOfSpecies.append(species)
-
-#listOfSpecies f.split('.')[0] for f in listdir(args.genomes) if isfile(join(args.genomes,f))]
-
-# ---------------------------------THE FIRST SPECIES IN THE LIST MUST BE THE REFERENCE SPECIES----------------------------------------------
-#listOfSpecies = ['dm6', 'anoGam1', 'apiMel4', 'droAlb1', 'droAna3', 'droBia2', 'droBip2', 'droEle2', 'droEre2', 'droEug2',\
-#                 'droFic2', 'droGri2', 'droKik2', 'droMir2', 'droMoj3', 'droPer1', 'droPse3', 'droRho2', 'droSec1', 'droSim1',\
-#                 'droSuz1', 'droTak2', 'droVir3', 'droWil2', 'droYak3', 'musDom2', 'triCas2'] #------------------------Testing -----------------------------
 
 if len(listdir(args.multiSeq)) == 0:
     raise Exception("No multiple sequence alignments given")
@@ -157,11 +153,11 @@ elif args.own_genes != None:
 else:
     raise Exception("either own_genes or search_genes must be given")
 
-print("sorting multiple sequence alignment files...")
+#print("sorting multiple sequence alignment files...")
 #multiSeqFiles.sort()#makes the output files alphabetical
-print("done")
+#print("done")
 print("parsing maf files, writing valid blocks in bed format...")
 
-maf2bed(args.multiSeq, args.outPutDir, geneObjects, listOfSpecies, args.quality, versionInfo)
+maf2bed(args.multiSeq, args.outPutDir, args.pathToRepo, geneObjects, listOfSpecies, args.quality, versionInfo)
 #print("done. Bed files stored in {}".format(('/'.join(multiSeqFiles[0].split('/')[:-2]))+'/bed'))
 
