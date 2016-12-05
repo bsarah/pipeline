@@ -79,6 +79,9 @@ my $extravalue;
 
 my $dirname = dirname(__FILE__);
 
+#test print
+print "current directory of main.pl: $dirname \n";
+
 
 #define other information
 my $toolname = "FindAFancyAbbrevation";
@@ -262,13 +265,13 @@ print "analysis of maf files started (this might take a while)..\n";
 if($perc eq ""){
 #    $cmd0 = "$pythonpath\/python3 $scripts_cam\/main.py $cmoption $genomes $mafs $outpath $refspecies 2>> $err "; #$infernalpath not yet done!!!
 
-    open(PROG,"$pythonpath\/python3 $scripts_cam\/main.py $cmoption $inclopt $genomes $mafs $infernalpath $outpath $refspecies 2>>$err0 |") or die "Couldn't start prog!";
+    open(PROG,"$pythonpath\/python3 $scripts_cam\/main.py $cmoption $inclopt $genomes $mafs $infernalpath $outpath $dirname $refspecies 2>>$err0 |") or die "Couldn't start prog!";
     while(<PROG>){print "$_";}
 }
 else{
 #    $cmd0 = "$pythonpath\/python3 $scripts_cam\/main.py $perc $cmoption $genomes $mafs $outpath $refspecies 2>> $err"; #$infernalpath not yet done!!!
 
-    open(PROG,"$pythonpath\/python3 $scripts_cam\/main.py $perc $cmoption $inclopt $genomes $mafs $infernalpath $outpath $refspecies 2>>$err0 |") or die "Couldn't start prog!";
+    open(PROG,"$pythonpath\/python3 $scripts_cam\/main.py $perc $cmoption $inclopt $genomes $mafs $infernalpath $outpath $dirname $refspecies 2>>$err0 |") or die "Couldn't start prog!";
     while(<PROG>){print "$_";}
 }
 
