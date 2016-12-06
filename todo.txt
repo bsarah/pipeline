@@ -5,7 +5,9 @@ ToDo file for our pipeline project:
 - look for ensembl msa's (EPO) instead of multiz. They can be converted into each other, and ensembl msa seem to have better quality (see m. smith, australia) (LATER!)
 - talk to Fabian for block clarification (LATER!)
 - think about how to handle introns (see T. Lowe - search for paper from him or waiting for his email)
-- add parameter as a maximal or minimal threshold for cluster sizes (genomic distance between anchors) - see talk T. Lowe
+- add parameter as a maximal or minimal threshold for cluster sizes (genomic dis
+tance between anchors) - see talk T. Lowe
+- some elements are not sorted into anchors (sbRNAs, distant related species)
 
 #Sarah & Anne
 - search for a student to build up our GUI
@@ -28,12 +30,10 @@ ToDo file for our pipeline project:
 - include reading of zipped data (do not unzipped files as we get memory issues)
 - delete bed files, temporary files (everything we don't need anymore)
 - optimize reading of multiz alns (ask fabian externbrink)
-- some elements are not sorted into anchors (sbRNAs, distant related species)
 - more detailed explanation for gene list input (README_cameron)
 - gene lists: be able to include unique IDs for elements such that they can be found later in the graphs
 
 #Sarah
-- getNumbers doesn't work
 - include counting of singletons/NoneCluster/edgeGraphs/noedgeGraphs in pipeline
 - still mistakes in summary (no NoneCluster folder anymore?)
 - do not print camerons output (too much)
@@ -46,7 +46,6 @@ ToDo file for our pipeline project:
 - write drawGraphs.pl
 ##more parameters?
 - give input parameters for alignment (possible for altNW?)
-- option to switch off camerons part because the data already exists (thus output folder has to exist with the genes folder in it) --> parameter to give path to camerons output to be able to run it again
 - give option for user to switch off several parts of the pipeline
 - do more statistics: in how many clusters is each species represented, percentages of elements in certain clusters/cographs/noncographs..., 
   length of clusters, report cluster information when only looking at synteny!
