@@ -316,33 +316,52 @@ print $outs "Events are Duplication, Matches, Insertion, Deletion, Mismatches.\n
 print $outs "The corresponding alignment files can be found in $outpath \n";
 print $outs "\n\n";
 
+
+##sort the entries in each entry for the hashes alphabetically
+
 print $outs "EVENT: Duplication\n";
 foreach my $du (sort keys %dupevents) {
-    print $outs "$du\t$dupevents{$du}\n";
+    my @devs = split ',', $dupevents{$du};
+    @devs = sort @devs;
+    my $dustr = join(',',@devs);
+    print $outs "$du\t$dustr\n";
 }
 print $outs "\n\n";
 
 print $outs "EVENT: Matches\n";
 foreach my $ma (sort keys %matevents) {
-    print $outs "$ma\t$matevents{$ma}\n";
+    my @mevs = split ',', $matevents{$ma};
+    @mevs = sort @mevs;
+    my $mastr = join(',',@mevs);
+
+    print $outs "$ma\t$mastr\n";
 }
 print $outs "\n\n";
 
 print $outs "EVENT: Insertion\n";
 foreach my $in (sort keys %insevents) {
-    print $outs "$in\t$insevents{$in}\n";
+    my @ievs = split ',', $insevents{$in};
+    @ievs = sort @ievs;
+    my $instr = join(',',@ievs);
+    print $outs "$in\t$instr\n";
 }
 print $outs "\n\n";
 
 print $outs "EVENT: Deletion\n";
 foreach my $de (sort keys %delevents) {
-    print $outs "$de\t$delevents{$de}\n";
+    my @deevs = split ',', $delevents{$de};
+    @deevs = sort @deevs;
+    my $destr = join(',',@deevs);
+    print $outs "$de\t$destr\n";
 }
 print $outs "\n\n";
 
 print $outs "EVENT: Mismatches\n";
 foreach my $mi (sort keys %misevents) {
-    print $outs "$mi\t$misevents{$mi}\n";
+    my @mevs = split ',', $misevents{$mi};
+    @mevs = sort @mevs;
+    my $mistr = join(',',@mevs);
+    print $outs "$mi\t$mistr\n";
 }
 print $outs "\n\n";
 

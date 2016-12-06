@@ -128,8 +128,6 @@ my @species=();
 my @genenum = ();
 my $spcount = 0;
 
-print $outs "OFFTOPIC: doSummary countspecies: genefile : $genefile, specieslist: $specieslist \n";
-
 
 while(<SL>){
     chomp;

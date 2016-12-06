@@ -236,7 +236,7 @@ if ($options{w}){$inclopt = "-incE $options{w}";}
 if ($options{b}){$inclopt = "-incT $options{b}";}
 
 my $doitagain="";
-if ($options{a}){$doitagain = "$options{a}";}
+if ($options{a}){$doitagain = "$options{a}";$genefile="$options{a}";$usingCM=0;}
 
 
 if ($options{y}){$pythonpath = $options{y};}
@@ -520,10 +520,11 @@ print $outs "======Output statistics======\n";
 print $outs "\n";
 close($outs);
 
+if($genefile eq ""){$genefile = ".";}
     
 my $cmd34 = "$perlpath\/perl $scripts_sarah\/doSummary.pl $outpath\/summary.txt $outpath\/graphs/cographs $outpath\/graphs/noncographs $genesfolder\/specieslist $numClus $numJoinClus $numSingles $numnoEdgeGr $numGraphs $numnoneclus $numrealgraphs $usingCM $genefile $outpath 2>>$err";
 
-print "command doSummary: $cmd34 \n";
+print "doSummary: $cmd34 \n";
 
 my @out34 = readpipe("$cmd34");
 print "Done!\n";
