@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-## call writeBED.pl filelist outpath
+## call writeBED.pl filelist outpath outname
 
 ## input file format:
 ## chromosome \t species_geneID \t genestart \t geneend \t strand
@@ -17,8 +17,9 @@ use warnings;
 
 my $filename = shift;
 my $outpath = shift;
+my $outname = shift;
 
-my $outfile="$outpath/allClusters.bed";
+my $outfile="$outpath\/$outname";
 open(my $outf,'>>',$outfile);
 
 

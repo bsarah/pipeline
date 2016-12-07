@@ -8,8 +8,12 @@
 ##get the sequence of one letters and put it in altnw for each pair of species.
 ##give own path for summary file because you dont want to have it in the same folder as all the alignments (many files).
 ## secsim and strucsim give the similarity thresholds for the sequence and structure, if one of them (and only one!) is -1, do not pay attention to this one, take only the other one into account
-## Only use graphs with edges as the alignments are only done if the thresholds fit!!!
 
+
+## Only use graphs with edges as the alignments are only done if the thresholds fit!!!
+##BUT: this doesn't include single elements in the clusters which count as insertion/deletion!
+
+#thus take the weighted edge lists as input for graphs and use the thresholds
 
 use Data::Dumper;
 use strict;
