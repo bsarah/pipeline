@@ -4,8 +4,10 @@ ToDo file for our pipeline project:
 - name!
 - look for ensembl msa's (EPO) instead of multiz. They can be converted into each other, and ensembl msa seem to have better quality (see m. smith, australia) (LATER!)
 - talk to Fabian for block clarification (LATER!)
-- think about how to handle introns (see T. Lowe - search for paper from him or waiting of his email)
-- add parameter as a maximal or minimal threshold for cluster sizes (genomic distance between anchors) - see talk T. Lowe
+- think about how to handle introns (see T. Lowe - search for paper from him or waiting for his email)
+- add parameter as a maximal or minimal threshold for cluster sizes (genomic dis
+tance between anchors) - see talk T. Lowe
+- some elements are not sorted into anchors (sbRNAs, distant related species)
 
 #Sarah & Anne
 - search for a student to build up our GUI
@@ -28,30 +30,31 @@ ToDo file for our pipeline project:
 - include reading of zipped data (do not unzipped files as we get memory issues)
 - delete bed files, temporary files (everything we don't need anymore)
 - optimize reading of multiz alns (ask fabian externbrink)
-- some elements are not sorted into anchors (sbRNAs, distant related species)
 - more detailed explanation for gene list input (README_cameron)
 - gene lists: be able to include unique IDs for elements such that they can be found later in the graphs
+- delete temp and bed folder?
 
 #Sarah
-- getNumbers doesn't work
-- include counting of singletons/NoneCluster/edgeGraphs/noedgeGraphs in pipeline
-- still mistakes in summary (no NoneCluster folder anymore?)
-- give input parameters for alignment (possible for altNW?)
-- do not print camerons output (too much)
-- for genetic events: always sort the species list alphabetically, such that the entries can be summarized easily! write the summary, ePoPE
-- check all 'list' files such that only the real names of the clusters are printed, not all the paths.
-- error in altNW, if aligning "AA" and "B", it outputs one mismatch and one duplication, or the strings do not have the same length, in case - is inserted
-- option to switch off camerons part because the data already exists (thus output folder has to exist with the genes folder in it) --> parameter to give path to camerons output to be able to run it again
 - accept a phylogenetic tree in newick format as input to add the genetic events directly to the tree (one tree for each event?)
 - only cographs used for count of genetic events? what about noncographs? if not included in genetic events, count them differently!!!
 - what happens to elements in edge graphs that themselves do not have an edge? do they get lost? count as insertion! --> compare counts for edge graphs when counting in cluster files or in graph files
-- do more statistics: in how many clusters is each species represented, percentages of elements in certain clusters/cographs/noncographs..., 
-  length of clusters, report cluster information when only looking at synteny!
-- parameter to set cluster length limits
-- give option for user to switch of several parts of the pipeline
-- option to include newick tree
 - solution for noncographs 
 - write drawGraphs.pl
+##more parameters?
+- update help page/github page about new parameters
+- give input parameters for alignment (possible for altNW?)
+- give option for user to switch off several parts of the pipeline
+- parameter to set cluster length limits
+- option to include newick tree
+##later to optimize and make nice
+- include counting of singletons/NoneCluster/edgeGraphs/noedgeGraphs in pipeline (partly done, make it nice)
+- do not print camerons output (too much)
+- count genes already while working with them, thus in collectCluster.pl
+- check all 'list' files such that only the real names of the clusters are printed, not all the paths.
+- do more statistics: in how many clusters is each species represented, percentages of elements in certain clusters/cographs/noncographs..., 
+  length of clusters, (report cluster information when only looking at synteny!), average number of elements in clusters, average number of matches/mismatches etc, average alignment score. Averages per element? sort elements by type?
+- more detailed counting of duplication etc (how is it done? write it down!)
+-parallelize checking of graphs? http://search.cpan.org/dist/Parallel-Iterator/lib/Parallel/Iterator.pm#Example
 
 
 #General ideas and keywords:

@@ -40,11 +40,8 @@ while(<FA>){
     chomp;
     my $curfile = $_;
     my @cursplit = split '\.', $curfile;
-    my $curname=$cursplit[0];
+    my $curname=$cursplit[0]; #species
 
-#    print "current file: ",$curfile,"\n";
-#    print join(", ",@clusters);
-#    print "\n";
     open CF,"<$curfile" or die "can't open $curfile\n";
     while(<CF>){
 	my $line = $_;
@@ -52,15 +49,11 @@ while(<FA>){
 	##skip empty or starting with #
 	if($line =~ /^\s*#/) {next;}
 	if($line =~ /^$/) {next;}
-#	print "line: $line\n";
 	my @F = split '\t', $line;
 	my $arrlen = scalar @F; ##should be 9
-#	print "arrlen = $arrlen \n";
-#	print join(", ",@F); #check if indices are ok!
-
 	my $clusstart;
 	my $clusend;
-	#	if($F[$arrlen-1] eq "NA"){next;}
+
 	## clusstart is always the smaller number
 	if($F[$arrlen-4] eq "None")
 	{
@@ -99,7 +92,6 @@ while(<FA>){
 	$struc =~ s/$us/$p/g;
 	$struc =~ s/$til/$p/g;
 	$struc =~ s/$mini/$p/g;
-#	print "struc: $struc\n";
 	$F[$arrlen-2]=$struc;
 	
 	# work on sequence, find intron, delete - and turn to lower case
@@ -123,7 +115,6 @@ while(<FA>){
 	    {
 		$position = index($preseq, "*", $offset+1);
 		last if ( $position < 0 );		
-#		print "position= $position \n";
 		if($first==-1){$first = $position; push @intronpos, $first;}
 		else{
 		    $second = $position+1;
@@ -137,13 +128,10 @@ while(<FA>){
 		$offset=$position;
 	    }
 	    push @intronpos, length($preseq);
-#	    print @intronpos,"\n";
 	    my @substring = ();
 	    my $curpos =0;
 	    for(my $i=0;$i<scalar @intronpos;){
-#		print "curpos=$curpos,other=$intronpos[$i]\n";
 		my $tempstr = substr $preseq, $curpos, ($intronpos[$i]-$curpos);
-#		print "tempstr: $tempstr \n";
 		push @substring, $tempstr;
 		$curpos = $intronpos[$i+1];
 		$i=$i+2;
@@ -151,23 +139,16 @@ while(<FA>){
 	    }
 	    $seq = join("",@substring);
 	}
-#	print "seq: $seq\n";
 
 	my $minu = "-";
 	$seq =~ s/$minu//g;
 	my $seq2 = lc $seq;
-#	print "seq2: $seq2\n";
 
-#	my $intronvec = join ("",@introns);
 	$F[$arrlen-1]=$seq2;
 	push @F, $preseq;
 
 	my $outline = join("\t",@F);
-#	print "outline: $outline\n";
-	
-	#print "startend: $clusstart,$clusend \n";
 	my $outname = "cluster-$clusstart-$clusend.clus";
-#	print "outname: $outname \n";
 	if ( grep( /^$outname$/, @clusters ) ) {
 	    open($outf2, ">>$outpath/$outname");
 	    print $outf2 "$outline \n"; 
@@ -181,5 +162,3 @@ while(<FA>){
 	}
     }
 }
-##print join(", ",@clusters);
-##print "\n";

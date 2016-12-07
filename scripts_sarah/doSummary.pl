@@ -1,8 +1,10 @@
 #!/usr/bin/perl -w
 
-## perl doSummary.pl summary_outfile cographs_file noncographs_file specieslist_file numclus numjoinclus numsingle numnoedge numgraphs numnoneclus numrealgraphs genefile outpath
+## perl doSummary.pl summary_outfile cographs_file noncographs_file specieslist_file numclus numjoinclus numsingle numnoedge numgraphs numnoneclus numrealgraphs usingCM genefile outpath
 
-#genefile is the path to the user provided gene lists. if empty, take gene folder created while infernal run
+##if usingCM == 1, then specieslist is the specieslist created after infernal run, ignore specieslist
+
+##if usingCM == 0, the user provided a genelist which
 
 use Data::Dumper;
 use strict;
@@ -23,6 +25,7 @@ my $numnoedge = shift;
 my $numgraphs = shift;
 my $numnone = shift;
 my $numrealgraphs = shift;
+my $usingCM = shift;
 my $genefile = shift;
 my $outpath = shift;
 
@@ -125,6 +128,7 @@ my @species=();
 my @genenum = ();
 my $spcount = 0;
 
+
 while(<SL>){
     chomp;
     my $line = $_;
@@ -134,7 +138,7 @@ while(<SL>){
     $spcount++;
     my $cmd="";
     my $diff = 0;
-    if($genefile eq ""){
+    if($usingCM == 1){
 	$cmd = "wc -l $line";
 	$diff = 3;
     }

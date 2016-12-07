@@ -21,7 +21,7 @@
 # R >= 3.2 needed, libraries qgraph, igraph
 # Infernal >= 1.1.1
 
-#options -o -g -m -f -s -t -c -l -q -w -b -y -e -r -i -h -v
+#options -o -g -m -f -s -t -c -l -q -w -b -y -e -r -i -h -v -a
 #-output folder
 #-genomes folder
 #-maf folder
@@ -39,6 +39,7 @@
 #-infernal path
 #-help
 #-version & citation
+#-again (run the program again but without creating the blocks (without camerons part)
 
 #k61 perl: /opt/localperl/bin/
 #
@@ -54,20 +55,21 @@ use File::Find;
 
 # declare the perl command line flags/options we want to allow
 my %options=();
-getopts("hvko:g:m:f:s:t:c:l:q:w:b:y:e:r:i:", \%options);
+getopts("hvko:g:m:f:s:t:c:l:q:w:b:a:y:e:r:i:", \%options);
 
 
 ##define variables
 my $outpath;
-my $genomes;
-my $mafs;
-my $refspecies;
+my $genomes="";
+my $mafs="";
+my $refspecies="";
 my $seqsim;
 my $strucsim;
 my $cmfile="";
 my $genefile="";
 my $cmoption;
 my $perc="";
+my $pathtocam; #path to output of cams program (genes folder)
 my $pythonpath;
 my $evalin=0.01;
 my $perlpath;
@@ -78,6 +80,9 @@ my $extravalue;
 
 
 my $dirname = dirname(__FILE__);
+
+#test print
+print "current directory of main.pl: $dirname \n";
 
 
 #define other information
@@ -91,81 +96,35 @@ my $altnwpath = "$dirname/scripts_sarah";
 ##test if it work when altNW executable is in scripts folder. (altNW is only for 64 bit!)
 #"/scr/gin/bsarah/software/alternativeNW/dist/build/altNW/";
 
+
+
+
+
+##Help page
 if ($options{h})
 {
-    print "\nThis is the help page of $toolname.
-Use this is a tool to detect homologous genetic elements in different species 
-based on a model or a lit of the genetic elements and a multiple sequence 
-alignment of the target species. You can choose if secondary structure 
-information should be included in the analysis or not. \n";
-    print "\n";
-    print "Program use:
-perl main.pl -o OutputFolder -g GenomesFolder -m MafFolder -f refspecies 
-[-s seqSimilarity] [-t strucSimilarity] [-q threshold] {-c CM | -l genelist} 
--y python -e perl -r R -i infernal \n\n";
-    print "Parameter explanations:\n";
-    print "-o Outputfolder:
-please specify where the Output files should be created. 
-The folder has to exist. \n";
-    print "-g GenomesFolder:
-path to folder where genomes are located. The names of the genome files must 
-be the same as the species' name in the MSA. The genome files should have 
-fasta format and can be gzipped. \n";
-    print "-m MafFolder:
-path to the folder where multiple sequence alignments in maf format are 
-located. The names of the species in the maf files have to be the same as the 
-names of the genome files. Format should be: .maf.gz, .maf.Z, .maf.bz2 \n";
-    print "-f refspecies:
-the maf files were created by using one species as the reference species. 
-Please provide the name of the reference species as it can be found in the 
-multiple sequence alignment and as a genome file \n";
-    print "-s seqSimilarity and -t strucSimilarity:
-when testing for homology, only sequences with a sequence similarity above 
-seqSimilarity and a secondary structure similarity above strucSimilarity will 
-be considered as homologous whereas the value is measured as percentage, thus 
-1 means the sequences are the same. Default for both : 0.9; if for any of the 
-two parameter -1 is given, this information will be skipped anthe analysis 
-will only be based on one of both, sequence or structure information. \n";
-    print "-q threshold:
-remove a percentage of the lowest scoring blocks based on the MAF scores, 
-whereas the value is between 0 and 100 \n";
-    print "-c CM or -l genelist:
-either give a covariance model (cm file) for the gene of interest or give a 
-list of genes (format: .bed, .bed.gz, .bed.Z, .bed.bz2). The gene list should 
-contain one line per gene with tab separated elements as follows: chromosome     species     startCoord     endCoord     '+'or'-'     sequence     secondary_structure(optional). 
-If either secondary structure or sequence are not given or should not be taken 
-into account, please use the parameters -s and -t and set the corresponding 
-one to -1. \n";
-    print "-w for inclusion E-value threshold or -b for an inclusion bit score threshold as parameter for the infernal run:
-As described in the infernal manual (to be found here: eddylab.org/infernal), inclusion thresholds control which hits are considered to be significant.
-In case you want to include more putative sequences into our pipeline as significant hits based on the given covariance model, please either increase the e-value threshold using parameter -w (default = 0.01) or decrease the bitscore threshold with parameter -b (this value is usually not set when running infernal with default parameters). Infernal will consider sequences significant if their e-value <= the e-value threshold or their bit score >= the bit score threshold. The README_output file will explain where to find the infernal output in order to see which sequences were included in the analysis.\n";
-    print "-y python:
-please specify the path to where python is installed. Version should be >= 3.0\n";
-    print "-e perl:
-please specify the path to where perl is installed. Version should be >= 5.0\n";
-    print "-r R:
-please specify the path to where R is installed. Version should be >= 3.2.0 \n";
-    print "-i Infernal:
-please specify the path to where Infernal is installed. Version should be >= 1.1.1 . Infernal is only needed when using option -c. With option -l Infernal is not used. \n";
-    print "\n";
-    print "Further parameter:\n";
-    print "choose -k for contact information and citation, -v to see the 
-version information and -h to display this help message.\n\n";
+    my $helpstr = createHelp($toolname,$version,$citation,$contact);
+    print $helpstr;
     exit 0;
 }
+##Contact
 if ($options{k})
 {
     print "If you use this program, please cite: $citation \n";
     print "If you have further questions, please contact $contact \n";
     exit 0;
 }
+##Version
 if ($options{v})
 {
     print "Program version $version \n";
     exit 0;
 }
 
-if ($options{o}){$outpath = $options{o};}
+
+##outpath
+my $outpathstr = "";
+if ($options{o}){$outpath = $options{o}; $outpathstr = "-o $outpath";}
 else{print "No output path given (option -o)!\n"; exit 1;}
 ##if output folder doesnt exist, create it!
 if(-e $outpath){}
@@ -174,16 +133,26 @@ else{
     my @out42 = readpipe("$cmd42");
 }
 
-if ($options{g}){$genomes = $options{g}; 
+##Genomes
+my $genomesstr="";
+if ($options{g}){$genomes = $options{g}; $genomesstr = "-e genomes";
 		 #check if folder is not empty
 		 if(-e $genomes){} else{print "Genomes folder is empty! (option -g)\n"; exit 1;}
 }
+elsif($options{a}){}
 else{print "No path to genomes given! (option -g)\n"; exit 1;}
 
-if ($options{m}){$mafs = $options{m};}
+
+##Maf
+my $mafstr = "";
+if ($options{m}){$mafs = $options{m};$mafstr = "-m $mafs";}
+elsif($options{a}){}
 else{print "No path to maf files given! (option -m)\n"; exit 1;}
 
-if ($options{f}){$refspecies = $options{f};
+
+##reference species
+my $refspeciesstr = "";
+if ($options{f}){$refspecies = $options{f};$refspeciesstr="-f $refspecies";
 		 #check if file exists
 		 my $n1 = "$refspecies\.fa";
 		 my $n2 = "$refspecies\.fasta";
@@ -196,90 +165,112 @@ if ($options{f}){$refspecies = $options{f};
 		 elsif(-f "$genomes\/$refspecies"){}
 		 else{print "No genome file for reference species in $genomes (option -f)\n"; exit 1;}
 }
+elsif($options{a}){}
 else{print "No references species given! (option -f)\n"; exit 1;}
 
+
+##similarity parameter
 if ($options{s}){$seqsim = $options{s};}
 else{$seqsim=0.9;}
 if ($options{t}){$strucsim = $options{t};}
 else{$strucsim=0.9;}
-
 if($seqsim == -1 && $strucsim == -1){
     print "Similarity thresholds for both, sequence and structure is -1! At least one has to be > 0! (Use parameter -s for sequence and -t for structure to specify the value) \n"; exit 1;
 }
 
-my $cmoptstr;
+##CM
+my $cmoptstr="";
+my $usingCM = 1; ##take care for the option if either cm is used or a gene list is given. this changes the result page later on
+if($options{c}){$cmfile = $options{c};$cmoption = "-sg $cmfile"; $cmoptstr = "-c $cmfile";}
+elsif($options{l}){$genefile = $options{l};$cmoption = "-og $genefile"; $cmoptstr = "-l $genefile"; $usingCM = 0;}
+elsif($options{a}){}
+else{print "Please give either a cm file (option -c) or a list of genes (option -l)! \n"; exit 1;}
 
-if ($options{c}){$cmfile = $options{c};}
-if ($options{l}){$genefile = $options{l};}
-if($cmfile eq "" && $genefile eq ""){print "Please give either a cm file (option -c) or a list of genes (option -l)! \n"; exit 1;}
-elsif($cmfile eq ""){$cmoption = "-og $genefile"; $cmoptstr = "-l $genefile"}
-else{$cmoption = "-sg $cmfile"; $cmoptstr = "-c $cmfile";}
 
+##Percentage of the lowest scoring blocks based on the MAF scores to be removed (between 0 and 100)
 if ($options{q}){$perc = "-q $options{q}";}
 else{$perc = "";}
 
-my $inclopt="";
 
+##infernal parameter
+my $inclopt="";
 if ($options{w}){$inclopt = "-incE $options{w}";}
 if ($options{b}){$inclopt = "-incT $options{b}";}
 
 
+##run again with genes folder already created
+my $doitagainstr = "";
+my $doitagain="";
+if ($options{a}){$doitagain = "$options{a}";$genefile="$options{a}";$usingCM=0;$doitagainstr="-a $doitagain";}
+
+
+##Pathes
+##Python
 if ($options{y}){$pythonpath = $options{y};}
 else{print "No path to python3 given! (option -y)\n"; exit 1;}
 
+##Perl
 if ($options{e}){$perlpath = $options{e};}
 else{print "No path to perl given! (option -e)\n"; exit 1;}
 
+##R (not needed anymore)
 if ($options{r}){$rpath = $options{r};}
 else{print "No path to R given! (option -r)\n"; exit 1;}
 
-#infernal only needed when option -c
+#Infernal, only needed when option -c
 if ($options{i}){$infernalpath = $options{i};}
 elsif($options{l}){$infernalpath = "";}
 else{print "No path to infernal given! (option -i)\n"; exit 1;}
 
-my $optstr = "-o $outpath -g $genomes -m $mafs -f $refspecies -s $seqsim -t $strucsim $cmoptstr $perc $inclopt -y $pythonpath -e $perlpath -r $rpath -i $infernalpath";
 
+
+##Program call
+my $optstr = "$outpathstr $genomesstr $mafstr $refspeciesstr -s $seqsim -t $strucsim $doitagainstr $cmoptstr $perc $inclopt -y $pythonpath -e $perlpath -r $rpath -i $infernalpath";
 print "program called with: $optstr \n";
 
 
+##DEBUG
 ##pipe all possible errors in errorfile
 system("touch $outpath\/errorsPart2.txt");
 my $err = "$outpath\/errorsPart2.txt";
-#open(my $outerr,">>$outpath\/$err");
 system("touch $outpath\/errorsPart1.txt");
 my $err0 = "$outpath\/errorsPart1.txt";
-#other debug prints
+##other debug prints
 system("touch $outpath\/debug.txt");
 my $db = "$outpath\/debug.txt";
+
+
 
 
 ##start the program
 my $start_string = strftime "%a %b %e %H:%M:%S %Y", localtime;
 
-#my $cmd0;
-print "analysis of maf files started (this might take a while)..\n";
-if($perc eq ""){
-#    $cmd0 = "$pythonpath\/python3 $scripts_cam\/main.py $cmoption $genomes $mafs $outpath $refspecies 2>> $err "; #$infernalpath not yet done!!!
 
-    open(PROG,"$pythonpath\/python3 $scripts_cam\/main.py $cmoption $inclopt $genomes $mafs $infernalpath $outpath $refspecies 2>>$err0 |") or die "Couldn't start prog!";
-    while(<PROG>){print "$_";}
+##Cam's part (sort the genetic elements into genomic anchors based on the maf blocks)
+my $genesfolder="";
+if(! $options{a}){
+    print "analysis of maf files started (this might take a while)..\n";
+    if($perc eq ""){
+	open(PROG,"$pythonpath\/python3 $scripts_cam\/main.py $cmoption $inclopt $genomes $mafs $infernalpath $outpath $dirname $refspecies 2>>$err0 |") or die "Couldn't start prog!";
+	while(<PROG>){print "$_";}
+    }
+    else{
+	open(PROG,"$pythonpath\/python3 $scripts_cam\/main.py $perc $cmoption $inclopt $genomes $mafs $infernalpath $outpath $dirname $refspecies 2>>$err0 |") or die "Couldn't start prog!";
+	while(<PROG>){print "$_";}
+    }
+        print "Done!\n";
+    $genesfolder = "$outpath\/genes";
 }
 else{
-#    $cmd0 = "$pythonpath\/python3 $scripts_cam\/main.py $perc $cmoption $genomes $mafs $outpath $refspecies 2>> $err"; #$infernalpath not yet done!!!
-
-    open(PROG,"$pythonpath\/python3 $scripts_cam\/main.py $perc $cmoption $inclopt $genomes $mafs $infernalpath $outpath $refspecies 2>>$err0 |") or die "Couldn't start prog!";
-    while(<PROG>){print "$_";}
+    $genesfolder = $doitagain;
 }
 
-#print "\n$cmd0 \n";
-#my @out0 = readpipe("$cmd0");
-print "Done!\n";
 
-#construct clusters
+
+##Construct clusters
 my $cmd1 = "mkdir $outpath\/clusters 2>>$err";
-my $cmd2 = "ls $outpath\/genes/*.bed \> $outpath\/genes\/specieslist 2>>$err";
-my $cmd3 = "$perlpath\/perl $scripts_sarah\/collectCluster\.pl $outpath\/genes\/specieslist $outpath\/genes $outpath\/clusters 2>>$err";
+my $cmd2 = "ls $genesfolder\/*.bed \> $genesfolder\/specieslist 2>>$err";
+my $cmd3 = "$perlpath\/perl $scripts_sarah\/collectCluster\.pl $genesfolder\/specieslist $genesfolder $outpath\/clusters 2>>$err";
 my $cmd4 = "ls $outpath\/clusters/*.clus > $outpath\/clusters/precluslist 2>>$err";
 my $cmd5 = "$perlpath/perl $scripts_sarah\/getNumbers.pl $outpath\/clusters/precluslist $outpath\/clusters 2>>$err";
 print "construct clusters..";
@@ -288,11 +279,6 @@ my @out2 = readpipe("$cmd2");
 my @out3 = readpipe("$cmd3");
 my @out4 = readpipe("$cmd4");
 my @out5 = readpipe("$cmd5");
-#print "$cmd1 \n";
-#print "$cmd2 \n";
-#print "$cmd3 \n";
-#print "$cmd4 \n";
-#print "$cmd5 \n";
 print "Done!\n";
 
 #sort clusters without specific coordinates (none cluster)
@@ -305,28 +291,31 @@ my @out6 = readpipe("$cmd6");
 my @out7 = readpipe("$cmd7");
 my @out7a = readpipe("$cmd7a");
 my @out7b = readpipe("$cmd7b");
-#print "$cmd6 \n";
-#print "$cmd7 \n";
 print "Done!\n";
 
 #create bedfile about clusters (without none clusters)
+my $outname = "allClusters.bed";
 my $cmd8 = "ls $outpath\/clusters\/\*\.clus \> $outpath\/clusters\/clusList 2>>$err";
-my $cmd9 = "$perlpath\/perl $scripts_sarah\/writeBED\.pl $outpath\/clusters\/clusList $outpath 2>>$err";
+my $cmd9 = "$perlpath\/perl $scripts_sarah\/writeBED\.pl $outpath\/clusters\/clusList $outpath $outname 2>>$err";
 print "create BED file..";
 my @out8 = readpipe("$cmd8");
 my @out9 = readpipe("$cmd9");
-#print "$cmd8 \n";
-#print "$cmd9 \n";
 print "Done!\n";
 
 #sort list of clusters by start coordinate
 my $cmd10 = "$perlpath\/perl -pi.bak -e 's/-/ /g' $outpath\/clusters/clusList 2>>$err";
 my $cmd11 = "sort -k2 -n $outpath\/clusters/clusList > $outpath\/clusters/clusList_sorted 2>>$err";
 my $cmd12 = "$perlpath\/perl -pi.bak -e 's/ /-/g' $outpath\/clusters/clusList_sorted 2>>$err";
+
 #join clusters and create list about which clusters were joined
 my $cmd13 = "$perlpath\/perl $scripts_sarah\/joinClusters.pl $outpath\/clusters/clusList_sorted $outpath\/clusters $outpath\/clusters/joinlist 2>>$err";
 #create list or current joined clusters
 my $cmd14 = "ls $outpath\/clusters/*.clus > $outpath\/clusters/cluslist_joined 2>>$err";
+
+#create bedfile about joined clusters (without none clusters)
+my $outname2 = "allClusters_joined.bed";
+my $cmd9a = "$perlpath\/perl $scripts_sarah\/writeBED\.pl $outpath\/clusters\/cluslist_joined $outpath $outname2 2>>$err";
+
 #sort out singletons
 my $cmd15 = "mkdir $outpath\/clusters/singletons 2>>$err";
 my $cmd16 = "$perlpath\/perl $scripts_sarah\/sortCluster.pl $outpath\/clusters/cluslist_joined $outpath\/clusters/singletons 2>>$err";
@@ -338,9 +327,11 @@ my @out11 = readpipe("$cmd11");
 my @out12 = readpipe("$cmd12");
 my @out13 = readpipe("$cmd13");
 my @out14 = readpipe("$cmd14");
+my @out9a = readpipe("$cmd9a");
 my @out15 = readpipe("$cmd15");
 my @out16 = readpipe("$cmd16");
 my @out17 = readpipe("$cmd17");
+
 #print "$cmd10 \n";
 #print "$cmd11 \n";
 #print "$cmd12 \n";
@@ -499,8 +490,11 @@ print $outs "======Output statistics======\n";
 print $outs "\n";
 close($outs);
 
+if($genefile eq ""){$genefile = ".";}
+    
+my $cmd34 = "$perlpath\/perl $scripts_sarah\/doSummary.pl $outpath\/summary.txt $outpath\/graphs/cographs $outpath\/graphs/noncographs $genesfolder\/specieslist $numClus $numJoinClus $numSingles $numnoEdgeGr $numGraphs $numnoneclus $numrealgraphs $usingCM $genefile $outpath 2>>$err";
 
-my $cmd34 = "$perlpath\/perl $scripts_sarah\/doSummary.pl $outpath\/summary.txt $outpath\/graphs/cographs $outpath\/graphs/noncographs $outpath\/genes\/specieslist $numClus $numJoinClus $numSingles $numnoEdgeGr $numGraphs $numnoneclus $numrealgraphs $genefile $outpath 2>>$err";
+print "doSummary: $cmd34 \n";
 
 my @out34 = readpipe("$cmd34");
 print "Done!\n";
@@ -517,3 +511,87 @@ print "If you have any further questions please write to:\n  $contact \n";
 ##TODO version citation help page....
 
 
+
+
+sub createHelp{
+    my @inp=@_;
+    my $toolname = $inp[0];
+    my $version = $inp[1];
+    my $citation = $inp[2];
+    my $contact = $inp[3];
+
+    
+my $outstr = "";
+    
+    $outstr = "$outstr \nThis is the help page of $toolname.
+Use this is a tool to detect homologous genetic elements in different species 
+based on a model or a lit of the genetic elements and a multiple sequence 
+alignment of the target species. You can choose if secondary structure 
+information should be included in the analysis or not. \n";
+    $outstr = "$outstr \n";
+    $outstr = "$outstr Program use:
+perl main.pl -o OutputFolder -g GenomesFolder -m MafFolder -f refspecies 
+[-s seqSimilarity] [-t strucSimilarity] [-q threshold] [-a genesFolder] {-c CM | -l genelist} [-w incE] [-b incT]
+-y python -e perl -r R -i infernal \n\n";
+    $outstr = "$outstr Parameter explanations:\n";
+    $outstr = "$outstr -o Outputfolder:
+please specify where the Output files should be created. 
+The folder has to exist. \n";
+    $outstr = "$outstr -g GenomesFolder:
+path to folder where genomes are located. The names of the genome files must 
+be the same as the species' name in the MSA. The genome files should have 
+fasta format and can be gzipped. Not required if option -a is taken. \n";
+    $outstr = "$outstr -m MafFolder:
+path to the folder where multiple sequence alignments in maf format are 
+located. The names of the species in the maf files have to be the same as the 
+names of the genome files. Format should be: .maf.gz, .maf.Z, .maf.bz2.  Not required if option -a is taken. \n";
+    $outstr = "$outstr -f refspecies:
+the maf files were created by using one species as the reference species. 
+Please provide the name of the reference species as it can be found in the 
+multiple sequence alignment and as a genome file. Not required if option -a is taken. \n";
+    $outstr = "$outstr -a pathToGenesFolder:
+Give this options in case creating the clusters and graphs should be redone without analyzing the maf files
+again. In this case, the option -a will specify the folder with .bed files for each species including information
+about adjacent maf blocks (e.g. the genes folder from a former run could be stored and reused).\n";
+    $outstr = "$outstr -s seqSimilarity and -t strucSimilarity:
+when testing for homology, only sequences with a sequence similarity above 
+seqSimilarity and a secondary structure similarity above strucSimilarity will 
+be considered as homologous whereas the value is measured as percentage, thus 
+1 means the sequences are the same. Default for both : 0.9; if for any of the 
+two parameter -1 is given, this information will be skipped anthe analysis 
+will only be based on one of both, sequence or structure information. \n";
+    $outstr = "$outstr -q threshold:
+remove a percentage of the lowest scoring blocks based on the MAF scores, 
+whereas the value is between 0 and 100 \n";
+    $outstr = "$outstr -c CM or -l genelist:
+either give a covariance model (cm file) for the gene of interest or give a 
+list of genes (format: .bed, .bed.gz, .bed.Z, .bed.bz2). The gene list should 
+contain one line per gene with tab separated elements as follows: chromosome     species     startCoord     endCoord     '+'or'-'     sequence     secondary_structure(optional). 
+If either secondary structure or sequence are not given or should not be taken 
+into account, please use the parameters -s and -t and set the corresponding 
+one to -1. Not required if option -a is taken. \n";
+    $outstr = "$outstr -w for inclusion E-value threshold or -b for an inclusion bit score threshold as parameter for the infernal run:
+As described in the infernal manual (to be found here: eddylab.org/infernal), inclusion thresholds control which hits are considered to be significant.
+In case you want to include more putative sequences into our pipeline as significant hits based on the given covariance model, please either increase the e-value threshold using parameter -w (default = 0.01) or decrease the bitscore threshold with parameter -b (this value is usually not set when running infernal with default parameters). Infernal will consider sequences significant if their e-value <= the e-value threshold or their bit score >= the bit score threshold. The README_output file will explain where to find the infernal output in order to see which sequences were included in the analysis.\n";
+    $outstr = "$outstr -y python:
+please specify the path to where python is installed. Version should be >= 3.0\n";
+    $outstr = "$outstr -e perl:
+please specify the path to where perl is installed. Version should be >= 5.0\n";
+    $outstr = "$outstr -r R:
+please specify the path to where R is installed. Version should be >= 3.2.0 \n";
+    $outstr = "$outstr -i Infernal:
+please specify the path to where Infernal is installed. Version should be >= 1.1.1 . Infernal is only needed when using option -c. With option -l Infernal is not used. \n";
+    $outstr = "$outstr \n";
+    $outstr = "$outstr Further parameter:\n";
+    $outstr = "$outstr choose -k for contact information and citation, -v to see the 
+version information and -h to display this help message.\n\n";
+
+
+return $outstr;
+
+
+
+
+
+
+}

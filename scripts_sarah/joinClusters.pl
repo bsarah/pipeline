@@ -18,8 +18,10 @@ open FA,"<$filename" or die "can't open $filename\n";
 my $curfile="";
 my $curstart = 0;
 my $curend = 0;
+my $curnum = 0;
 
-my $count=0;
+my @counts = ("a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z");
+my $ct=0;
 my $num=0;
 #print "$curfile \n";
 
@@ -30,39 +32,31 @@ while(<FA>){
     my $path;
     my $suffix;
     ($name,$path,$suffix) = fileparse($prenewfile);
-
- #   print "$prenewfile\n";
-#    my $newfile = substr($prenewfile,7,length($prenewfile)-7);
-  #  print "newfile: $newfile\n";
     my @F=split '-', $name;
     my $newstart = $F[1];
     my $preend = $F[2];
-    my @G = split '\.', $preend;
+    my @G = split '\.', $preend; #works also fine, if there is no . in the word
     my $newend = $G[0];
     my $newnum;
-    if(scalar @F <= 3){
+    if(scalar @F <= 3){ ##if getNumbers didn't work, new numbers are assigned to the clusters
 	$newnum = $num;
 	$num++;
     }
     else{
-	$newnum = $F[3];
+	my @tmpsplit = split '\.', $F[3];
+	my @numsplit = split ':', $tmpsplit[0];
+	$newnum = $numsplit[(scalar @numsplit)-1]; ##take the last entry which is the current higher number
     }
-#    my @G = split '\.',$preend;
-#    my $newnum = $G[0];
- #   print "curfiles: $curfile, $curstart, $curend\n";
- #   print "newfiles: $newfile, $newstart, $newend\n";
 
     if($newstart <= $curend)#join the clusters
     {
-#	print("joining\n");
-	my @H= split '-', $curfile;
-	my @I=split '\.', $H[2];
-	my $curnum = $I[0];
-	my $joinedfile = "$outpath\/cluster-$curstart-$newend-joined\.clus";
+	my $joinedfile = "$outpath\/cluster-$curstart-$newend-$curnum\:$newnum\.clus";
+	##in case a filename occurs more than once (does this happen?)
 	if($curfile eq $joinedfile || $prenewfile eq $joinedfile)
 	{
-	    $joinedfile = "$outpath\/cluster-$curstart-$newend-joined$count\.clus";
-	    $count++;
+	    $joinedfile = "$outpath\/cluster-$curstart-$newend-$curnum\:$newnum$counts[$ct]\.clus";
+	    if($ct >= scalar @counts){$ct = 0;}
+	    else{$ct++;}
 	}
 	system("cat $curfile $prenewfile > $joinedfile");
 	system("rm $curfile");
@@ -79,7 +73,7 @@ while(<FA>){
 	$curfile = $prenewfile;
 	$curstart = $newstart;
 	$curend = $newend;
-	print $outf "nojoin: $newnum\n";
+	$curnum = $newnum;
     }
 
 
