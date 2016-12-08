@@ -36,7 +36,7 @@ from os.path import isfile, join #join joins a file extension with a file name
 from parser_MAF_lessMem import maf2bed #maf2bed parses maf files and writes bed files
 from parser_infernal import parseInfernal #parses infernal files and returns a list of Genes
 from parser_genes import parseGenes #parses user provied gene files and returns a list of Genes
-
+from helperFunctions import *
 
 #globals
 #locationInfernal = '/opt/bin'
@@ -65,11 +65,18 @@ parser.add_argument("-incT", action="store", type=float, help="consider sequence
 
 args = parser.parse_args()
 
+'''
+handel irregularites in args
+'''
+args.genomes, args.multiSeq, args.infernalPath, args.outPutDir, args.pathToRepo = endSlash((args.genomes, args.multiSeq, args.infernalPath, args.outPutDir, args.pathToRepo))
+
+'''
 if args.infernalPath.endswith('/'):
     locationInfernal = args.infernalPath.rstrip('/')
 else:
     locationInfernal = args.infernalPath
-    
+'''
+
 args.quality = float(args.quality)
 if args.quality < 0 or args.quality > 99:
     raise Exception("quality value must be a number between 0 and 99 corresponding to the percentage of "\
@@ -78,12 +85,20 @@ if args.quality < 0 or args.quality > 99:
 if args.own_genes != None and args.search_genes != None:
     raise Exception("both own_genes and search_genes given. own_genes and search_genes are mutually exclusize.")
 
+#handle outputdir irregularities
 if not args.outPutDir.endswith('/'):
     args.outPutDir = args.outPutDir + '/'
 
+#handle pathToRepo irregularities
 if not args.pathToRepo.endswith('/'):
     args.pathToRepo = args.pathToRepo + '/'
-    
+if not args.pathToRepo.endswith('/pipeline/'):
+    if args.pathToRepo.endswith('/scripts_cam/'):
+        pass
+    else:
+        args.pathToRepo = args.pathToRepo + 'pipeline/scripts_cam/'
+else:
+    args.pathToRepo = args.pathToRepo + 'scripts_cam/'
 #returns a list of all the files in a given directory with the full file path
 genomeFiles = [join(args.genomes,f) for f in listdir(args.genomes) if isfile(join(args.genomes,f))]
 #multiSeqFiles = [join(args.multiSeq,f) for f in listdir(args.multiSeq) if isfile(join(args.multiSeq,f))]
@@ -125,23 +140,19 @@ if args.search_genes != None:#if we need to search for genes
             infernalOptArgs = ' --incE '+str(args.incE)
         else:
             infernalOptArgs = ' --incE '+str(args.incE)+' --incT '+str(args.incT)
-    #print("incE: {}".format(str(args.incE)))
-    #print("incT: {}".format(str(args.incT)))
-    #print("optArgs: {}".format(infernalOptArgs))
             
     #search the genomes for genes
     for g_file in genomeFiles:
 
         species = g_file.split('/')[-1].split('.')[0]
         print("searching {} for genes of interest...".format(g_file))
-        subprocess.call(locationInfernal+'/cmsearch -o '+args.outPutDir+'infernalIn/'+species+'.out '+infernalOptArgs+' '+args.search_genes+' '+g_file, shell=True)
+        subprocess.call(args.infernalPath+'/cmsearch -o '+args.outPutDir+'infernalIn/'+species+'.out '+infernalOptArgs+' '+args.search_genes+' '+g_file, shell=True)
                 
         print("done searching genome {}/{}".format(i,len(genomeFiles)))
         i+=1
 
     print("converting infernal files to list of gene objects...")
     geneObjects, versionInfo, listOfSpecies = parseInfernal(args.outPutDir+'/infernalIn', [args.referenceSpecies])
-    print(listOfSpecies)
     print("done.")
 
 elif args.own_genes != None:
