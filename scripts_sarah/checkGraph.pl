@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 
-## perl checkGraph.pl .edlilist inpath outpath secsim strucsim cographlist noncographlist noEdgeGraohs_list edgegraphs
+## perl checkGraph.pl .edlilist inpath outpath secsim strucsim cographlist noncographlist noEdgeGraohs_list edgegraphs summary
 
 ##outpath is for files that will be visualized with R (no weights), extra folder
 ## .edli is the edgelist file with node1 node2 seqval strucval (separated with space)
@@ -29,11 +29,35 @@ my $cglist = shift;
 my $ncglist = shift;
 my $noedges = shift;
 my $edgelist = shift;
+my $summary = shift;
 
 open(my $outcg, ">>$cglist");
 open(my $outn,">>$ncglist");
 open(my $outo, ">>$noedges");
 open(my $oute, ">>$edgelist");
+
+open(my $outs, ">>$summary");
+
+my $numcg = 0;
+my $numcliques = 0;
+my $numng = 0;
+my $sumnodescg = 0;
+my $sumnodesng = 0;
+my $sumedgescg = 0;
+my $sumedgesng = 0;
+my $sumdenscg = 0;
+my $sumdensng = 0;
+
+my $maxncg = 0;
+my $maxecg = 0;
+my $minncg = 3000;
+my $minecg = 3000;
+
+
+my $maxnng = 0;
+my $maxeng = 0;
+my $minnng = 3000;
+my $mineng = 3000;
 
 open FA,"<$file" or die "can't open $file\n";
 while(<FA>){
@@ -159,18 +183,74 @@ while(<FA>){
     #print "edges: $edtmp \n";
     if($density == 0 || $density == 2){
 	print $outcg "$almostname\t$numn\t$nume\t$density\n";
+	$numcg++;
+	$numcliques++;
+	$sumnodescg = $sumnodescg + $numn;
+	$sumedgescg = $sumedgescg + $nume;
+	$sumdenscg = $sumdenscg + $density;
+	if($numn > $maxncg){$maxncg = $numn;}
+	if($numn < $minncg){$minncg = $numn;}
+	if($nume > $maxecg){$maxecg = $nume;}
+	if($nume < $minecg){$minecg = $nume;}
     }
     else{
 	my $cg = IsCograph(join(' ',@nodes),@uniqedges);
 	if($cg ==1){
 	    print $outcg "$almostname\t$numn\t$nume\t$density\n";
+	    $numcg++;
+	    $sumnodescg = $sumnodescg + $numn;
+	    $sumedgescg = $sumedgescg + $nume;
+	    $sumdenscg = $sumdenscg + $density;
+	    if($numn > $maxncg){$maxncg = $numn;}
+	    if($numn < $minncg){$minncg = $numn;}
+	    if($nume > $maxecg){$maxecg = $nume;}
+	    if($nume < $minecg){$minecg = $nume;}
 	}
 	else{
 	    print $outn "$almostname\t$numn\t$nume\t$density\n";
+	    $numng++;
+	    $sumnodesng = $sumnodesng + $numn;
+	    $sumedgesng = $sumedgesng + $nume;
+	    $sumdensng = $sumdensng + $density;
+	    if($numn > $maxnng){$maxnng = $numn;}
+	    if($numn < $minnng){$minnng = $numn;}
+	    if($nume > $maxeng){$maxeng = $nume;}
+	    if($nume < $mineng){$mineng = $nume;}
+
 	}
     }
 }    
-    
+
+
+my $avnumncg = sprintf("%.2f",$sumnodescg/$numcg);
+my $avnumecg = sprintf("%.2f",$sumedgescg/$numcg);
+my $avdenscg = sprintf("%.2f",$sumdenscg/$numcg);
+
+my $avnumnng = sprintf("%.2f",$sumnodesng/$numng);
+my $avnumeng = sprintf("%.2f",$sumedgesng/$numng);
+my $avdensng = sprintf("%.2f",$sumdensng/$numng);
+
+
+print $outs "===============Graph analysis\===============\n";
+print $outs "Number of cographs: $numcg \n";
+print $outs "Number of cliques (included in cographs): $numcliques \n";
+print $outs "Number of noncographs: $numng \n";
+print $outs "Cographs: 
+  average node number: $avnumncg;
+  average edge number: $avnumecg; 
+  Max\/min number of nodes: $maxncg\/$minncg; 
+  Max\/min number of edges: $maxecg\/$minecg; 
+  average density:  $avdenscg \n";
+print $outs "Noncographs: 
+  average node number: $avnumnng; 
+  average edge number: $avnumeng; 
+  Max\/min number of nodes: $maxnng\/$minnng; 
+  Max\/min number of edges: $maxeng\/$mineng; 
+  average density:  $avdensng \n";
+print $outs "\n";
+
+
+
 ##check if it is a cograph
     
 sub IsCograph{ #arguments is nodestring, uniqedgelist, input is a connected graph

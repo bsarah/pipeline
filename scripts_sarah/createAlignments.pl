@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-## perl getDuplication edlilist inpath outpath pathtonw summaryfile
+## perl createAlignments.pl edlilist outpath pathtonw secsim strsim geneticEvents summary
 
 ##program will produce sequences of letters, where the same letter means similar sequences, depending on the threshold.
 ##thus one letter for each connected component.
@@ -10,25 +10,22 @@
 ## secsim and strucsim give the similarity thresholds for the sequence and structure, if one of them (and only one!) is -1, do not pay attention to this one, take only the other one into account
 
 
-## Only use graphs with edges as the alignments are only done if the thresholds fit!!!
-##BUT: this doesn't include single elements in the clusters which count as insertion/deletion!
-
-#thus take the weighted edge lists as input for graphs and use the thresholds
 
 use Data::Dumper;
 use strict;
 use warnings;
 use List::Util qw(any none first);
-#use Time::localtime;
 use POSIX qw(strftime);
 
+
 my $file = shift;
-my $inpath = shift;
 my $outpath=shift;
-#my $secsim = shift;
-#my $strucsim = shift;
 my $pathtonw = shift;
-my $sumary = shift;
+my $seqlim = shift;
+my $strlim = shift;
+my $sumary = shift; #geneticEvents
+my $summary = shift; #usual summary after running the script
+
 
 #create a hash with strings that show spec1_spec2,spec1,spec3,spec5 as key whereas
 #spec1 is the current species and the others are in the same cluster.
@@ -43,12 +40,15 @@ my %misevents =();
 
 open(my $outs,">>$sumary");
 
-#curfile are the .gr files, thus only showing the possible edges
+open(my $outm,">>$summary");
+
+
+
+#curfile are the .edli files, such that the user can run the analysis again and change the thresholds
 if(-z $file){
     print $outs "no sequences found that fulfill the similarity thresholds, thus, only graphs without edges and no alignments. Lower the similarity thresholds for sequences and/or secondary structure to see alignments (options -s, -t). \n";
     exit 0;
 }
-
 
 open FA,"<$file" or die "can't open $file\n";
 while(<FA>){
@@ -62,12 +62,16 @@ while(<FA>){
     open(my $outgr,">>$outpath\/$newname");
 
     print $outgr ">$almostname\n";
-   
-    my @edges = ();
-    my @nodes= ();
-    my @uniqedges =();
-    my @species=();
 
+    ##one letter codes needed
+    ##are all the chars ok?
+    my @letters = ('A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','0','1','2','3','4','5','6','7','8','9','!','@','#','$','%','^','&','*','(',')','=','+','_','-','~'); 
+    my $letcount = 0;
+   
+    my %node2letter = ();
+    my %species = ();
+    my %start2node = ();
+    
     open CF,"<$curfile" or die "can't open $curfile\n";
     while(<CF>){
 	chomp;
@@ -75,142 +79,74 @@ while(<FA>){
 	my @F = split ' ', $line;
 	my $n1 = $F[0];
 	my $n2 = $F[1];
-#	print "nodes: $n1,$n2\n";
-	my @F1 = split '_', $n1;
-#	my @F2 = split '_', $n2;
-	my $spec1 = $F1[(scalar @F1)-5];
-#	my $spec2 = $F2[(scalar @F2)-5];
-	if(none {$_ eq $spec1} @species){
-#	    print "pushspec\n";
-	    push @species, $spec1;
-	}
-#all possible edges exist, thus each species will be spec1 at some point
-#	if(none {$_ eq $spec2} @species){
-#	    push @species, $spec2;
-#	}
+	my $seqsim = $F[2];
+	my $strsim = $F[3];
 
+	my @G = split '_', $n1;
+	my $spec = $G[(scalar @G) - 5];
+	$species{$spec} = "";
+	my $startvec = $G[(scalar @G) - 3] + (0.0001 * $G[(scalar @G) - 4]);
+	if(exists $start2node{$startvec}){}
+	else{$start2node{$startvec} = $n1;}
+	
+	
+	if($seqsim >= $seqlim && $strsim >= $strlim){
+	    ##similarity fits, nodes get the same letter
+	    if (exists $node2letter{$n1}) {
+		if(exists $node2letter{$n2}){
+		    if($node2letter{$n1} eq $node2letter{$n2}){}
+		    else{$node2letter{$n2} = $node2letter{$n1};} ##should fit as we iterate over all nodes.
+		}
+		else{
+		    $node2letter{$n2} = $node2letter{$n1};
+		}
+	    } 
+	    else{
+		if(exists $node2letter{$n2}){
+		    $node2letter{$n1} = $node2letter{$n2};
+		}
+		else{
+		    $node2letter{$n1} = $letters[$letcount];
+		    $node2letter{$n2} = $letters[$letcount];
+		    $letcount++;
+		}
+	    }
+	}
+	else{
+	    ##similarity does not fit, nodes get different letters.
+	    if (exists $node2letter{$n1}) {}
+	    else{$node2letter{$n1} = $letters[$letcount];$letcount++;}
+	    if (exists $node2letter{$n2}) {}
+	    else{$node2letter{$n2} = $letters[$letcount];$letcount++;}
+	}
 
-	my $ed = "$n1 $n2";
-	push @edges, $ed;
-	
-	my $ed0;
-	if($n1 lt $n2){$ed0 = "$n1 $n2";}
-	else{$ed0 = "$n2 $n1";}
-	if(none {$_ eq $ed0} @uniqedges){
-	    push @uniqedges, $ed0;
-	}
-	
-	if(none {$_ eq $n1} @nodes){
-#	    print "pushnode\n";
-	    push @nodes,$n1;
-	}
-	
     }
-
-#    print "curfile:\n";
-#    print "$curfile\n";
     
-#    print "len nodes:\n";
-#    print scalar @nodes;
-#    print "\n";
-    
-    my $specstr = join(',',@species);
 
-#    print "len species:\n";
-#    print scalar @species;
-#    print "\n";
-	
-    my @ccs = GetCCs(join(' ',@nodes),@uniqedges);
+    my $specstr = "";
+    $specstr = join(',',(keys %species));
 
 
-#    print "len nodes2:\n";
-#    print scalar @nodes;
-#    print "\n";
-
-#    print "len species2:\n";
-#    print scalar @species;
-#    print "\n";
-
-#    print "ccs:\n";
-#    print join(" ",@ccs);
-#    print "\n";
-    
-#    print "len ccs:\n";
-#    print scalar @ccs;
-#    print "\n";
-
-    
-    my @letters = ('A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z');
-    
-    my %n2l=(); #hash to translate each node to a letter
-
-    #assign letter to each connected component
-    for(my $c=0;$c< scalar @ccs;$c++){
-	my @N = split " ", $ccs[$c];
-	for(my $n=0;$n< scalar @N;$n++){
-	    $n2l{$N[$n]}=$letters[$c];
-	}
-	print $outgr "$letters[$c]\t$ccs[$c]\n";
+    ##for every species, sort nodes in the correct order and create the sequences to be aligned
+    foreach my $k1 (sort { $a <=> $b } keys(%start2node) ) {
+	my $curnode = $start2node{$k1};
+	my @H = split "_", $curnode;
+	my $spec = $H[1];
+	#my $sstr = $species{$spec};
+	$species{$spec} = "$node2letter{$curnode}";
     }
-
-#    print "n2l hash\n";
-#    print Dumper(\%n2l);
-#    print "\n";
-    
-    my %sp2nod = ();
-    for(my $p=0;$p<scalar @species;$p++){
-
-	$sp2nod{$species[$p]}="";
-    }
-
-    #write string of nodes for each species
-    for(my $q=0;$q < scalar @nodes;$q++){
-	my @T= split "_", $nodes[$q];
-	my $spec = $T[(scalar @T)-5];
-	my $spstr = $sp2nod{$spec};
-	$spstr = "$spstr $nodes[$q]";
-	$sp2nod{$spec}=$spstr;
-    }
-
-    ##get letter seq for each species
-    my %sp2seq=();
-    foreach my $key (keys %sp2nod){
-	my $sstr = $sp2nod{$key};
-	my @A= split " ", $sstr;
-	my $letseq = "";
-	my %tmp = ();
-	for(my $a=0;$a< scalar @A;$a++){
-	    my @B = split '_', $A[$a];
-	    my $start = $B[(scalar @B)-3];
-	    $tmp{$start} = $A[$a];
-	}
-
-	
-#	print "tmp hash\n";
-#	print Dumper(\%tmp);
-#	print "\n";
-
-	
-	foreach my $key2 (sort { $a <=> $b } keys(%tmp) ) {
-	    my $let = $tmp{$key2};
-	    my $bet = $n2l{$let};
-	    $letseq="$letseq$bet";
-	}
-	$sp2seq{$key}=$letseq;
-    }
-
     ##get alignments for each species against each other
-    foreach my $k (keys %sp2seq){
-	print $outgr "\@$k\t$sp2seq{$k}\n";
+    foreach my $k (keys %species){
+	print $outgr "\@$k\t$species{$k}\n";
 	my $match=0; #m
 	my $mismatch=0; #s
 	my $dupl=0; #d
 	my $ins=0; #i
 	my $del=0; #l
-	foreach my $k2 (keys %sp2seq){
+	foreach my $k2 (keys %species){
 	    if($k eq $k2) {next;}
-	    my $lseq1 = $sp2seq{$k};
-	    my $lseq2 = $sp2seq{$k2};
+	    my $lseq1 = $species{$k};
+	    my $lseq2 = $species{$k2};
 	    my $cmd1 = "$pathtonw/altNW 1 1 \"$lseq1\" \"$lseq2\"";
 	    my @out1 = readpipe("$cmd1");
 	    print $outgr ">$k2\t";
@@ -303,14 +239,8 @@ while(<FA>){
 	    else{$misevents{$sumstr} = $mismatch;}
 	}
     }
-    
 }
 
-
-#write summary file
-
-#my $dt = DateTime->today;
-#my $time = $dt->date;
 my $now_string = strftime "%a %b %e %H:%M:%S %Y", localtime;
 
 print $outs "File created on $now_string\n";
@@ -367,97 +297,28 @@ foreach my $mi (sort keys %misevents) {
     my $mistr = join(',',@mevs);
     print $outs "$mi\t$mistr\n";
 }
+
+
 print $outs "\n\n";
 
-    
-sub GetCCs{ #arguments is nodestring, uniqedgelist, input is a connected graph
-    
-    #first: get complement
+	
 
-    my @edges = @_;
-    my @nodes = split ' ', $edges[0];
-    $edges[0]="";
-    
-    my @uniqedges=(); #unique edges from complement
- 
-#    print "getComplement \n";
+print $outm "===============Duplication alignments\===============\n";
+print $outm "Duplication alignments and genetic events information: \n";
+print $outm "The results for the analysis of genetic events are written to
+ $sumary .
+The summary file contains information about how many genetic events were 
+counted in a certain combination of species. This can be used to draw a 
+phylogenetic tree with genetic events at its nodes. \n";
+print $outm "The files containing the duplications alignments (.aln) for 
+each cluster and pairs of species can be found here: 
+$outpath \n";
+print $outm "Format of alignment files (.aln): At first the cluster and 
+its species are defined. Then, connected nodes get mapped to the same 
+one-letter-code (needed for the alignment). Afterwards for each species, its 
+genetic elements are sorted by coordinate and depicted by the letter code. The
+ letter code is aligned to the ones of each other species in the cluster. '~' 
+stand for duplications, '-' for insertions or deletions in the alignment. \n";
+print $outm "\n";
 
-    for(my $a=0;$a<scalar @nodes;$a++){
-	for(my $b=0;$b<scalar @nodes;$b++){
-	    if($a == $b){next;}
-	    my $tmpstr;
-	    if($nodes[$a] lt $nodes[$b]){
-		$tmpstr = "$nodes[$a] $nodes[$b]";	       
-	    }
-	    else{
-		$tmpstr = "$nodes[$b] $nodes[$a]";
-	    }
-	    if(none {$tmpstr eq $_ } @edges){
-		if(none {$tmpstr eq $_ } @uniqedges){
-		    push @uniqedges, $tmpstr;
-		}
-	    }
-	}
 
-    }
-#    my $ednum = scalar @uniqedges;
-#    print "complement edge num: $ednum \n";
-#    my $edtmp = join(",",@uniqedges);
-#    print "complement edges: $edtmp \n";
-
-    
-    #check if we can find more than one cc
-    
-    my @permnodes1 = @nodes;
-    my @permnodes2=();
-
-#    my $nodstr = join(',',@permnodes1);
-#    print "nodes: $nodstr\n";
-    
-    for(my $i=0;$i<scalar @uniqedges;$i++){
-	my @E = split ' ', $uniqedges[$i];
-	my $n1 = $E[0];
-	my $n2 = $E[1];
-#	print "n1,n2: $n1, $n2\n";
-	my $id1 =-1;
-	my $id2 =-1;
-#	print "curedge: $uniqedges[$i]\n";
-	for(my $j=0;$j<scalar @permnodes1;$j++)
-	{
-#	    print "curnode: $permnodes1[$j]\n";
-	    
-	    if(index($permnodes1[$j],$n1)!= -1) #remember current position of node
-	    {
-		$id1 = $j;
-	    }
-	    if(index($permnodes1[$j],$n2)!= -1) #remember current position of node
-	    {
-		$id2 = $j;
-	    }
-	}
-#	print "id1,id2: $id1, $id2\n";
-	for(my $k=0;$k<scalar @permnodes1;$k++)
-	{
-	    if($k != $id1 && $k != $id2)
-	    {
-		push @permnodes2, $permnodes1[$k];
-	    }
-	}
-	if($id1 != $id2){
-	    my $str = "$permnodes1[$id1] $permnodes1[$id2]";
-	    push @permnodes2, $str;
-	}
-	else{
-	    push @permnodes2, $permnodes1[$id1];
-	}
-	@permnodes1=();
-	@permnodes1 = @permnodes2;
-	@permnodes2=();
-
-#	my $permnodestr = join(',',@permnodes1);
-#	print "curr conn comp: $permnodestr\n";
-    }
-
-    return @permnodes1;
-
-}

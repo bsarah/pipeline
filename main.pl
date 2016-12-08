@@ -266,13 +266,15 @@ else{
 }
 
 
+my $sumcollectcluster = "$outpath\/clusters/Summary_collectCluster.txt";
+my $sumgetnumbers = "$outpath\/clusters/Summary_getNumbers.txt";
 
 ##Construct clusters
 my $cmd1 = "mkdir $outpath\/clusters 2>>$err";
 my $cmd2 = "ls $genesfolder\/*.bed \> $genesfolder\/specieslist 2>>$err";
-my $cmd3 = "$perlpath\/perl $scripts_sarah\/collectCluster\.pl $genesfolder\/specieslist $genesfolder $outpath\/clusters 2>>$err";
+my $cmd3 = "$perlpath\/perl $scripts_sarah\/collectCluster\.pl $genesfolder\/specieslist $genesfolder $outpath\/clusters $sumcollectcluster 2>>$err";
 my $cmd4 = "ls $outpath\/clusters/*.clus > $outpath\/clusters/precluslist 2>>$err";
-my $cmd5 = "$perlpath/perl $scripts_sarah\/getNumbers.pl $outpath\/clusters/precluslist $outpath\/clusters 2>>$err";
+my $cmd5 = "$perlpath/perl $scripts_sarah\/getNumbers.pl $outpath\/clusters/precluslist $outpath\/clusters $sumgetnumbers 2>>$err";
 print "construct clusters..";
 my @out1 = readpipe("$cmd1");
 my @out2 = readpipe("$cmd2");
@@ -294,9 +296,10 @@ my @out7b = readpipe("$cmd7b");
 print "Done!\n";
 
 #create bedfile about clusters (without none clusters)
+my $sumallclusters = "$outpath\/Summary_allClusters.txt";
 my $outname = "allClusters.bed";
 my $cmd8 = "ls $outpath\/clusters\/\*\.clus \> $outpath\/clusters\/clusList 2>>$err";
-my $cmd9 = "$perlpath\/perl $scripts_sarah\/writeBED\.pl $outpath\/clusters\/clusList $outpath $outname 2>>$err";
+my $cmd9 = "$perlpath\/perl $scripts_sarah\/writeBED\.pl $outpath\/clusters\/clusList $outpath $outname $sumallclusters 2>>$err";
 print "create BED file..";
 my @out8 = readpipe("$cmd8");
 my @out9 = readpipe("$cmd9");
@@ -313,8 +316,9 @@ my $cmd13 = "$perlpath\/perl $scripts_sarah\/joinClusters.pl $outpath\/clusters/
 my $cmd14 = "ls $outpath\/clusters/*.clus > $outpath\/clusters/cluslist_joined 2>>$err";
 
 #create bedfile about joined clusters (without none clusters)
+my $sumallclustersjoined = "$outpath\/Summary_allClusters_joined.txt";
 my $outname2 = "allClusters_joined.bed";
-my $cmd9a = "$perlpath\/perl $scripts_sarah\/writeBED\.pl $outpath\/clusters\/cluslist_joined $outpath $outname2 2>>$err";
+my $cmd9a = "$perlpath\/perl $scripts_sarah\/writeBED\.pl $outpath\/clusters\/cluslist_joined $outpath $outname2 $sumallclustersjoined 2>>$err";
 
 #sort out singletons
 my $cmd15 = "mkdir $outpath\/clusters/singletons 2>>$err";
@@ -343,8 +347,9 @@ my @out17 = readpipe("$cmd17");
 print "Done!\n";
 
 #create graphs
+my $sumbuildedges = "$outpath\/graphs\/Summary_buildedges.txt";
 my $cmd18 = "mkdir $outpath\/graphs 2>>$err";
-my $cmd19 = "$perlpath\/perl $scripts_sarah\/buildEdgeList.pl $outpath\/clusters/cluslist_nosingles $outpath\/clusters $outpath\/graphs $altnwpath $seqsim $strucsim 2>>$err";
+my $cmd19 = "$perlpath\/perl $scripts_sarah\/buildEdgeList.pl $outpath\/clusters/cluslist_nosingles $outpath\/clusters $outpath\/graphs $altnwpath $seqsim $strucsim $sumbuildedges 2>>$err";
 my $cmd20 = "ls $outpath\/graphs/*.edli > $outpath\/graphs/edlilist 2>>$err";
 ##no edge graphs are graphs with node from only one species, as all other graphs have a completely connected graph (except same species)
 #my $cmd21 = "mkdir $outpath\/graphs/noEdgeGraphs 2>>$err";   
@@ -367,12 +372,13 @@ print "Done!\n";
 
 
 ##check graph structure
+my $sumcheckgraph = "$outpath\/graphs\/Summary_checkgraph.txt";
 my $cmd24 = "touch $outpath\/graphs/cographs 2>>$err";
 my $cmd23 = "touch $outpath\/graphs/list-noEdgeGraphs.txt 2>>$err";
 my $cmd23a = "touch $outpath\/graphs/list-EdgeGraphs.txt 2>>$err";
 my $cmd25 = "touch $outpath\/graphs/noncographs 2>>$err";
 my $cmd26 = "mkdir $outpath\/graphs/showGraphs 2>>$err";
-my $cmd27 = "$perlpath\/perl $scripts_sarah\/checkGraph.pl $outpath\/graphs/edlilist $outpath\/graphs $outpath\/graphs/showGraphs $seqsim $strucsim $outpath\/graphs/cographs $outpath\/graphs/noncographs $outpath\/graphs/list-noEdgeGraphs.txt $outpath\/graphs/list-EdgeGraphs.txt >>$db 2>>$err";
+my $cmd27 = "$perlpath\/perl $scripts_sarah\/checkGraph.pl $outpath\/graphs/edlilist $outpath\/graphs $outpath\/graphs/showGraphs $seqsim $strucsim $outpath\/graphs/cographs $outpath\/graphs/noncographs $outpath\/graphs/list-noEdgeGraphs.txt $outpath\/graphs/list-EdgeGraphs.txt $sumcheckgraph >>$db 2>>$err";
 
 print "analyse graphs..";
 my @out23 = readpipe("$cmd23");
@@ -392,9 +398,12 @@ my @out31 = readpipe("$cmd31");
 
 
 #create duplication alignments for each graph, thus take care for the similarity thresholds
+my $sumcreatealn = "$outpath\/graphs\/Summary_createAlignments.txt";
 my $cmd28 = "mkdir $outpath\/graphs/alignments 2>>$err";
 my $cmd29 = "touch $outpath\/geneticEvents.txt 2>>$err";
-my $cmd30 = "$perlpath\/perl $scripts_sarah\/getDuplication.pl $outpath\/graphs/showGraphs/graphsToDraw $outpath\/graphs/showGraphs $outpath\/graphs/alignments $altnwpath $outpath\/geneticEvents.txt 2>>$err";
+#my $cmd30 = "$perlpath\/perl $scripts_sarah\/getDuplication.pl $outpath\/graphs/showGraphs/graphsToDraw $outpath\/graphs/showGraphs $outpath\/graphs/alignments $altnwpath $outpath\/geneticEvents.txt 2>>$err";
+my $cmd30 = "$perlpath\/perl $scripts_sarah\/createAlignments.pl $outpath\/graphs/edlilist $outpath\/graphs/alignments $altnwpath $seqsim $strucsim $outpath\/geneticEvents.txt $sumcreatealn 2>>$err";
+
 print "create duplication alignments..";
 my @out28 = readpipe("$cmd28");
 my @out29 = readpipe("$cmd29");
@@ -591,7 +600,6 @@ return $outstr;
 
 
 
-
-
-
 }
+
+__END__

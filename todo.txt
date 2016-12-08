@@ -36,10 +36,9 @@ tance between anchors) - see talk T. Lowe
 
 #Sarah
 - accept a phylogenetic tree in newick format as input to add the genetic events directly to the tree (one tree for each event?)
-- only cographs used for count of genetic events? what about noncographs? if not included in genetic events, count them differently!!!
-- what happens to elements in edge graphs that themselves do not have an edge? do they get lost? count as insertion! --> compare counts for edge graphs when counting in cluster files or in graph files
 - solution for noncographs 
 - write drawGraphs.pl
+- set a further similarity threshold for pseudogenes!
 ##more parameters?
 - update help page/github page about new parameters
 - give input parameters for alignment (possible for altNW?)
@@ -47,14 +46,14 @@ tance between anchors) - see talk T. Lowe
 - parameter to set cluster length limits
 - option to include newick tree
 ##later to optimize and make nice
-- include counting of singletons/NoneCluster/edgeGraphs/noedgeGraphs in pipeline (partly done, make it nice)
+- test: with cm, with gene list, with seq and struc, with only sec/struc, ... 
 - do not print camerons output (too much)
-- count genes already while working with them, thus in collectCluster.pl
 - check all 'list' files such that only the real names of the clusters are printed, not all the paths.
+- counting of events
 - do more statistics: in how many clusters is each species represented, percentages of elements in certain clusters/cographs/noncographs..., 
   length of clusters, (report cluster information when only looking at synteny!), average number of elements in clusters, average number of matches/mismatches etc, average alignment score. Averages per element? sort elements by type?
 - more detailed counting of duplication etc (how is it done? write it down!)
--parallelize checking of graphs? http://search.cpan.org/dist/Parallel-Iterator/lib/Parallel/Iterator.pm#Example
+- parallelize checking of graphs? http://search.cpan.org/dist/Parallel-Iterator/lib/Parallel/Iterator.pm#Example
 
 
 #General ideas and keywords:
