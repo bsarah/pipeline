@@ -15,16 +15,17 @@ tance between anchors) - see talk T. Lowe
 #Anne
 - get newick trees of the remaining species (sources, tool for user)
 - check sbRNAs cm and run again (single cm or cambination)
-- done - create 4 other Y RNA models for testing
 - repeats: repeat masker (think about e.g. alu repeats)
 - create test runs 
 - compare our results from Y RNAs with https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1074747/  and   https://www.ncbi.nlm.nih.gov/pubmed/17470436
-
-#Anne
+## later
 - newick tree to ePoPE format parser
 - ePoPE format to newick
 - postscript script to draw trees
 - postscript script to draw graphs -> we need a drawing algorithm, so it might be better to use python/latex/perl instead of ps
+## done
+- create 4 other Y RNA models for testing
+
 
 #Cameron
 - include reading of zipped data (do not unzipped files as we get memory issues)
