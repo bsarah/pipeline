@@ -32,6 +32,8 @@ my $sumalledges = 0;
 my $sumspecies = 0;
 my $sumnodes = 0;
 
+
+
 while(<FA>){
     chomp;
     my $curfile=$_;
@@ -156,14 +158,14 @@ while(<FA>){
 }
 
 
-my $avedgenum = sprintf("%.2f",$sumalledges/$sumgraphs);
+my $avedgenum = sprintf("%.2f",($sumalledges/2)/$sumgraphs);
 my $avnodenum = sprintf("%.2f",$sumnodes/$sumgraphs);
 my $avspecnum = sprintf("%.2f",$sumspecies/$sumgraphs);
 
-my $avtotsecsim = sprintf("%.2f",$totsumsecsim/$sumgraphs);
-my $avtotstrsim = sprintf("%.2f",$totsumstrsim/$sumgraphs);
+my $avtotsecsim = sprintf("%.2f",($totsumsecsim/2)/$sumgraphs);
+my $avtotstrsim = sprintf("%.2f",($totsumstrsim/2)/$sumgraphs);
 
-my $avrealedgenum = sprintf("%.2f",$sumrealedges/$sumrealedgegraphs);
+my $avrealedgenum = sprintf("%.2f",($sumrealedges/2)/$sumrealedgegraphs);
 
 my $percrealgraphs = sprintf("%.2f",$sumrealedgegraphs/$sumgraphs);
 

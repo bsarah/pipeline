@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-## perl createAlignments.pl edlilist outpath pathtonw secsim strsim geneticEvents summary
+## perl createAlignments.pl edlilist outpath pathtonw secsim strsim psecsim pstrsim geneticEvents summary
 
 ##program will produce sequences of letters, where the same letter means similar sequences, depending on the threshold.
 ##thus one letter for each connected component.
@@ -23,9 +23,24 @@ my $outpath=shift;
 my $pathtonw = shift;
 my $seqlim = shift;
 my $strlim = shift;
+my $pseqlim = shift;
+my $pstrlim = shift;
 my $sumary = shift; #geneticEvents
 my $summary = shift; #usual summary after running the script
 
+
+
+##set the lowest similarity score as threshold
+my $gseqlim;
+my $gstrlim;
+
+if($pseqlim >= 0 && $pseqlim <= $seqlim){
+    $gseqlim = $pseqlim;}
+else{$gseqlim = $seqlim;}
+
+if($pstrlim >= 0 && $pstrlim <= $strlim){
+    $gstrlim = $pstrlim;}
+else{$gstrlim = $strlim;}
 
 #create a hash with strings that show spec1_spec2,spec1,spec3,spec5 as key whereas
 #spec1 is the current species and the others are in the same cluster.
@@ -37,18 +52,22 @@ my %matevents =();
 my %delevents =();
 my %insevents =();
 my %misevents =();
+my %psevents = ();
 
 open(my $outs,">>$sumary");
 
 open(my $outm,">>$summary");
 
+##filter which is the biggest alignment created
+my $maxlen = 0;
+my $maxlenname="";
 
 
 #curfile are the .edli files, such that the user can run the analysis again and change the thresholds
-if(-z $file){
-    print $outs "no sequences found that fulfill the similarity thresholds, thus, only graphs without edges and no alignments. Lower the similarity thresholds for sequences and/or secondary structure to see alignments (options -s, -t). \n";
-    exit 0;
-}
+#if(-z $file){
+#    print $outs "no sequences found that fulfill the similarity thresholds, thus, only graphs without edges and no alignments. Lower the similarity thresholds for sequences and/or secondary structure to see alignments (options -s, -t). \n";
+#    exit 0;
+#}
 
 open FA,"<$file" or die "can't open $file\n";
 while(<FA>){
@@ -71,7 +90,8 @@ while(<FA>){
     my %node2letter = ();
     my %species = ();
     my %start2node = ();
-    
+    my @pgenes = (); ##pseudogenes
+   
     open CF,"<$curfile" or die "can't open $curfile\n";
     while(<CF>){
 	chomp;
@@ -90,7 +110,7 @@ while(<FA>){
 	else{$start2node{$startvec} = $n1;}
 	
 	
-	if($seqsim >= $seqlim && $strsim >= $strlim){
+	if($seqsim >= $gseqlim && $strsim >= $gstrlim){
 	    ##similarity fits, nodes get the same letter
 	    if (exists $node2letter{$n1}) {
 		if(exists $node2letter{$n2}){
@@ -131,9 +151,9 @@ while(<FA>){
     foreach my $k1 (sort { $a <=> $b } keys(%start2node) ) {
 	my $curnode = $start2node{$k1};
 	my @H = split "_", $curnode;
-	my $spec = $H[1];
-	#my $sstr = $species{$spec};
-	$species{$spec} = "$node2letter{$curnode}";
+	my $spec = $H[(scalar @H) - 5];
+	my $sstr = $species{$spec};
+	$species{$spec} = "$sstr$node2letter{$curnode}";
     }
     ##get alignments for each species against each other
     foreach my $k (keys %species){
@@ -155,6 +175,10 @@ while(<FA>){
 #	    print "@out1";
 #	    print "\n";
 	    chomp(@out1);
+	    if(length $out1[1] > $maxlen){
+		$maxlen = length $out1[1];
+		$maxlenname = $newname;
+	    }
 	    ##count duplication etc for each pos with ~ or - and write it down
 	    ##such that we take the max for event (all letters together)
 	    my $m =0;
@@ -305,14 +329,18 @@ print $outs "\n\n";
 
 print $outm "===============Duplication alignments\===============\n";
 print $outm "Duplication alignments and genetic events information: \n";
+print $outm "The longest alignment has length $maxlen and is in file $maxlenname . \n";
+print $outm "\n";
 print $outm "The results for the analysis of genetic events are written to
- $sumary .
-The summary file contains information about how many genetic events were 
+ $sumary .\n";
+print $outm "\n";
+print $outm "The summary file contains information about how many genetic events were 
 counted in a certain combination of species. This can be used to draw a 
 phylogenetic tree with genetic events at its nodes. \n";
 print $outm "The files containing the duplications alignments (.aln) for 
 each cluster and pairs of species can be found here: 
 $outpath \n";
+print $outm "\n";
 print $outm "Format of alignment files (.aln): At first the cluster and 
 its species are defined. Then, connected nodes get mapped to the same 
 one-letter-code (needed for the alignment). Afterwards for each species, its 
