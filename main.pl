@@ -21,7 +21,7 @@
 # R >= 3.2 needed, libraries qgraph, igraph
 # Infernal >= 1.1.1
 
-#options -o -g -m -f -s -t -c -l -q -w -b -y -e -r -i -h -v -a -x -z
+#options -o -g -m -f -s -t -c -l -q -w -b -y -e -r -i -h -v -a -x -z -n -d
 #-output folder
 #-genomes folder
 #-maf folder
@@ -43,6 +43,8 @@
 #-x do NOT check graphs for cographs
 #-z do NOT create alignments
 #-u -v are sequence and structure thresholds for pseudogenes (thus their range is between -u/-v and -s/-t); default???? 0.7?
+#-n is the newick tree file
+#-d is the id translation between species names in newick tree and in the maf alignments (not needed if the species names in the tree already got the maf names)
 
 #k61 perl: /opt/localperl/bin/
 #
@@ -58,7 +60,7 @@ use File::Find;
 
 # declare the perl command line flags/options we want to allow
 my %options=();
-getopts("hVKo:g:m:f:s:t:c:l:q:w:b:a:y:e:r:i:xzu:v:", \%options);
+getopts("hVKo:g:m:f:s:t:c:l:q:w:b:a:y:e:r:i:xzu:v:n:d:", \%options);
 
 
 ##define variables
@@ -81,7 +83,8 @@ my $perlpath;
 my $rpath;
 my $infernalpath;
 my $extravalue;
-
+my $newicktree;
+my $ids;
 
 
 my $dirname = dirname(__FILE__);
@@ -249,10 +252,17 @@ else{print "No path to infernal given! (option -i)\n"; exit 1;}
 if ($options{x}){$checkgraphs = 0;}
 if ($options{z}){$createalns = 0;}
 
-
+my $newickstr = "";
+if($options{n} && $createalns == 1){$newicktree = $options{n};$newickstr = "-n $newicktree";}
+elsif((! $options{n}) && $createalns == 1){print "Please give a newick tree as input file (option -n)\n"; exit 1;}
+else{}
+my $idstr = "";
+if($options{d} && $createalns == 1){$ids = $options{d};$idstr = "-d $ids";}
+elsif((! $options{d}) && $createalns == 1){print "No file given to translate newick IDs into MAF IDs (option -d). Please make sure that IDs fit!\n";}
+else{}
 
 ##Program call
-my $optstr = "$outpathstr $genomesstr $mafstr $refspeciesstr -s $seqsim -t $strucsim $doitagainstr $cmoptstr $perc $inclopt -y $pythonpath -e $perlpath -r $rpath -i $infernalpath";
+my $optstr = "$outpathstr $genomesstr $mafstr $refspeciesstr $newickstr $idstr -s $seqsim -t $strucsim $doitagainstr $cmoptstr $perc $inclopt -y $pythonpath -e $perlpath -r $rpath -i $infernalpath";
 print "program called with: $optstr \n";
 
 
@@ -336,6 +346,8 @@ my $cmd6 = "mkdir $outpath\/clusters\/NoneCluster 2>>$err";
 my $cmd7 = "mv $outpath\/clusters\/cluster-None\* $outpath\/clusters\/NoneCluster 2>>$err";
 my $cmd7a = "touch $outpath\/clusters\/NoneCluster/nonecluslist 2>>$err";;
 my $cmd7b = "ls $outpath\/clusters\/NoneCluster/*.clus > $outpath\/clusters\/NoneCluster/nonecluslist 2>>$err";
+##report the number of elements for each species that are contained in none clusters
+
 print "sort clusters..";
 my @out6 = readpipe("$cmd6");
 my @out7 = readpipe("$cmd7");
@@ -387,6 +399,15 @@ my @out17 = readpipe("$cmd17");
 append2file($outs,$sumallclustersjoined);
 print "Done!\n";
 
+##this string contains $species\-$num_singletons\=$species\-...has to be separated like this in order to be able to hand it over as a parameter
+##give this to create alignments in order to add the singleton count to the genetic events list (as insertions)
+
+my $singletoncount;
+if($out16[0] eq ""){$singletoncount = "=";}
+else{$singletoncount = "$out16[0]";}
+print "singletoncount: $singletoncount \n";
+
+
 #create graphs
 my $sumbuildedges = "$summarypath\/Summary_buildedges.txt";
 my $cmd18 = "mkdir $outpath\/graphs 2>>$err";
@@ -436,12 +457,16 @@ if($createalns == 1){
     my $sumcreatealn = "$summarypath\/Summary_createAlignments.txt";
     my $cmd28 = "mkdir $outpath\/graphs/alignments 2>>$err";
     my $cmd29 = "touch $outpath\/geneticEvents.txt 2>>$err";
+    my $cmd29a = "mkdir $outpath\/graphs/GainLoss 2>>$err";
     #my $cmd30 = "$perlpath\/perl $scripts_sarah\/getDuplication.pl $outpath\/graphs/showGraphs/graphsToDraw $outpath\/graphs/showGraphs $outpath\/graphs/alignments $altnwpath $outpath\/geneticEvents.txt 2>>$err";
     ##TODO set the pseqsim and pstruclim if we have a solution for pseudogenes
-    my $cmd30 = "$perlpath\/perl $scripts_sarah\/createAlignments.pl $outpath\/graphs/edlilist $outpath\/graphs/alignments $altnwpath $seqsim $strucsim -1 -1 $outpath\/geneticEvents.txt $sumcreatealn 2>>$err";
+    my $cmd30 = "$perlpath\/perl $scripts_sarah\/createAlignments.pl $outpath\/graphs/edlilist $outpath\/graphs/alignments $altnwpath $seqsim $strucsim -1 -1 $singletoncount $outpath\/graphs/GainLoss $outpath\/geneticEvents.txt $sumcreatealn 2>>$err";
+    
     print "create duplication alignments..";
+    print "cmd createalns: $cmd30 \n";
     my @out28 = readpipe("$cmd28");
     my @out29 = readpipe("$cmd29");
+    my @out29a = readpipe("$cmd29a");
     my @out30 = readpipe("$cmd30");
     append2file($outs,$sumcreatealn);
     print "Done!\n";
@@ -590,10 +615,10 @@ alignment of the target species. You can choose if secondary structure
 information should be included in the analysis or not. \n";
     $outstr = "$outstr \n";
     $outstr = "$outstr Program use:
-perl main.pl -o OutputFolder -g GenomesFolder -m MafFolder -f refspecies 
+perl main.pl -o OutputFolder -g GenomesFolder -m MafFolder -f refspecies -n newicktree -d IDtranslation
+{-c CM | -l genelist} -y python -e perl -r R -i infernal
 [-s seqSimilarity] [-t strucSimilarity] [-u pseudoseqSimilarity] [-v pseudostrucSimilarity] 
-[-q threshold] [-a genesFolder] [-x] [-z] {-c CM | -l genelist} [-w incE] [-b incT]
--y python -e perl -r R -i infernal \n\n";
+[-q threshold] [-a genesFolder] [-x] [-z]  [-w incE] [-b incT] \n\n";
     $outstr = "$outstr Parameter explanations:\n";
     $outstr = "$outstr -o Outputfolder:
 please specify where the Output files should be created. 
@@ -610,6 +635,13 @@ names of the genome files. Format should be: .maf.gz, .maf.Z, .maf.bz2.  Not req
 the maf files were created by using one species as the reference species. 
 Please provide the name of the reference species as it can be found in the 
 multiple sequence alignment and as a genome file. Not required if option -a is taken. \n";
+    $outstr = "$outstr -n newicktree:
+Specify a newick tree that represents the species used in the analysis. Numbers of occuring genetic
+events will be written on the tree in an output file. This option is not needed when -z is activated \n";
+    $outstr = "$outstr -d IDtranslation
+As species names are different in newick trees and MAF alignments, we need a file showing both names to be able
+to translate. If you are sure that the names in your newick tree are the same as in the MAF alignments, this
+option is not needed. \n";
     $outstr = "$outstr -a pathToGenesFolder:
 Give this options in case creating the clusters and graphs should be redone without analyzing the maf files
 again. In this case, the option -a will specify the folder with .bed files for each species including information

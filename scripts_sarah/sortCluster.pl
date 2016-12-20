@@ -14,6 +14,8 @@ my $outfolder= shift;
 open FA,"<$filename" or die "can't open $filename\n";
 my $count = 0;
 
+my %species=();
+
 while(<FA>){
     chomp;
     my $curfile = $_;
@@ -22,10 +24,29 @@ while(<FA>){
     chomp(@out);
     my @F = split " ", $out[0];
     if($F[0] < 2){
+	##if there is only one cluster in the file, count how many elements 
+	##for which species are contained in the singleton clusters
+	open CF,"<$curfile" or die "can't open $curfile\n";
+	while(<CF>){
+	    my $line = $_;
+	    my @G = split "\t", $line;
+	    my $prespec = $G[1];
+	    my @H = split '_', $prespec;
+	    my $spec = $H[0];
+	    if(exists $species{$spec}){$species{$spec} += 1;}
+	    else{$species{$spec} = 1;}
+	}
+	
 	$count++;
 	my $copycmd = "mv $curfile $outfolder";
 	readpipe("$copycmd");
     }
 }
 
-print "$count \n";
+my $outstr =  "";
+
+foreach my $k (sort keys %species) {
+    $outstr = "$outstr$k\-$species{$k}\=";
+}
+
+print $outstr;

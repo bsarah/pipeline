@@ -40,3 +40,4 @@ print $outs "===============Cluster information\=============== \n";
 print $outs "Number of original clusters: $count \n";
 print $outs "Number of 'None'-clusters: $nonecount \n"; 
 print $outs "(clusters where no start or end coordinates could be detected)\n";
+print $outs "\n";
