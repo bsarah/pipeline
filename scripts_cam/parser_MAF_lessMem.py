@@ -1,7 +1,6 @@
 
 #this program takes multiple sequence alignments in MAF format and parses them.
 #It then makes BED files for each species that contain the allignments for that species.
-#All blocks that are overlapping will not be included in the BED file.
 import subprocess
 import datetime #module that can give the current day month and year
 from os import listdir
@@ -98,7 +97,7 @@ def maf2TempWrapper(mafDir, outputDir, repoDir, listOfSpecies):
         catchExceptions(name)
         
         #use Popen to catch stdOutput of reading file, stdOutput being the current block number
-        proc = subprocess.Popen("zcat "+name+" | python3 "+repoDir+"scripts_cam/maf2TempBed.py "+str(blockNum)+" "+tempOutputDir, shell=True, universal_newlines=True, stdout=subprocess.PIPE)
+        proc = subprocess.Popen("zcat "+name+" | python3 "+repoDir+"maf2TempBed.py "+str(blockNum)+" "+tempOutputDir, shell=True, universal_newlines=True, stdout=subprocess.PIPE)
 
         stdOutput, errors = proc.communicate()
         #print('output: {}'.format(stdOutput))
@@ -119,10 +118,14 @@ def maf2TempWrapper(mafDir, outputDir, repoDir, listOfSpecies):
     #however this is done with literals so be careful if changing the file name schema
     sortedTempList = [join(tempOutputDir, listOfSpecies[0]+'_temp_sorted.bed')]
     for _file in listdir(tempOutputDir):
-        if join(tempOutputDir, _file) not in sortedTempList and _file.endswith("_sorted.bed"):
-            sortedTempList.append(join(tempOutputDir, _file))
-    
-    return sortedTempList, tempOutputDir
+        fileName = join(tempOutputDir, _file)
+        if fileName not in sortedTempList:
+            if fileName.endswith("_sorted.bed"):
+                sortedTempList.append(fileName)
+            else:
+                subprocess.call("rm "+fileName, shell=True)
+            
+    return sortedTempList
     
 
 def maf2TempBed(mafFiles, outputDir, listSpeciesFiles):
@@ -223,8 +226,9 @@ def parseTempWrapper(tempFiles, listOfGenes, outputDir, threshold, infernalVersi
         species = tempBlockFile.name.split('/')[-1].split('_')[0]
         print("species: {}".format(species))
         #print("len geneList: {}".format(len(listOfGenes)))
-        
-        finalBlockFile = open(bedFileDir+species+'.bed', 'w')
+
+        finalBlockFileName = bedFileDir+species+'.bed'
+        finalBlockFile = open(finalBlockFileName, 'w')
         start = finalBlockFile.write("# Created on "+str(now.day)+"/"+str(now.month)+"/"+str(now.year)+" (day/month/year)\n"+\
                                      "\n")
         finalBlockFile.seek(start)
@@ -234,9 +238,13 @@ def parseTempWrapper(tempFiles, listOfGenes, outputDir, threshold, infernalVersi
                                "\n")
         geneFile.seek(start)
         overlappingBlockNums, listOfGenes = parseTemp(tempBlockFile, finalBlockFile, geneFile, listOfGenes, overlappingBlockNums, threshold)
+
         tempBlockFile.close()
         finalBlockFile.close()
         geneFile.close()
+        
+        subprocess.call('gzip '+finalBlockFileName, shell=True)
+        subprocess.call('rm '+tempBlockFileName, shell=True)
     print("done")
 
 
@@ -292,9 +300,9 @@ def parseTemp(tempFile, finalFile, geneFile, listOfGenes, overlapSet, threshold)
                 if gene.chromosome == chromo.name and gene.species == chromo.species:
                     chromo.checkGene(gene)
                     fivePrime, threePrime = chromo.getAdjBlock(gene)
-                    geneFile.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(\
+                    geneFile.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(\
                                    chromo.name, chromo.species+"_"+str(gene.blockNum), gene.s,\
-                                   gene.getEndPos(), gene.strand, fivePrime, threePrime, gene.structure, gene.sequence))
+                                   gene.getEndPos(), gene.strand, fivePrime, threePrime, gene.structure, gene.sequence, gene.score))
 
 
             #replaced deleting with creating new list. Remove had O(n) cost + n operations
@@ -350,12 +358,9 @@ def maf2bed(mafDir, outputDir, repoDir, geneObjs, listOfSpecies, threshold, infe
     Assumptions:
         The first string in listOfSpecies must correspond to the reference species.
     '''
-    tempFiles, tempFileDir = maf2TempWrapper(mafDir, outputDir, repoDir, listOfSpecies)
+    tempFiles = maf2TempWrapper(mafDir, outputDir, repoDir, listOfSpecies)
 
     parseTempWrapper(tempFiles, geneObjs, outputDir, threshold, infernalVersion)
-
-    if tempFileDir in [join(outputDir, dir) for dir in listdir(outputDir) if isdir(join(outputDir, dir))]:
-        subprocess.call("rm -r "+tempFileDir, shell=True)
 
 #if this python file is called from the command line
 if __name__ == "__main__":

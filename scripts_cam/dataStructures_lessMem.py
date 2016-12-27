@@ -89,7 +89,7 @@ class Gene (Block):
     sequence:   A string of the DNA sequence of the gene in single letter bases (ex: TGCTA)
     '''
 
-    def __init__(self, species, chromosome, startPos, length, strand, geneNum, structure, sequence):
+    def __init__(self, species, chromosome, startPos, length, strand, geneNum, structure, sequence, score=None):
         self.species = species
         self.chromosome = chromosome
         self.s = startPos
@@ -98,6 +98,7 @@ class Gene (Block):
         self.blockNum = geneNum
         self.sequence = sequence
         self.structure = structure
+        self.score = score
 
     def __lt__(self, multiZ):
         '''

@@ -38,20 +38,16 @@ from parser_infernal import parseInfernal #parses infernal files and returns a l
 from parser_genes import parseGenes #parses user provied gene files and returns a list of Genes
 from helperFunctions import *
 
-#globals
-#locationInfernal = '/opt/bin'
-#locationModel = '/scr/k61san/trnaevo/CMs/trna.cm'
-
 parser = argparse.ArgumentParser()
-parser.add_argument("genomes", type=str, help="directory where the genomes are")
 parser.add_argument("multiSeq", type=str, help="directory where the multiple sequence allignments are")
 parser.add_argument("infernalPath", type=str, help="path to infernal")
 parser.add_argument("outPutDir", type=str, help="directory where you want the output files to be placed")
 parser.add_argument("pathToRepo", type=str, help="absolute path of the git repo")
 parser.add_argument("referenceSpecies", type=str, help="the name of the reference species as it appears in the "\
                     + "multiple sequence alignment.")
-parser.add_argument("-sg","--search_genes", action="store", help="search for genes using infernal cmsearch. "\
-                    + "File pathway provided must lead to a rna model.")
+parser.add_argument("-sg","--search_genes", action="store", nargs=2,help="search for genes using infernal cmsearch. "\
+                    + "First argument must be a file pathway to a RNA Model. "\
+                    + "Second argument must be a file pathway to the Genomes.")
 parser.add_argument("-og","--own_genes", action="store", help="use prespecified genes in analysis. File path "\
                     + "provided should be a directory. Files in this directory should be named for the species "\
                     + "that it concerns. The names of the species should match those in the multiple sequence "\
@@ -68,15 +64,39 @@ args = parser.parse_args()
 '''
 handel irregularites in args
 '''
-args.genomes, args.multiSeq, args.infernalPath, args.outPutDir, args.pathToRepo = endSlash((args.genomes, args.multiSeq, args.infernalPath, args.outPutDir, args.pathToRepo))
+argList = [args.multiSeq, args.infernalPath, args.outPutDir, args.pathToRepo]
+args.multiSeq, args.infernalPath, args.outPutDir, args.pathToRepo = endSlash(argList)
 
-'''
-if args.infernalPath.endswith('/'):
-    locationInfernal = args.infernalPath.rstrip('/')
+#Call helper functions
+args.pathToRepo = makeFullPath(args.pathToRepo)
+makeOutPutDir(args.outPutDir)
+
+if args.search_genes[0] != None:
+    print("search Genes")
+    args.genomes = args.search_genes[1]
+     args.model = args.search_genes[0]
+
+    args.genomes = endSlash([args.genomes])
+
+    genomeFiles = [join(args.genomes,f) for f in listdir(args.genomes) if isfile(join(args.genomes,f))]
+    listOfSpecies = makeSpeciesList([args.referenceSpecies], args.genomes)
+    
+    geneObjects, versionInfo = infernal(args.outPutDir, genomeFiles, args.model, args.incE, args.incT, args.infernalPath)
+    
+elif args.own_genes != None:
+    print("own Genes")
+    argList.append(args.own_genes)
+    args.own_genes = endSlash([args.own_genes])
+
+    listOfSpecies = makeSpeciesList([args.referenceSpecies], args.own_genes)
+
+    geneObjects = parseGenes(args.own_genes, args.outPutDir)
+    versionInfo = "User provided genes"
+    
 else:
-    locationInfernal = args.infernalPath
-'''
-
+    raise Exception("either own_genes or search_genes must be given")
+    
+#Catch Exceptions
 args.quality = float(args.quality)
 if args.quality < 0 or args.quality > 99:
     raise Exception("quality value must be a number between 0 and 99 corresponding to the percentage of "\
@@ -85,85 +105,12 @@ if args.quality < 0 or args.quality > 99:
 if args.own_genes != None and args.search_genes != None:
     raise Exception("both own_genes and search_genes given. own_genes and search_genes are mutually exclusize.")
 
-#handle outputdir irregularities
-if not args.outPutDir.endswith('/'):
-    args.outPutDir = args.outPutDir + '/'
-
-#handle pathToRepo irregularities
-if not args.pathToRepo.endswith('/'):
-    args.pathToRepo = args.pathToRepo + '/'
-if not args.pathToRepo.endswith('/pipeline/'):
-    if args.pathToRepo.endswith('/scripts_cam/'):
-        pass
-    else:
-        args.pathToRepo = args.pathToRepo + 'pipeline/scripts_cam/'
-else:
-    args.pathToRepo = args.pathToRepo + 'scripts_cam/'
-#returns a list of all the files in a given directory with the full file path
-genomeFiles = [join(args.genomes,f) for f in listdir(args.genomes) if isfile(join(args.genomes,f))]
-#multiSeqFiles = [join(args.multiSeq,f) for f in listdir(args.multiSeq) if isfile(join(args.multiSeq,f))]
-
-listOfSpecies = [args.referenceSpecies]
-for f in listdir(args.genomes):
-    if isfile(join(args.genomes,f)):
-        species = f.split('.')[0]
-        if species != args.referenceSpecies:
-            listOfSpecies.append(species)
-
 if len(listdir(args.multiSeq)) == 0:
     raise Exception("No multiple sequence alignments given")
-
-try:
-    listdir(args.outPutDir)
-
-except FileNotFoundError:
-    subprocess.call('mkdir '+args.outPutDir, shell=True)
-    
-if args.search_genes != None:#if we need to search for genes
-    
-    #prep
-    if len(genomeFiles) == 0:
-        raise Exception("No genomes given. Make sure all paths given are directories not a files")
-    if 'infernalIn' in listdir(args.outPutDir):
-        subprocess.call("rm -r "+args.outPutDir+'infernalIn', shell=True)
-    subprocess.call("mkdir "+args.outPutDir+'infernalIn', shell=True)
-
-    i = 1 #counter for the number of genomes searched
-
-    if args.incE == None:
-        if args.incT == None:
-            infernalOptArgs = ''
-        else:
-            infernalOptArgs = ' --incT '+str(args.incT)
-    else:
-        if args.incT == None:
-            infernalOptArgs = ' --incE '+str(args.incE)
-        else:
-            infernalOptArgs = ' --incE '+str(args.incE)+' --incT '+str(args.incT)
-            
-    #search the genomes for genes
-    for g_file in genomeFiles:
-
-        species = g_file.split('/')[-1].split('.')[0]
-        print("searching {} for genes of interest...".format(g_file))
-        subprocess.call(args.infernalPath+'/cmsearch -o '+args.outPutDir+'infernalIn/'+species+'.out '+infernalOptArgs+' '+args.search_genes+' '+g_file, shell=True)
-                
-        print("done searching genome {}/{}".format(i,len(genomeFiles)))
-        i+=1
-
-    print("converting infernal files to list of gene objects...")
-    geneObjects, versionInfo, listOfSpecies = parseInfernal(args.outPutDir+'/infernalIn', [args.referenceSpecies])
-    print("done.")
-
-elif args.own_genes != None:
-    print("parsing given genes...")
-    geneObjects, listOfSpecies = parseGenes(args.own_genes,args.outPutDir, [args.referenceSpecies])
-    versionInfo = "User provided genes"
-    print("done")
-
+'''
 else:
     raise Exception("either own_genes or search_genes must be given")
-
+'''
 #print("sorting multiple sequence alignment files...")
 #multiSeqFiles.sort()#makes the output files alphabetical
 #print("done")

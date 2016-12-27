@@ -5,7 +5,7 @@ from os.path import isfile, join
 from dataStructures_lessMem import Gene
 
 
-def parseInfernal(filePath,  speciesList=list(), geneList=list()):
+def parseInfernal(filePath,  geneList=list()):
     '''
     Takes a directory filled with infernal files. parses the infernal files.
     Stores all of the genes of interest marked significant by infernal.
@@ -29,10 +29,6 @@ def parseInfernal(filePath,  speciesList=list(), geneList=list()):
                 except UnicodeDecodeError:
                     raise Exception("try using an unzipped file")
                 else:
-                    #print("reading infernal file {}...".format(_file))
-                    species_name = _file.split('.')[0] #gets species from the file name
-                    if species_name not in speciesList:
-                        speciesList.append(species_name)
                     f.seek(0)
                     for line in f:
                         if line.startswith('# INFERNAL'):
@@ -43,15 +39,16 @@ def parseInfernal(filePath,  speciesList=list(), geneList=list()):
                             lineList = readGene(f)
                             if lineList[7] == "!":
 
-                                #                        panTro        chr3         100          10           
-                                geneList.append(Gene(species_name, chromosome, lineList[1], lineList[2],\
-                                                     lineList[3], lineList[4], lineList[5], lineList[6]))
-                                #                      +             23       2nd structure   Sequence   
+                                #                        panTro             chr3         100          10           
+                                geneList.append(Gene(f.name.split('.')[0], chromosome, lineList[1], lineList[2],\
+                                                     lineList[3], lineList[4], lineList[5], lineList[6], lineList[7]))
+                                #                      +             23       2nd structure   Sequence    score
                             else:
                                 break
                     f.close()
+                    subprocess.call("rm "+f, shell=True)
     #print("done")
-    return geneList, infernalVersion, speciesList
+    return geneList, infernalVersion
 
 def getGeneLength(start, end):
     '''
@@ -83,7 +80,7 @@ def readGene(_file):
     #skip two lines
     _file.readline()
     _file.readline()
-    #read len, !or?, strand, rank, start(+ strand) and end(+strand)
+    #read len, !or?, score, strand, rank, start(+ strand) and end(+strand)
     line1 = _file.readline().split()
     #skip two lines
     _file.readline()
@@ -110,8 +107,8 @@ def readGene(_file):
         sequence = line3[0]
     #       chromosome             start                                       length                            strand     id num
     return (line3[0], getGeneStart(line1[9],line1[10],line1[11]), getGeneLength(int(line1[9]),int(line1[10])), line1[11], int(line1[0].strip('()')),\
-            line2[0], sequence, line1[1])
-    #secondary structure, sequence  !or?
+            line2[0], sequence, line1[1], line1[3])
+    #secondary structure, sequence  !or?  score
     
 if __name__ == '__main__':
     parseInfernal("../test/infernalIn")
