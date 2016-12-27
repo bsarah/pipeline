@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-## call: buildEdgeList filelist pathtoinfiles outpath pathtoaltnw seqsim strucsim
+## call: buildEdgeList filelist pathtoinfiles outpath pathtoaltnw seqsim strucsim summary
 
 ##if seqsim or strucsim is -1 (only one of them) then just check the other one for similarity as input to altnw
 ##output: weighted graph, thus node1 node2 seq_diff struc_diff
@@ -15,10 +15,24 @@ my $outpath=shift;
 my $pathtonw=shift;
 my $seqsim = shift;
 my $strucsim = shift;
+my $summary = shift;
 
 open FA,"<$filename" or die "can't open $filename\n";
 
+open(my $outs, ">>$summary");
+
 #print "file: $filename \n";
+
+my $sumgraphs = 0;
+my $sumrealedges = 0;
+my $sumrealedgegraphs = 0;
+my $totsumsecsim = 0;
+my $totsumstrsim = 0;
+my $sumalledges = 0;
+my $sumspecies = 0;
+my $sumnodes = 0;
+
+
 
 while(<FA>){
     chomp;
@@ -75,12 +89,17 @@ while(<FA>){
 	my $res = "$nodes[0]";
 	print $outf "$res\n";
     }
-    
+
+    ##divide all those numbers by 2 as every edge appears twice in the edgelist!
+    my $edgecount = 0; #number of edges fulfilling the similarity thresholds
+    my $sumsecsim = 0;
+    my $sumstrsim = 0;
+    my $totedges = 0;
+
     for(my $i=0 ; $i < (scalar @nodes) ; $i++){
 	my $res = "$nodes[$i]";
 	for(my $j=0 ; $j < scalar @nodes ; $j++){
-	    #include edges of the same species for the duplication detection, remove them later in the checkGraph
-	    #if($specs[$i] eq $specs[$j]){next;}
+	    ##create complete weighted graphs
 	    if($nodes[$i] eq $nodes[$j]){next;}
 	    my $cmd1 = "$pathtonw/altNW 0 1 \"$seqs[$i]\" \"$seqs[$j]\"";
 	    my $cmd2 = "$pathtonw/altNW 0 1 \"$strucs[$i]\" \"$strucs[$j]\"";
@@ -116,8 +135,76 @@ while(<FA>){
 	    my $diff2_rounded = sprintf("%.2f", $diff2);
 	    my $res2 = "$res $nodes[$j] $diff_rounded $diff2_rounded\n";
 	    print $outf "$res2";
-	}
-	
+	    if($diff_rounded >= $seqsim && $diff2_rounded >= $strucsim){
+		$edgecount++;
+	    }
+	    $totedges++;
+	    $sumsecsim = $sumsecsim+$diff_rounded;
+	    $sumstrsim = $sumstrsim + $diff2_rounded;
+	}	
     }
+
+    $sumgraphs++;
+    if($edgecount > 0){$sumrealedgegraphs++;}
+    $sumrealedges = $sumrealedges + $edgecount;
+    $sumalledges = $sumalledges + $totedges;
+    my $avsecsim = sprintf("%.2f",$sumsecsim/$sumalledges);
+    my $avstrsim = sprintf("%.2f",$sumstrsim/$sumalledges);
+    $totsumsecsim = $totsumsecsim + $avsecsim;
+    $totsumstrsim = $totsumstrsim + $avstrsim;
+    $sumspecies = $sumspecies + scalar @specs;
+    $sumnodes = $sumnodes + scalar @nodes;
     
 }
+
+
+my $avedgenum = sprintf("%.2f",($sumalledges/2)/$sumgraphs);
+my $avnodenum = sprintf("%.2f",$sumnodes/$sumgraphs);
+my $avspecnum = sprintf("%.2f",$sumspecies/$sumgraphs);
+
+my $avtotsecsim = sprintf("%.2f",($totsumsecsim/2)/$sumgraphs);
+my $avtotstrsim = sprintf("%.2f",($totsumstrsim/2)/$sumgraphs);
+
+my $avrealedgenum = sprintf("%.2f",($sumrealedges/2)/$sumrealedgegraphs);
+
+my $percrealgraphs = sprintf("%.2f",$sumrealedgegraphs/$sumgraphs);
+
+print $outs "===============Graph information\===============\n";
+print $outs "Number of graphs: $sumgraphs\n";
+print $outs "Average number of nodes per graph: $avnodenum\n";
+print $outs "Average number of edges per graph: $avedgenum\n";
+print $outs "Average number of species per graph: $avspecnum\n";
+
+print $outs "Average sequence similarity score of average score for each graph: $avtotsecsim \n";
+print $outs "Average structure similarity score of average score for each graph: $avtotstrsim \n";
+
+print $outs "Number of graphs with edges fulfilling the thresholds (real edges): $sumrealedgegraphs\n";
+print $outs "Percentage of graphs with real edges: $percrealgraphs \n";
+print $outs "Average number of real edges in graphs with real edges: $avrealedgenum \n";
+print $outs "In the graphs without edges, no edges were added because of 
+either not enough nodes (thus, including singletons) or all nodes
+ belonging to the same species or the similarity thresholds were not fulfiled.
+ Use input parameters -s and/or -t to change the similarity thresholds. \n";
+print $outs "Graph files (.edli) are located in $outpath
+which contains a file listing graphs without any edges. \n";
+print $outs "Graph files are edgelists whereas an edge (a,b) appears as (a,b) 
+and (b,a). As graphs are weighted (similarity threshold) the graph files are 
+tab separated files containing: node1, node2, sequences similarity, structure 
+similarity.\n";
+print $outs "If the number of graphs with edges is 0, no sequences fulfilled 
+the similarity thresholds for sequence and/or structure. In this way, no graphs
+ were drawn or alignments were built. If you want to get graphs with edges, 
+similarity thresholds can be lowered using parameters -s and/or -t. The 
+ values currently set are $seqsim and $strucsim, the default values are 0.9 meaning 
+a similarity of 90%.\n";
+print $outs "\n";
+
+__END__
+my $sumgraphs = 0;
+my $sumrealedges = 0;
+my $sumrealedgegraphs = 0;
+my $totsumsecsim = 0;
+my $totsumstrsim = 0;
+my $sumalledges = 0;
+my $sumspecies = 0;
+my $sumnodes = 0;

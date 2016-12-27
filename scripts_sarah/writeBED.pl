@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-## call writeBED.pl filelist outpath outname
+## call writeBED.pl filelist outpath outname summary
 
 ## input file format:
 ## chromosome \t species_geneID \t genestart \t geneend \t strand
@@ -18,12 +18,19 @@ use warnings;
 my $filename = shift;
 my $outpath = shift;
 my $outname = shift;
+my $summary = shift;
 
 my $outfile="$outpath\/$outname";
-open(my $outf,'>>',$outfile);
+open(my $outf,">>$outfile");
+open(my $outs,">>$summary");
 
 
 open FA,"$filename" or die "can't open $filename\n";
+
+my $numclus = 0;
+my $sumelems = 0;
+my $numsingles = 0;
+my $nummultcluselems = 0;
 
 while(<FA>){
     my $curfile=$_;
@@ -53,6 +60,30 @@ while(<FA>){
     for(my $i=0;$i<scalar @lines;$i++){
 	print $outf $lines[$i];
     }
+    if($count == 1){$numsingles++;}
+    else{$nummultcluselems = $nummultcluselems + $count;}
+    $sumelems = $sumelems + $count;
     $count=0;
     @lines=();
+    $numclus++;
 }
+
+
+my $avelemnum = $sumelems/$numclus;
+my $nummultclus = $numclus - $numsingles;
+my $avmultcluselemnum = $nummultcluselems/$nummultclus;
+
+print $outs "===============$outname\===============\n";
+print $outs "The bed file $outname containing the genes sorted into 
+the clusters is located here: $outpath \n";
+print $outs "Format bed file (tab separated): 
+  >cluster_name(including species and coordinates) number of elements
+  for each element one line consisting of: chromosome, species, start, end, 
+  strand, 5' blocknumber, 3'blocknumber \n";
+print $outs "\n";
+print $outs "Number of clusters (excluding None clusters): $numclus \n";
+print $outs "Number of singleton clusters thereof: $numsingles \n";
+print $outs "Number of multi-element clusters thereof: $nummultclus \n";
+print $outs "Average number of elements per cluster (including singletons): $avelemnum \n";
+print $outs "Average number of elements per cluster (excluding singletons): $avmultcluselemnum \n";
+print $outs "\n";

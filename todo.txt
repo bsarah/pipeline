@@ -3,28 +3,31 @@ ToDo file for our pipeline project:
 #All
 - name!
 - look for ensembl msa's (EPO) instead of multiz. They can be converted into each other, and ensembl msa seem to have better quality (see m. smith, australia) (LATER!)
-- talk to Fabian for block clarification (LATER!)
+- talk to Fabian for block clarification of EPO (LATER!)
 - think about how to handle introns (see T. Lowe - search for paper from him or waiting for his email)
-- add parameter as a maximal or minimal threshold for cluster sizes (genomic dis
-tance between anchors) - see talk T. Lowe
+- add parameter as a maximal or minimal threshold for cluster sizes (genomic distance between anchors) - see talk T. Lowe
 - some elements are not sorted into anchors (sbRNAs, distant related species)
 
 #Sarah & Anne
+## done
 - search for a student to build up our GUI
-- compare our results from Y RNAs with https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1074747/  and   https://www.ncbi.nlm.nih.gov/pubmed/17470436
-
-#Anne (Do until 09.12.16)
-- get newick trees of the remaining species (sources, tool for user)
-- check sbRNAs cm and run again (single cm or cambination)
-- create 4 other Y RNA models for testing
-- repeats: repeat masker (think about e.g. alu repeats)
-- create test runs 
 
 #Anne
+- get newick trees of the remaining species (sources, tool for user)
+- create CM's of other repetative elements
+        - annotation of alu repeats is still missing
+        - maybe use repeatmasker tracks from genome browser/ENSEMBL
+        - Dfam (sic!) http://www.dfam.org/ elements
+- create test runs
+- compare our results from Y RNAs with https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1074747/  and   https://www.ncbi.nlm.nih.gov/pubmed/17470436
+## later
+- check sbRNAs cm and run again (single cm or cambination)
 - newick tree to ePoPE format parser
 - ePoPE format to newick
 - postscript script to draw trees
 - postscript script to draw graphs -> we need a drawing algorithm, so it might be better to use python/latex/perl instead of ps
+## done
+- create 4 other Y RNA models for testing
 
 #Cameron
 - include reading of zipped data (do not unzipped files as we get memory issues)
@@ -36,25 +39,29 @@ tance between anchors) - see talk T. Lowe
 
 #Sarah
 - accept a phylogenetic tree in newick format as input to add the genetic events directly to the tree (one tree for each event?)
-- only cographs used for count of genetic events? what about noncographs? if not included in genetic events, count them differently!!!
-- what happens to elements in edge graphs that themselves do not have an edge? do they get lost? count as insertion! --> compare counts for edge graphs when counting in cluster files or in graph files
 - solution for noncographs 
 - write drawGraphs.pl
+- set a further similarity threshold for pseudogenes!
 ##more parameters?
 - update help page/github page about new parameters
 - give input parameters for alignment (possible for altNW?)
-- give option for user to switch off several parts of the pipeline
 - parameter to set cluster length limits
 - option to include newick tree
 ##later to optimize and make nice
-- include counting of singletons/NoneCluster/edgeGraphs/noedgeGraphs in pipeline (partly done, make it nice)
+- test: with cm, with gene list, with seq and struc, with only sec/struc, ... 
 - do not print camerons output (too much)
-- count genes already while working with them, thus in collectCluster.pl
 - check all 'list' files such that only the real names of the clusters are printed, not all the paths.
+- format help page
+- counting of events
 - do more statistics: in how many clusters is each species represented, percentages of elements in certain clusters/cographs/noncographs..., 
   length of clusters, (report cluster information when only looking at synteny!), average number of elements in clusters, average number of matches/mismatches etc, average alignment score. Averages per element? sort elements by type?
 - more detailed counting of duplication etc (how is it done? write it down!)
--parallelize checking of graphs? http://search.cpan.org/dist/Parallel-Iterator/lib/Parallel/Iterator.pm#Example
+- parallelize checking of graphs? http://search.cpan.org/dist/Parallel-Iterator/lib/Parallel/Iterator.pm#Example
+##done
+- give option for user to switch off several parts of the pipeline (-a for cam's part, -x for not checking graphs for cographs, -z for not creating alignments thus not counting events)
+- took out drawing of graphs with R
+- summary files are created for each subprogram independantly and put into summaries folder
+- help page is done in a subroutine named createHelp in main.pl
 
 
 #General ideas and keywords:

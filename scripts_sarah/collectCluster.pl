@@ -1,6 +1,6 @@
  
 #!/usr/bin/perl -w
-## call: collectCluster filelist pathtoinfiles pathtooutfiles
+## call: collectCluster filelist pathtoinfiles pathtooutfiles summary
 ##filelist = consists of a list of files called e.g. example_genes.bed
 ## input file format:
 ## Chromosome (tab) Species_IDnum (tab) startPosition (tab) endposition
@@ -29,9 +29,13 @@ my @clusters = ();
 my $filename = shift;
 my $inpath = shift;
 my $outpath = shift;
+my $summary = shift;
 my $outf;
 my $outf2;
 #my $cluscount=0;
+
+my %species = ();
+open(my $outs, ">>$summary");
 
 
 open FA,"<$filename" or die "can't open $filename\n";
@@ -41,7 +45,8 @@ while(<FA>){
     my $curfile = $_;
     my @cursplit = split '\.', $curfile;
     my $curname=$cursplit[0]; #species
-
+    
+    my $elementnum = 0;
     open CF,"<$curfile" or die "can't open $curfile\n";
     while(<CF>){
 	my $line = $_;
@@ -49,6 +54,7 @@ while(<FA>){
 	##skip empty or starting with #
 	if($line =~ /^\s*#/) {next;}
 	if($line =~ /^$/) {next;}
+	$elementnum++;
 	my @F = split '\t', $line;
 	my $arrlen = scalar @F; ##should be 9
 	my $clusstart;
@@ -161,4 +167,21 @@ while(<FA>){
 	    close $outf;
 	}
     }
+    $species{$curname}=$elementnum;
 }
+
+my $spstr = "";
+my $numspec = 0;
+foreach my $key (sort (keys(%species))) {
+    my @L = split '\/', $key;
+    my @M = split '\.', $L[(scalar @L) -1];
+    $spstr = "$spstr$M[0] $species{$key}\n";
+    $numspec++;
+}
+
+
+print $outs "===============Species information\===============\n";
+print $outs "Number of Species: $numspec 
+Species Number_of_genetic_elements
+$spstr \n";
+print $outs "\n";
