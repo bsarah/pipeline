@@ -5,7 +5,7 @@
 ## input file format:
 ## Chromosome (tab) Species_IDnum (tab) startPosition (tab) endposition
 ## (tab) '+' or '-' for the strand (tab) 5'blocknum (tab) 3'blocknum
-## (tab) secondary structure(including (,),,,<,>,.,_,:) (tab) sequence(including *,[,],numbers,-,upper case, lower case)
+## (tab) secondary structure(including (,),,,<,>,.,_,:) (tab) sequence(including *,[,],numbers,-,upper case, lower case) (tab) Infernal score
 
 
 ## further input parameter: path to where the clus files should be written?
@@ -32,6 +32,10 @@ my $outpath = shift;
 my $summary = shift;
 my $outf;
 my $outf2;
+my $scoresum = 0;
+my $minscore = 300;
+my $maxscore = 0;
+my $numseqs = 0;
 #my $cluscount=0;
 
 my %species = ();
@@ -56,31 +60,31 @@ while(<FA>){
 	if($line =~ /^$/) {next;}
 	$elementnum++;
 	my @F = split '\t', $line;
-	my $arrlen = scalar @F; ##should be 9
+	my $arrlen = scalar @F; ##should be 10
 	my $clusstart;
 	my $clusend;
 
 	## clusstart is always the smaller number
-	if($F[$arrlen-4] eq "None")
+	if($F[$arrlen-5] eq "None")
 	{
-	    $clusstart = $F[$arrlen-4];
-	    $clusend = $F[$arrlen-3];
-	}
-	elsif($F[$arrlen-3] eq "None"){
-	    $clusstart = $F[$arrlen-3];
+	    $clusstart = $F[$arrlen-5];
 	    $clusend = $F[$arrlen-4];
 	}
-	elsif($F[$arrlen-4] < $F[$arrlen-3]){
+	elsif($F[$arrlen-4] eq "None"){
 	    $clusstart = $F[$arrlen-4];
-	    $clusend = $F[$arrlen-3];
+	    $clusend = $F[$arrlen-5];
+	}
+	elsif($F[$arrlen-5] < $F[$arrlen-4]){
+	    $clusstart = $F[$arrlen-5];
+	    $clusend = $F[$arrlen-4];
 	}
 	else{
-	    $clusstart = $F[$arrlen-3];
-	    $clusend = $F[$arrlen-4];
+	    $clusstart = $F[$arrlen-4];
+	    $clusend = $F[$arrlen-5];
 	}
 
 	#standardize secondary structure
-	my $struc = $F[$arrlen-2];
+	my $struc = $F[$arrlen-3];
 	my $a = "<";
 	my $b="(";
 	my $c=">";
@@ -98,10 +102,10 @@ while(<FA>){
 	$struc =~ s/$us/$p/g;
 	$struc =~ s/$til/$p/g;
 	$struc =~ s/$mini/$p/g;
-	$F[$arrlen-2]=$struc;
+	$F[$arrlen-3]=$struc;
 	
 	# work on sequence, find intron, delete - and turn to lower case
-	my $preseq = $F[$arrlen-1];
+	my $preseq = $F[$arrlen-2];
 	my @introns = ();
 	my @intronpos = ();
 	my $pos1 = index($preseq,"*");
@@ -150,9 +154,16 @@ while(<FA>){
 	$seq =~ s/$minu//g;
 	my $seq2 = lc $seq;
 
-	$F[$arrlen-1]=$seq2;
+	$F[$arrlen-2]=$seq2;
 	push @F, $preseq;
 
+	my $score = $F[$arrlen-1];
+	$scoresum = $scoresum + $score;
+	$numseqs++;
+	if($score > $maxscore){$maxscore = $score;}
+	if($score < $minscore){$minscore = $score;}
+	
+	
 	my $outline = join("\t",@F);
 	my $outname = "cluster-$clusstart-$clusend.clus";
 	if ( grep( /^$outname$/, @clusters ) ) {
@@ -179,9 +190,15 @@ foreach my $key (sort (keys(%species))) {
     $numspec++;
 }
 
+my $avscore = sprintf("%.2f",$scoresum/$numseqs);
 
 print $outs "===============Species information\===============\n";
 print $outs "Number of Species: $numspec 
 Species Number_of_genetic_elements
-$spstr \n";
+    $spstr \n";
+print $outs "===============Infernal information\===============\n";
+print $outs "Total number of sequences detected with infernal: $numseqs
+Maximal infernal score: $maxscore
+Minimal infernal score: $minscore
+Average infernal score: $avscore";
 print $outs "\n";

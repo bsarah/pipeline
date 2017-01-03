@@ -74,7 +74,7 @@ makeOutPutDir(args.outPutDir)
 if args.search_genes[0] != None:
     print("search Genes")
     args.genomes = args.search_genes[1]
-     args.model = args.search_genes[0]
+    args.model = args.search_genes[0]
 
     args.genomes = endSlash([args.genomes])
 

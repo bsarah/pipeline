@@ -3,7 +3,7 @@
 from os import listdir
 from os.path import isfile, join
 from dataStructures_lessMem import Gene
-
+import subprocess
 
 def parseInfernal(filePath,  geneList=list()):
     '''
@@ -46,7 +46,9 @@ def parseInfernal(filePath,  geneList=list()):
                             else:
                                 break
                     f.close()
-                    subprocess.call("rm "+f, shell=True)
+                    #throw error: subprocess.call("rm "+f, shell=True) TypeError: Can't convert '_io.TextIOWrapper' object to str implicitly
+                    #skip deleting the files
+                    #subprocess.call("rm "+f, shell=True)
     #print("done")
     return geneList, infernalVersion
 

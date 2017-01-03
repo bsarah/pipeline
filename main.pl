@@ -53,14 +53,15 @@ use Data::Dumper;
 use strict;
 use warnings;
 #use List::Util qw(any none first);
-use Getopt::Std;
+#use Getopt::Std;
+use Getopt::Long qw(GetOptions);
 use POSIX qw(strftime);
 use File::Basename;
 use File::Find;
 
 # declare the perl command line flags/options we want to allow
-my %options=();
-getopts("hVKo:g:m:f:s:t:c:l:q:w:b:a:y:e:r:i:xzu:v:n:d:", \%options);
+#my %options=();
+#getopts("hVKo:g:m:f:s:t:c:l:q:w:b:a:y:e:r:i:xzu:v:n:d:", \%options);
 
 
 ##define variables
@@ -68,29 +69,34 @@ my $outpath;
 my $genomes="";
 my $mafs="";
 my $refspecies="";
-my $seqsim;
-my $strucsim;
-my $pseqsim;
-my $pstrucsim;
+my $seqsim =0.9;
+my $strucsim =0.9;
+my $pseudoscore=-1;
+#my $pstrucsim =-1;
 my $cmfile="";
 my $genefile="";
 my $cmoption;
+#my $infscore="";
 my $perc="";
 my $pathtocam; #path to output of cams program (genes folder)
 my $pythonpath;
 my $evalin=0.01;
+my $bitvalin="";
 my $perlpath;
 my $rpath;
 my $infernalpath;
-my $extravalue;
+#my $extravalue;
 my $newicktree;
 my $ids;
+my $help;
+my $cont;
+my $vers;
+my $cit;
+my $skipg;
+my $skipa;
 
 
 my $dirname = dirname(__FILE__);
-
-#test print
-#print "current directory of main.pl: $dirname \n";
 
 
 #define other information
@@ -104,36 +110,62 @@ my $altnwpath = "$dirname/scripts_sarah";
 ##test if it work when altNW executable is in scripts folder. (altNW is only for 64 bit!)
 #"/scr/gin/bsarah/software/alternativeNW/dist/build/altNW/";
 
+my $helpstr = createHelp($toolname,$version,$citation,$contact);
+
+GetOptions(
+    'out|o=s' => \$outpath,
+    'genomes=s' => \$genomes,
+    'maf=s' => \$mafs,
+    'ref=s' => \$refspecies,
+    'seqsim=s' => \$seqsim,
+    'strucsim=s' => \$strucsim,    
+    'pseudo=s' => \$pseudoscore,
+#    'pstrucsim=s' => \$pstrucsim,
+    'cm=s' => \$cmfile,
+    'genes=s' => \$genefile,
+#    'infscore=s' => \$infscore,
+    'filter=s' => \$perc,
+    'again=s' => \$pathtocam,
+    'incE=s' => \$evalin,
+    'incT=s' => \$bitvalin,
+    'newick=s' => \$newicktree,
+    'id=s' => \$ids,
+    'perl=s' => \$perlpath,
+    'rpath=s' => \$rpath,
+    'python=s' => \$pythonpath,
+    'infernal=s' => \$infernalpath,
+    'nograph' => \$skipg,
+    'noaln' => \$skipa,
+    'help|h' => \$help,
+    'version|v' => \$vers,
+    'citation' => \$cit,
+    'contact' => \$cont
+    ) or die "Usage: \n $helpstr \n";
+
+
+
+
+##TODO: test if program can be called with -h -v together
+
+##Help page
+if ($help){print $helpstr;exit 0;}
+##Contact
+if($cont){print "If you have further questions, please contact $contact \n";exit 0;}
+##Citation
+if($cit){print "If you use this program, please cite: $citation \n"; exit 0;}
+##Version
+if($vers){print "Program version $version \n"; exit 0;}
+
+
+###General parameters
 
 my $checkgraphs =1;
 my $createalns = 1;
 
 
-##Help page
-if ($options{h})
-{
-    my $helpstr = createHelp($toolname,$version,$citation,$contact);
-    print $helpstr;
-    exit 0;
-}
-##Contact
-if ($options{K})
-{
-    print "If you use this program, please cite: $citation \n";
-    print "If you have further questions, please contact $contact \n";
-    exit 0;
-}
-##Version
-if ($options{V})
-{
-    print "Program version $version \n";
-    exit 0;
-}
-
-
-##outpath
+##Outpath
 my $outpathstr = "";
-if ($options{o}){$outpath = $options{o}; $outpathstr = "-o $outpath";}
+if ($outpath){$outpathstr = "-o $outpath";}
 else{print "No output path given (option -o)!\n"; exit 1;}
 ##if output folder doesnt exist, create it!
 if(-e $outpath){}
@@ -142,127 +174,143 @@ else{
     my @out42 = readpipe("$cmd42");
 }
 
+
+##Refspecies
+my $refspeciesstr = "";
+if ($refspecies){$refspeciesstr="--ref $refspecies";
+		 #check if file exists
+		 if($genomes){
+		     my $n1 = "$refspecies\.fa";
+		     my $n2 = "$refspecies\.fasta";
+		     my $n3 = "$refspecies\.fa\.gz";
+		     my $n4 = "$refspecies\.fasta\.gz";
+		     if(-f "$genomes\/$n1"){}
+		     elsif(-f "$genomes\/$n2"){}
+		     elsif(-f "$genomes\/$n3"){}
+		     elsif(-f "$genomes\/$n4"){}
+		     elsif(-f "$genomes\/$refspecies"){}
+		     else{print "No genome file for reference species in $genomes (option -f)\n"; exit 1;}
+		 }
+}
+else{print "No references species given! (option --ref)\n"; exit 1;}
+
+
+##Parameters for modes for skipping graph analysis or alignments
+my $skipgstr = "";
+my $skipastr = "";
+if ($skipg){$checkgraphs = 0;$skipgstr = "--skipg";}
+if ($skipa){$createalns = 0;$skipastr = "--skipa";}
+
+
+##Newicktree and IDs
+my $newickstr = "";
+if($newicktree && $createalns == 1){$newickstr = "--newick $newicktree";}
+elsif((! $newicktree) && $createalns == 1){print "Please give a newick tree as input file (option --newick)\n"; exit 1;}
+else{}
+my $idstr = "";
+if($ids && $createalns == 1){$idstr = "--id $ids";}
+elsif((! $ids) && $createalns == 1){print "No file given to translate newick IDs into MAF IDs (option --id). Please make sure that IDs fit!\n";}
+else{}
+
+
+
+##similarity parameter, default = 0.9, inactivated with -1
+my $simstr = "--seqSim $seqsim --strucSim $strucsim --pseudo $pseudoscore";
+if($seqsim == -1 && $strucsim == -1){
+    print "Similarity thresholds for both, sequence and structure is -1! At least one has to be > 0! (Use parameter -s for sequence and -t for structure to specify the value) \n"; exit 1;
+}
+##pseudovalue, default = -1, thus inactivated
+
+
+##Paths: perl, python, r
+my $pystr = "";
+my $pestr = "";
+my $rstr = "";
+##Python
+if ($pythonpath){$pystr = "--python $pythonpath";}
+else{print "No path to python3 given! (option --python)\n"; exit 1;}
+
+##Perl
+if ($perlpath){$pestr = "--perl $perlpath";}
+else{print "No path to perl given! (option --perl)\n"; exit 1;}
+
+##R (not needed at the moment)
+if ($rpath){$rstr = "--rpath $rpath";}
+else{print "No path to R given! (option --rpath)\n"; exit 1;}
+
+
+
+###Parameters for infernal mode
+
+##CM
+my $cmoptstr="";
+if($cmfile){$cmoption = "-sg $cmfile"; $cmoptstr = "--cm $cmfile";}
+
+
 ##Genomes
 my $genomesstr="";
-if ($options{g}){$genomes = $options{g}; $genomesstr = "-e genomes";
-		 #check if folder is not empty
-		 if(-e $genomes){} else{print "Genomes folder is empty! (option -g)\n"; exit 1;}
+if ($genomes){ 
+    $genomesstr = "--genomes genomes";
+    $cmoption = "$cmoption $genomes";
+    #check if folder is not empty
+    if(-e $genomes){} else{print "Genomes folder is empty! (option -g)\n"; exit 1;}
 }
-elsif($options{a}){}
-else{print "No path to genomes given! (option -g)\n"; exit 1;}
 
 
 ##Maf
 my $mafstr = "";
-if ($options{m}){$mafs = $options{m};$mafstr = "-m $mafs";}
-elsif($options{a}){}
-else{print "No path to maf files given! (option -m)\n"; exit 1;}
+if ($mafs){$mafstr = "--maf $mafs";}
 
 
-##reference species
-my $refspeciesstr = "";
-if ($options{f}){$refspecies = $options{f};$refspeciesstr="-f $refspecies";
-		 #check if file exists
-		 my $n1 = "$refspecies\.fa";
-		 my $n2 = "$refspecies\.fasta";
-		 my $n3 = "$refspecies\.fa\.gz";
-		 my $n4 = "$refspecies\.fasta\.gz";
-		 if(-f "$genomes\/$n1"){}
-		 elsif(-f "$genomes\/$n2"){}
-		 elsif(-f "$genomes\/$n3"){}
-		 elsif(-f "$genomes\/$n4"){}
-		 elsif(-f "$genomes\/$refspecies"){}
-		 else{print "No genome file for reference species in $genomes (option -f)\n"; exit 1;}
-}
-elsif($options{a}){}
-else{print "No references species given! (option -f)\n"; exit 1;}
-
-
-##similarity parameter
-if ($options{s}){$seqsim = $options{s};}
-else{$seqsim=0.9;}
-if ($options{t}){$strucsim = $options{t};}
-else{$strucsim=0.9;}
-if($seqsim == -1 && $strucsim == -1){
-    print "Similarity thresholds for both, sequence and structure is -1! At least one has to be > 0! (Use parameter -s for sequence and -t for structure to specify the value) \n"; exit 1;
-}
-if($seqsim==-1){$pseqsim = -1;}
-elsif ($options{u}){$pseqsim = $options{u};}
-else{$pseqsim=0.7;}
-if($strucsim==-1){$pstrucsim = -1;}
-elsif($options{v}){$pstrucsim = $options{v};}
-else{$pstrucsim=0.7;}
-if($pseqsim == -1 && $pstrucsim == -1){
-    #then, pseudogenes are NOT included, thus no range between seqsim and pseqsim or strucsim and pstrucsim
-    $pstrucsim=$strucsim;
-    $pseqsim = $seqsim;
-}
-
-
-##CM
-my $cmoptstr="";
-my $usingCM = 1; ##take care for the option if either cm is used or a gene list is given. this changes the result page later on
-if($options{c}){$cmfile = $options{c};$cmoption = "-sg $cmfile"; $cmoptstr = "-c $cmfile";}
-elsif($options{l}){$genefile = $options{l};$cmoption = "-og $genefile"; $cmoptstr = "-l $genefile"; $usingCM = 0;}
-elsif($options{a}){}
-else{print "Please give either a cm file (option -c) or a list of genes (option -l)! \n"; exit 1;}
-
-
-##Percentage of the lowest scoring blocks based on the MAF scores to be removed (between 0 and 100)
-if ($options{q}){$perc = "-q $options{q}";}
-else{$perc = "";}
+#Infernal path
+my $infstr = "";
+if ($infernalpath){$infstr = "--infernal $infernalpath";}
 
 
 ##infernal parameter
 my $inclopt="";
-if ($options{w}){$inclopt = "-incE $options{w}";}
-if ($options{b}){$inclopt = "-incT $options{b}";}
+my $incloptstr = "";
+if ($evalin){$inclopt = "-incE $evalin"; $incloptstr = "$incloptstr\--incE $evalin";}
+if ($bitvalin){$inclopt = "-incT $bitvalin";$incloptstr = "$incloptstr\--incT $bitvalin";}
 
 
-##run again with genes folder already created
-my $doitagainstr = "";
-my $doitagain="";
-if ($options{a}){
-    $doitagain = "$options{a}";
-    $genefile="$options{a}";
-    $usingCM=0;
-    $doitagainstr="-a $doitagain";
-    if(-e $doitagain){}
-    else{print "Option -a given but argument folder $doitagain doesn't exist! \n"; exit 1;}
+##Percentage of the lowest scoring blocks based on the MAF scores to be removed (between 0 and 100)
+my $filterstr = "";
+if ($perc){$filterstr = "--filter $perc";}
+
+
+if($cmfile){
+    if($genomes && $mafs && $infernalpath){}
+    else{print "Infernal mode but some required parameters are missing! See --help for more information! \n"; exit 1;}
 }
 
-##Pathes
-##Python
-if ($options{y}){$pythonpath = $options{y};}
-else{print "No path to python3 given! (option -y)\n"; exit 1;}
 
-##Perl
-if ($options{e}){$perlpath = $options{e};}
-else{print "No path to perl given! (option -e)\n"; exit 1;}
+###Genelist mode
 
-##R (not needed anymore)
-if ($options{r}){$rpath = $options{r};}
-else{print "No path to R given! (option -r)\n"; exit 1;}
+if($genefile){$cmoption = "-og $genefile"; $cmoptstr = "--genes $genefile";}
 
-#Infernal, only needed when option -c
-if ($options{i}){$infernalpath = $options{i};}
-elsif($options{l}){$infernalpath = "";}
-else{print "No path to infernal given! (option -i)\n"; exit 1;}
+##maf and filter should already be reported
 
-if ($options{x}){$checkgraphs = 0;}
-if ($options{z}){$createalns = 0;}
+if($genefile){
+    if($mafs){}
+    else{print "Genelist mode but --maf parameter is missing! See --help for more information! \n"; exit 1;}
+}
 
-my $newickstr = "";
-if($options{n} && $createalns == 1){$newicktree = $options{n};$newickstr = "-n $newicktree";}
-elsif((! $options{n}) && $createalns == 1){print "Please give a newick tree as input file (option -n)\n"; exit 1;}
-else{}
-my $idstr = "";
-if($options{d} && $createalns == 1){$ids = $options{d};$idstr = "-d $ids";}
-elsif((! $options{d}) && $createalns == 1){print "No file given to translate newick IDs into MAF IDs (option -d). Please make sure that IDs fit!\n";}
-else{}
+
+###Repetition mode
+my $doitagainstr = "";
+if($pathtocam){
+    $doitagainstr="--again $pathtocam";
+    $genefile=$pathtocam;
+    if(-e $pathtocam){}
+    else{print "Option -a given but argument folder $pathtocam doesn't exist! \n"; exit 1;}
+}
+
+
+
 
 ##Program call
-my $optstr = "$outpathstr $genomesstr $mafstr $refspeciesstr $newickstr $idstr -s $seqsim -t $strucsim $doitagainstr $cmoptstr $perc $inclopt -y $pythonpath -e $perlpath -r $rpath -i $infernalpath";
+my $optstr = "$outpathstr $cmoptstr $mafstr $refspeciesstr $newickstr $idstr $simstr $doitagainstr $filterstr $incloptstr $pystr $pestr $rstr $infstr";
 print "program called with: $optstr \n";
 
 
@@ -297,21 +345,21 @@ print $outs "\n";
 
 ##Cam's part (sort the genetic elements into genomic anchors based on the maf blocks)
 my $genesfolder="";
-if(! $options{a}){
+if(! $pathtocam){
     print "analysis of maf files started (this might take a while)..\n";
     if($perc eq ""){
-	open(PROG,"$pythonpath\/python3 $scripts_cam\/main.py $cmoption $inclopt $genomes $mafs $infernalpath $outpath $dirname $refspecies 2>>$err0 |") or die "Couldn't start prog!";
+	open(PROG,"$pythonpath\/python3 $scripts_cam\/main.py $cmoption $inclopt $mafs $infernalpath $outpath $dirname $refspecies 2>>$err0 |") or die "Couldn't start program!";
 	while(<PROG>){print "$_";}
     }
     else{
-	open(PROG,"$pythonpath\/python3 $scripts_cam\/main.py $perc $cmoption $inclopt $genomes $mafs $infernalpath $outpath $dirname $refspecies 2>>$err0 |") or die "Couldn't start prog!";
+	open(PROG,"$pythonpath\/python3 $scripts_cam\/main.py $perc $cmoption $inclopt $mafs $infernalpath $outpath $dirname $refspecies 2>>$err0 |") or die "Couldn't start program!";
 	while(<PROG>){print "$_";}
     }
         print "Done!\n";
     $genesfolder = "$outpath\/genes";
 }
 else{
-    $genesfolder = $doitagain;
+    $genesfolder = $pathtocam;
 }
 
 
@@ -614,87 +662,122 @@ based on a model or a lit of the genetic elements and a multiple sequence
 alignment of the target species. You can choose if secondary structure 
 information should be included in the analysis or not. \n";
     $outstr = "$outstr \n";
-    $outstr = "$outstr Program use:
-perl main.pl -o OutputFolder -g GenomesFolder -m MafFolder -f refspecies -n newicktree -d IDtranslation
-{-c CM | -l genelist} -y python -e perl -r R -i infernal
-[-s seqSimilarity] [-t strucSimilarity] [-u pseudoseqSimilarity] [-v pseudostrucSimilarity] 
-[-q threshold] [-a genesFolder] [-x] [-z]  [-w incE] [-b incT] \n\n";
-    $outstr = "$outstr Parameter explanations:\n";
-    $outstr = "$outstr -o Outputfolder:
-please specify where the Output files should be created. 
-The folder has to exist. \n";
-    $outstr = "$outstr -g GenomesFolder:
-path to folder where genomes are located. The names of the genome files must 
-be the same as the species' name in the MSA. The genome files should have 
-fasta format and can be gzipped. Not required if option -a is taken. \n";
-    $outstr = "$outstr -m MafFolder:
-path to the folder where multiple sequence alignments in maf format are 
-located. The names of the species in the maf files have to be the same as the 
-names of the genome files. Format should be: .maf.gz, .maf.Z, .maf.bz2.  Not required if option -a is taken. \n";
-    $outstr = "$outstr -f refspecies:
-the maf files were created by using one species as the reference species. 
-Please provide the name of the reference species as it can be found in the 
-multiple sequence alignment and as a genome file. Not required if option -a is taken. \n";
-    $outstr = "$outstr -n newicktree:
-Specify a newick tree that represents the species used in the analysis. Numbers of occuring genetic
-events will be written on the tree in an output file. This option is not needed when -z is activated \n";
-    $outstr = "$outstr -d IDtranslation
-As species names are different in newick trees and MAF alignments, we need a file showing both names to be able
-to translate. If you are sure that the names in your newick tree are the same as in the MAF alignments, this
-option is not needed. \n";
-    $outstr = "$outstr -a pathToGenesFolder:
-Give this options in case creating the clusters and graphs should be redone without analyzing the maf files
-again. In this case, the option -a will specify the folder with .bed files for each species including information
-about adjacent maf blocks (e.g. the genes folder from a former run could be stored and reused).\n";
-    $outstr = "$outstr -s seqSimilarity and -t strucSimilarity:
-when testing for homology, only sequences with a sequence similarity above 
-seqSimilarity and a secondary structure similarity above strucSimilarity will 
-be considered as homologous whereas the value is measured as percentage, thus 
-1 means the sequences are the same. Default for both : 0.9; if for any of the 
-two parameter -1 is given, this information will be skipped and the analysis 
-will only be based on one of both, sequence or structure information. \n";
-    $outstr = "$outstr -u pseudoseqSimilarity and -v pseudostrucSimilarity:
-when testing for homology, only sequences with a sequence similarity above 
-pseudoseqSimilarity and a secondary structure similarity above pseudostrucSimilarity will 
-be considered as pseudogenes and thus counted as a pseudogenization event. 
-Default for both : 0.7; if for any of the 
-two parameter -1 is given, this information will be skipped and the analysis 
-will only be based on one of both, sequence or structure information. 
-If both are -1, pseudogenization is not considered in the analysis. 
-If -t (strucsim) is set to -1, -v (pseudostrucsim) won't be considered either,
-and analogous for the sequence similarities -s and -u. \n";
-    $outstr = "$outstr -q threshold:
-remove a percentage of the lowest scoring blocks based on the MAF scores, 
-whereas the value is between 0 and 100 \n";
-    $outstr = "$outstr -c CM or -l genelist:
-either give a covariance model (cm file) for the gene of interest or give a 
-list of genes (format: .bed, .bed.gz, .bed.Z, .bed.bz2). The gene list should 
-contain one line per gene with tab separated elements as follows: chromosome     species     startCoord     endCoord     '+'or'-'     sequence     secondary_structure(optional). 
-If either secondary structure or sequence are not given or should not be taken 
-into account, please use the parameters -s and -t and set the corresponding 
-one to -1. Not required if option -a is taken. \n";
-    $outstr = "$outstr -w for inclusion E-value threshold or -b for an inclusion bit score threshold as parameter for the infernal run:
-As described in the infernal manual (to be found here: eddylab.org/infernal), inclusion thresholds control which hits are considered to be significant.
-In case you want to include more putative sequences into our pipeline as significant hits based on the given covariance model, please either increase the e-value threshold using parameter -w (default = 0.01) or decrease the bitscore threshold with parameter -b (this value is usually not set when running infernal with default parameters). Infernal will consider sequences significant if their e-value <= the e-value threshold or their bit score >= the bit score threshold. The README_output file will explain where to find the infernal output in order to see which sequences were included in the analysis.\n";
-    $outstr = "$outstr if option -x is activated, graphs are NOT analysed for structural properties (cographs/noncographs).\n";
-    $outstr = "$outstr if option -z is activated, duplication alignments are NOT created, thus genetic events are NOT counted.\n";
-    $outstr = "$outstr -y python:
-please specify the path to where python is installed. Version should be >= 3.0\n";
-    $outstr = "$outstr -e perl:
-please specify the path to where perl is installed. Version should be >= 5.0\n";
-    $outstr = "$outstr -r R:
-please specify the path to where R is installed. Version should be >= 3.2.0 \n";
-    $outstr = "$outstr -i Infernal:
-please specify the path to where Infernal is installed. Version should be >= 1.1.1 . Infernal is only needed when using option -c. With option -l Infernal is not used. \n";
+    $outstr = "$outstr ##Program use:
+         perl main.pl --out OutputFolder --ref refspecies --newick newicktree [--id IDtranslation]
+                     [--seqsim seqSim] [--strucsim strucSim] 
+                     [--pseudo pseudoScore] [--skipg] [--skipa]
+                      --python pythonpath --perl perlpath --rpath Rpath 
+{mode options 
+(a)infernal mode:     --maf MafFolder --genomes GenomesFolder --cm Cmfile --infernal infernalpath 
+                     [--incE e-value] [--incT bitscore] [--filter threshold],
+(b)genelist mode:     --maf MafFolder --genes GeneList [--filter threshold],
+(c)repetition mode:   --again pathToPreviousOutput,
+} 
+
+Please choose one of the modes and use its parameters!
+  \n\n";
     $outstr = "$outstr \n";
-    $outstr = "$outstr Further parameter:\n";
-    $outstr = "$outstr choose -k for contact information and citation, -v to see the 
-version information and -h to display this help message.\n\n";
+    $outstr = "$outstr Input options:
 
+--out|-o Outputfolder  specify the location of the output files. If folder doesn't exist,
+                       it will be newly created.
+--ref refSpecies       specify the reference species. The identifier must be the same as given in all
+                       other input files, e.g. maf files, genelist, newicktree of IDtranslation file.
+                       The specified reference species must be the same as in the maf alignments.
+--newick newickTree    tree in newick format showing the phylogenetic relation between target species.
+                       In case the species identifier in the tree do not fit to the maf alignments,
+                       an ID translation file can be specified (--id).
+                       Inner nodes should have a unique name.
+--id IDtranslation     file including both, the species identifier in the tree and in the maf alignments
+                       to be able to translate. Not needed if the names in the tree fit.
+                       Tree and translation file can be downloaded from NCBI and should have NCBI's format.
+--seqsim seqSim        optional, default=0.9, value between 0 and 1. Specifies the sequence similarity 
+                       (percentage) that is used to detect orthologuous sequences (>= seqSim). 
+                       if set to -1, only structure similarity is used.
+                       If seqsim and strucsim are used, genetic elements are orthologuous if both thresholds
+                       fit (>= seqSim AND >= strucSim).
+--strucsim strucSim    optional, default=0.9, value between 0 and 1. Specifies the structure similarity
+                       (percentage) that is used to detect orthologuous sequences. (>= strucSim)
+                       if set to -1, only sequence similarity is used.
+                       If seqsim and strucsim are used, genetic elements are orthologuous if both thresholds
+                       fit (>= seqSim AND >= strucSim).
+--pseudo pseudoScore   optional, default = -1 (inactivated). Based on the infernal score, all sequences
+                       with infernal score < pseudoScore are considered pseudogenes, values above active genes.
+                       After running the program for the first time with default parameters, the range of 
+                       infernal scores will be included in the output. Using the repetition mode, the program
+                       can be rerun specifying several parameters for the orthologuous elements detection. 
+--skipg                If --skipg is given, graph analysis step will be inactivated, thus NO analysis of
+                       structural properties. This is useful when repeating a run to save time. (optional)
+--skipa                If --skipa is given, creation of duplication alignments is inactivated, thus NO counting of
+                       genetic events. This is useful when repeating a run to save time. (optional)
+--python pythonpath    Specifies the path to the installed python version (must be at least python 3.0)
+--perl perlpath        Specifies the path to the installed perl version (must be at least perl 5.0)
+--rpath Rpath          Specifies the path to the installed R version (must be at least R 3.2)
+\n";
+    $outstr = "$outstr ##The program modes:
 
-return $outstr;
+a) Infernal mode: Enter a covariance model of your target elements, the genomes to be
+                  scanned and the path to infernal. The pipeline will use the infernal 
+                  output and maf alignments as input for further analysis. 
+                  Input options (additional to the general ones):
 
+--maf MafFolder           path to the folder where multiple sequence alignments in maf format are 
+                          located. The names of the species in the maf files have to be the same as the 
+                          names of the genome files. Format should be: .maf.gz, .maf.Z, .maf.bz2.
+--genomes GenomesFolder   path to folder where genomes are located. The names of the genome files must 
+                          be the same as the species' name in the MSA. The genome files should have 
+                          fasta format and can be gzipped.
+--cm CMfile               Give a covariance model (cm file) for the gene of interest created with cmbuild
+                          a program of the infernal suite. Infernal manual: eddylab.org/infernal
+--infernal infernalpath   path to the installed version of infernal (cmsearch) with version at least 1.1.1
+                          Infernal manual: eddylab.org/infernal
+--incE e-value            optional, inclusion e-value threshold for infernal run, default = 0.01. Specifies 
+                          which infernal hits are considered to be significant. To catch more hits, increase
+                          the inclusion e-value threshold. Infernal manual: eddylab.org/infernal
+--incT bitscore           optional, inclusion bitscore threshold for infernal run, default = unset. Specifies 
+                          which infernal hits are considered to be significant. To catch more hits, decrease
+                          the inclusion bitscore threshold. Infernal manual: eddylab.org/infernal
+--filter threshold        optional, remove a percentage of the lowest scoring blocks based on the MAF scores, 
+                          whereas the value is between 0 and 100
+\n
+b) Genelist mode: Enter a list with target genes that will be sorted into the maf blocks
+                  and used for further analysis. Input options (additional to the general ones):
 
+--maf MafFolder           path to the folder where multiple sequence alignments in maf format are 
+                          located. The names of the species in the maf files have to be the same as the 
+                          names of the genome files. Format should be: .maf.gz, .maf.Z, .maf.bz2.
+--genes GeneList          Give a list of genes (format: .bed, .bed.gz, .bed.Z, .bed.bz2). The gene list should 
+                          contain one line per gene with tab separated elements as follows: 
+                          chromosome, species, startCoord, endCoord, '+'or'-', sequence, 
+                          secondary_structure, score.
+                          If some columns are of no importance, please fill in some dummy values. Thus, there should
+                          be 10 tab-separated columns in the input gene lists. 
+                          If either secondary structure or sequence are not given or should not be taken 
+                          into account, please use the parameters --seqSim and --strucSim and set the corresponding 
+                          one to -1.
+--filter threshold        optional, remove a percentage of the lowest scoring blocks based on the MAF scores, 
+                          whereas the value is between 0 and 100
+\n
+(c) Repetition mode: After running the program once with default parameters, a second run can be started without 
+                     analyzing the maf files again. Similarity parameters can be different than in the first run 
+                     to change the output to the preferred direction.   
+
+--again pathToPreviousOut Give this options in case the analysis should be redone without reading the maf
+                          alignments again. This option can be used to adapt the similarity or scoring 
+                          parameters after having seen a first output based on default parameters.
+                          The option will specify the folder with .bed files for each species including information
+                          about adjacent maf blocks (e.g. the genes folder from a former run could be stored and reused).
+\n
+";
+    $outstr = "$outstr \n";
+    $outstr = "$outstr Further parameter:
+--help|-h                 print this help page
+--version|-v              print version information
+--contact                 print contact information
+--citation                print citation information
+\n";
+
+    return $outstr;
 
 }
 
