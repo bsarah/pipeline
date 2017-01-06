@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-## perl getDuplication edlilist inpath outpath pathtonw summaryfile
+## perl getDuplication edlilist inpath outpath pathtonw match dupl ins pseudo
 
 ##program will produce sequences of letters, where the same letter means similar sequences, depending on the threshold.
 ##thus one letter for each connected component.
@@ -28,7 +28,12 @@ my $outpath=shift;
 #my $secsim = shift;
 #my $strucsim = shift;
 my $pathtonw = shift;
-my $sumary = shift;
+#no summary file but now output files that are input for countEvents.pl
+my $matchout = shift;
+my $duplout = shift;
+my $insout = shift;
+my $pseout = shift;
+
 
 #create a hash with strings that show spec1_spec2,spec1,spec3,spec5 as key whereas
 #spec1 is the current species and the others are in the same cluster.
@@ -41,13 +46,16 @@ my %delevents =();
 my %insevents =();
 my %misevents =();
 
-open(my $outs,">>$sumary");
+open(my $outm,">>",$matchout);
+open(my $outd,">>",$duplout);
+open(my $outi,">>",$insout);
+open(my $outp,">>",$pseout);
 
 #curfile are the .gr files, thus only showing the possible edges
-if(-z $file){
-    print $outs "no sequences found that fulfill the similarity thresholds, thus, only graphs without edges and no alignments. Lower the similarity thresholds for sequences and/or secondary structure to see alignments (options -s, -t). \n";
-    exit 0;
-}
+#if(-z $file){
+#    print $outs "no sequences found that fulfill the similarity thresholds, thus, only graphs without edges and no alignments. Lower the similarity thresholds for sequences and/or secondary structure to see alignments (options -s, -t). \n";
+#    exit 0;
+#}
 
 
 open FA,"<$file" or die "can't open $file\n";
@@ -59,7 +67,8 @@ while(<FA>){
     my @E = split '\/', $prename;
     my $almostname = $E[(scalar @E)-1];
     my $newname="$almostname\.aln";
-    open(my $outgr,">>$outpath\/$newname");
+    my $outloc = "$outpath\/$newname";
+    open(my $outgr,">>",$outloc);
 
     print $outgr ">$almostname\n";
    
@@ -306,68 +315,39 @@ while(<FA>){
     
 }
 
-
-#write summary file
-
-#my $dt = DateTime->today;
-#my $time = $dt->date;
-my $now_string = strftime "%a %b %e %H:%M:%S %Y", localtime;
-
-print $outs "File created on $now_string\n";
-print $outs "The following output shows the number of events that occur in the specified combination of species relative to the species written first.\n";
-print $outs "Thus, summary for each event is a tab separated table with: reference_species species_in_cluster number_of_event\n";
-print $outs "Events are Duplication, Matches, Insertion, Deletion, Mismatches.\n";
-print $outs "The corresponding alignment files can be found in $outpath \n";
-print $outs "\n\n";
-
-
-##sort the entries in each entry for the hashes alphabetically
-
-print $outs "EVENT: Duplication\n";
+#duplications
 foreach my $du (sort keys %dupevents) {
     my @devs = split ',', $dupevents{$du};
     @devs = sort @devs;
     my $dustr = join(',',@devs);
-    print $outs "$du\t$dustr\n";
+    print $outd "$du\t$dustr\n";
 }
-print $outs "\n\n";
 
-print $outs "EVENT: Matches\n";
+#matches
 foreach my $ma (sort keys %matevents) {
     my @mevs = split ',', $matevents{$ma};
     @mevs = sort @mevs;
     my $mastr = join(',',@mevs);
-
-    print $outs "$ma\t$mastr\n";
+    print $outm "$ma\t$mastr\n";
 }
-print $outs "\n\n";
 
-print $outs "EVENT: Insertion\n";
+#insertions
 foreach my $in (sort keys %insevents) {
     my @ievs = split ',', $insevents{$in};
     @ievs = sort @ievs;
     my $instr = join(',',@ievs);
-    print $outs "$in\t$instr\n";
+    print $outi "$in\t$instr\n";
 }
-print $outs "\n\n";
 
-print $outs "EVENT: Deletion\n";
-foreach my $de (sort keys %delevents) {
-    my @deevs = split ',', $delevents{$de};
-    @deevs = sort @deevs;
-    my $destr = join(',',@deevs);
-    print $outs "$de\t$destr\n";
-}
-print $outs "\n\n";
-
-print $outs "EVENT: Mismatches\n";
+#pseudogenes
+#TODO change this!
 foreach my $mi (sort keys %misevents) {
     my @mevs = split ',', $misevents{$mi};
     @mevs = sort @mevs;
     my $mistr = join(',',@mevs);
-    print $outs "$mi\t$mistr\n";
+    print $outp "$mi\t$mistr\n";
 }
-print $outs "\n\n";
+
 
     
 sub GetCCs{ #arguments is nodestring, uniqedgelist, input is a connected graph

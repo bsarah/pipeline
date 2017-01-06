@@ -103,6 +103,7 @@ my $dirname = dirname(__FILE__);
 my $toolname = "FindAFancyAbbrevation";
 my $scripts_cam = "$dirname/scripts_cam";
 my $scripts_sarah = "$dirname/scripts_sarah";
+my $epope = "$dirname/epope";
 my $version = "0.1";
 my $citation = "Beerinformatics Leipzig";
 my $contact = "bsarah at bioinf dot uni-leipzig dot de or anneh at bioinf.uni-leipzig dot de";
@@ -337,7 +338,8 @@ my @out33 = readpipe("$cmd33");
 my $sumfile = "$outpath\/summary.txt";
 open(my $outs,">>",$sumfile);
 print $outs "Program started on $start_string\n";
-print $outs "Program call: $optstr \n";
+print $outs "======Program parameters======\n";
+print $outs "$optstr \n";
 print $outs "\n\n";
 print $outs "======Output statistics======\n";
 print $outs "\n";
@@ -375,7 +377,7 @@ my $sumgetnumbers = "$summarypath\/Summary_getNumbers.txt";
 ##Construct clusters
 my $cmd1 = "mkdir $outpath\/clusters 2>>$err";
 my $cmd2 = "ls $genesfolder\/*.bed \> $genesfolder\/specieslist 2>>$err";
-my $cmd3 = "$perlpath\/perl $scripts_sarah\/collectCluster\.pl $genesfolder\/specieslist $genesfolder $outpath\/clusters $sumcollectcluster 2>>$err";
+my $cmd3 = "$perlpath\/perl $scripts_sarah\/collectCluster\.pl $genesfolder\/specieslist $genesfolder $pseudoscore $outpath\/clusters $sumcollectcluster 2>>$err";
 my $cmd4 = "ls $outpath\/clusters/*.clus > $outpath\/clusters/precluslist 2>>$err";
 my $cmd5 = "$perlpath/perl $scripts_sarah\/getNumbers.pl $outpath\/clusters/precluslist $outpath\/clusters $sumgetnumbers 2>>$err";
 print "construct clusters..";
@@ -384,6 +386,10 @@ my @out2 = readpipe("$cmd2");
 my @out3 = readpipe("$cmd3");
 my @out4 = readpipe("$cmd4");
 my @out5 = readpipe("$cmd5");
+
+##looks like: $species\-$num_elems\=$species\-...
+my $totelemnumstr = $out3[0];
+print "$totelemnumstr\n";
 
 append2file($outs,$sumcollectcluster);
 append2file($outs,$sumgetnumbers);
@@ -394,6 +400,7 @@ my $cmd6 = "mkdir $outpath\/clusters\/NoneCluster 2>>$err";
 my $cmd7 = "mv $outpath\/clusters\/cluster-None\* $outpath\/clusters\/NoneCluster 2>>$err";
 my $cmd7a = "touch $outpath\/clusters\/NoneCluster/nonecluslist 2>>$err";;
 my $cmd7b = "ls $outpath\/clusters\/NoneCluster/*.clus > $outpath\/clusters\/NoneCluster/nonecluslist 2>>$err";
+my $cmd7c = "$perlpath\/perl $scripts_sarah\/countNones.pl $outpath\/clusters\/NoneCluster/nonecluslist";
 ##report the number of elements for each species that are contained in none clusters
 
 print "sort clusters..";
@@ -401,7 +408,10 @@ my @out6 = readpipe("$cmd6");
 my @out7 = readpipe("$cmd7");
 my @out7a = readpipe("$cmd7a");
 my @out7b = readpipe("$cmd7b");
+my @out7c = readpipe("$cmd7c");
 print "Done!\n";
+
+my $nonestr = $out7c[0];
 
 #create bedfile about clusters (without none clusters)
 my $sumallclusters = "$summarypath\/Summary_allClusters.txt";
@@ -430,6 +440,7 @@ my $outname2 = "allClusters_joined.bed";
 my $cmd9a = "$perlpath\/perl $scripts_sarah\/writeBED\.pl $outpath\/clusters\/cluslist_joined $outpath $outname2 $sumallclustersjoined 2>>$err";
 
 #sort out singletons
+##sortCluster should output a summaryfile for singletons...
 my $cmd15 = "mkdir $outpath\/clusters/singletons 2>>$err";
 my $cmd16 = "$perlpath\/perl $scripts_sarah\/sortCluster.pl $outpath\/clusters/cluslist_joined $outpath\/clusters/singletons 2>>$err";
 my $cmd17 = "ls $outpath\/clusters/*.clus > $outpath\/clusters/cluslist_nosingles 2>>$err";
@@ -454,6 +465,20 @@ my $singletoncount;
 if($out16[0] eq ""){$singletoncount = "=";}
 else{$singletoncount = "$out16[0]";}
 print "singletoncount: $singletoncount \n";
+
+##add another summary file that includes the singleton and none cluster count
+my $singlecounts = "$summarypath\/Singleton_Counts.txt";
+my $cmdallsingles = "ls $outpath\/clusters/singletons\/*.clus > $outpath\/clusters/singletons\/singletonlist";
+my $cmdsingles = "$perlpath\/perl $scripts_sarah\/countElems.pl $outpath\/clusters/singletons/singletonlist $summarypath\/Singleton_Counts.txt 2>>$err";
+my $nonecounts = "$summarypath\/None_Counts.txt";
+my $cmdnones = "$perlpath\/perl $scripts_sarah\/countElems.pl $outpath\/clusters\/NoneCluster/nonecluslist $summarypath\/None_Counts.txt 2>>$err";
+
+readpipe("$cmdallsingles");
+readpipe("$cmdsingles");
+readpipe("$cmdnones");
+append2file($outs,$singlecounts);
+append2file($outs,$nonecounts);
+
 
 
 #create graphs
@@ -504,20 +529,39 @@ if($createalns == 1){
     #create duplication alignments for each graph, thus take care for the similarity thresholds
     my $sumcreatealn = "$summarypath\/Summary_createAlignments.txt";
     my $cmd28 = "mkdir $outpath\/graphs/alignments 2>>$err";
-    my $cmd29 = "touch $outpath\/geneticEvents.txt 2>>$err";
+    my $cmd281 = "mkdir $outpath\/data_iTOL 2>>$err";
+    my $cmd291 = "touch $outpath\/matches.txt 2>>$err";
+    my $cmd292 = "touch $outpath\/duplications.txt 2>>$err";
+    my $cmd293 = "touch $outpath\/insertions.txt 2>>$err";
+    my $cmd294 = "touch $outpath\/pseudogenes.txt 2>>$err";
     my $cmd29a = "mkdir $outpath\/graphs/GainLoss 2>>$err";
-    #my $cmd30 = "$perlpath\/perl $scripts_sarah\/getDuplication.pl $outpath\/graphs/showGraphs/graphsToDraw $outpath\/graphs/showGraphs $outpath\/graphs/alignments $altnwpath $outpath\/geneticEvents.txt 2>>$err";
+#    my $cmd29b = "touch $outpath\/graphs/showGraphs/graphsToDraw 2>>$err";
+##getDuplication not needed anymore as it was replaced by create alignments
+#    my $cmd30 = "$perlpath\/perl $scripts_sarah\/getDuplication.pl $outpath\/graphs/edlilist $outpath\/graphs/showGraphs $outpath\/graphs/alignments $altnwpath $outpath\/matches.txt $outpath\/duplications.txt $outpath\/insertions.txt $outpath\/pseudogenes.txt 2>>$err";
+    my $cmd301 = "touch $outpath\/tree.out 2>>$err";
+    my $cmd302 = "touch $outpath\/geneticEvents.txt 2>>$err";
     ##TODO set the pseqsim and pstruclim if we have a solution for pseudogenes
-    my $cmd30 = "$perlpath\/perl $scripts_sarah\/createAlignments.pl $outpath\/graphs/edlilist $outpath\/graphs/alignments $altnwpath $seqsim $strucsim -1 -1 $singletoncount $outpath\/graphs/GainLoss $outpath\/geneticEvents.txt $sumcreatealn 2>>$err";
+    my $cmd30b = "$perlpath\/perl $scripts_sarah\/createAlignments.pl $outpath\/graphs/edlilist $outpath\/graphs/alignments $altnwpath $seqsim $strucsim -1 $singletoncount $outpath\/graphs/GainLoss $outpath\/matches.txt $outpath\/duplications.txt $outpath\/insertions.txt $outpath\/pseudogenes.txt $sumcreatealn 2>>$err";
+    my $cmd30a = "$perlpath\/perl $scripts_sarah\/countEvents.pl $newicktree $outpath\/matches.txt $outpath\/duplications.txt $outpath\/insertions.txt $outpath\/pseudogenes.txt $outpath\/tree.out $outpath\/geneticEvents.txt $totelemnumstr $nonestr $outpath\/data_iTOL 2>>$err";
     
     print "create duplication alignments..";
-    print "cmd createalns: $cmd30 \n";
     my @out28 = readpipe("$cmd28");
-    my @out29 = readpipe("$cmd29");
+    my @out281 = readpipe("$cmd281");
+    my @out291 = readpipe("$cmd291");
+    my @out292 = readpipe("$cmd292");
+    my @out293 = readpipe("$cmd293");
+    my @out294 = readpipe("$cmd294");
     my @out29a = readpipe("$cmd29a");
-    my @out30 = readpipe("$cmd30");
+#    my @out29b = readpipe("$cmd29b");
+#    my @out30 = readpipe("$cmd30");
+    my @out301 = readpipe("$cmd301");
+    my @out302 = readpipe("$cmd302");
+    my @out30b = readpipe("$cmd30b");
+    my @out30a = readpipe("$cmd30a");
     append2file($outs,$sumcreatealn);
     print "Done!\n";
+
+    
 }
 
 

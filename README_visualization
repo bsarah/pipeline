@@ -1,0 +1,29 @@
+The output of the pipeline will represent the simulated evolutionary history of the target genetic elements.
+To be able to visualize the results, the online tool iTOL can be used. We are providing all the files needed to be able to use the online tool and get a nice and interactive visualization of the resulting tree.
+The online tool page is here: itol.embl.de
+The visualization start here: itol.embl.de/upload.cgi
+
+The files needed for visualization can be found in the output folder of your pipeline run, in the subfolder data_iTOL.
+
+At first, please upload the file tree.txt.
+
+Now, you will see your input tree visualized in your browser. By using iTOL functions, the tree can be edited and downloaded.
+To see the pipeline's results, please drag and drop the following files from the pipeline's output folder onto the tree visualized in the browser. If you only want to see specific information, you can of course skip some files. iTOL also gives you the opportunity to switch of some parts of the visualization.
+
+tree_labels.txt: This will insert node identifiers for all the inner nodes of the tree and show the total number of genetic events that were included in the pipeline run for each species. This is colored black.
+
+tree_labels_tot.txt: This will show the total number of genetic events that were included in the pipeline run for each species. This is colored black. Additionally, a legend will appear including all possible events to include.
+
+tree_labels_ins.txt: This will insert numbers on the tree's nodes indicating the gain of genetic elements. This is colored green.
+
+tree_labels_del.txt: This will insert numbers on the tree's nodes indicating the loss of genetic elements. This is colored red.
+
+tree_labels_dup.txt: This will insert numbers on the tree's nodes indicating the duplication of genetic elements. This is colored blue.
+
+tree_labels_pse.txt: This will insert numbers on the tree's nodes indicating the pseudogenization of genetic elements. This is colored pink.
+
+tree_labels_non.txt: This will insert numbers on the tree's nodes indicating the the number of genetic elements that could not be included in the pipeline. This is colored turquoise.
+
+Numbers indicated in black show the total number of genetic elements for each species, Thus adding all the numbers on the path in the tree from the root to a specific species, including the numbers for the genetic events at the species leaf node, should result in the total number of elements.
+
+

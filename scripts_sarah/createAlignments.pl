@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-## perl createAlignments.pl edlilist outpath pathtonw secsim strsim psecsim pstrsim singletoncount outfolder geneticEvents summary
+## perl createAlignments.pl edlilist outpath pathtonw secsim strsim pseudoscore singletoncount outfolder match dupl ins pseudo summary
 
 ##program will produce sequences of letters, where the same letter means similar sequences, depending on the threshold.
 ##thus one letter for each connected component.
@@ -25,43 +25,36 @@ my $outpath=shift;
 my $pathtonw = shift;
 my $seqlim = shift;
 my $strlim = shift;
-my $pseqlim = shift;
-my $pstrlim = shift;
+my $pseudosc = shift;
 my $singletoncount = shift;
 my $outfolder = shift; ##write files for ePoPE
-my $sumary = shift; #geneticEvents
+my $matchout = shift;
+my $duplout = shift;
+my $insout = shift;
+my $pseout = shift;
 my $summary = shift; #usual summary after running the script
 
 
-
-##set the lowest similarity score as threshold
-my $gseqlim;
-my $gstrlim;
-
-if($pseqlim >= 0 && $pseqlim <= $seqlim){
-    $gseqlim = $pseqlim;}
-else{$gseqlim = $seqlim;}
-
-if($pstrlim >= 0 && $pstrlim <= $strlim){
-    $gstrlim = $pstrlim;}
-else{$gstrlim = $strlim;}
 
 #create a hash with strings that show spec1_spec2,spec1,spec3,spec5 as key whereas
 #spec1 is the current species and the others are in the same cluster.
 #in this way, genetic events occuring in just this combination of species can
 #be counted
 
+##TODO implement pseudocounting
+
 my %dupevents =();
 my %matevents =();
-my %delevents =();
 my %insevents =();
 ##are mismatches needed? use pseudogenes INSTEAD of mistmatches
 my %misevents =();
 my %psevents = ();
 
-open(my $outs,">>", $sumary);
-
-open(my $outm,">>", $summary);
+open(my $outm,">>",$matchout);
+open(my $outd,">>",$duplout);
+open(my $outi,">>",$insout);
+open(my $outp,">>",$pseout);
+open(my $outs,">>", $summary);
 
 ##filter which is the biggest alignment created
 my $maxlen = 0;
@@ -140,7 +133,7 @@ while(<FA>){
 	else{$start2node{$startvec} = $n1;}
 	
 	
-	if($seqsim >= $gseqlim && $strsim >= $gstrlim){
+	if($seqsim >= $seqlim && $strsim >= $strlim){
 	    ##similarity fits, nodes get the same letter
 	    if (exists $node2letter{$n1}) {
 		if(exists $node2letter{$n2}){
@@ -226,7 +219,7 @@ while(<FA>){
 	    my $l=0;
 	    my $s=0;
 	    my $i=0;
-	    my $d=0;
+#	    my $p =0;
 	    my @ref = split '',$out1[1];
 	    my @oth = split '',$out1[2];
 	    my $tild = "~";
@@ -352,7 +345,7 @@ while(<FA>){
 	    my $spe = $SP[1];
 	    if(scalar @verts >= 2){	
 		my $word = "sequence";
-		my $outst = "$spe\t$word\n";
+		my $outst = "$spe $word\n";
 		print $outpo $outst;
 	    }
 	    if(exists $spe2count{$spe}){
@@ -409,16 +402,7 @@ while(<FA>){
     
 }
 
-my $now_string = strftime "%a %b %e %H:%M:%S %Y", localtime;
-
-#print "now: $now_string \n";
-
-print $outs "File created on $now_string\n";
-print $outs "The following output shows the number of events that occur in the specified combination of species relative to the species written first.\n";
-print $outs "Thus, summary for each event is a tab separated table with: reference_species species_in_cluster number_of_event\n";
-print $outs "Events are Duplication, Matches, Insertion, Deletion, Mismatches.\n";
-print $outs "The corresponding alignment files can be found in $outpath \n";
-print $outs "\n\n";
+#my $now_string = strftime "%a %b %e %H:%M:%S %Y", localtime;
 
 
 ##include insertion events from the singleton clusters that were not included in the graph analysis, as they were sorted out before
@@ -434,55 +418,39 @@ for(my $s = 0; $s < scalar @SC; $s++){
 
 ##sort the entries in each entry for the hashes alphabetically
 
-print $outs "EVENT: Duplication\n";
 foreach my $du (sort keys %dupevents) {
     my @devs = split ',', $du;
     @devs = sort @devs;
     my $dustr = join(',',@devs);
-#    my $realdupnum = $dupevents{$du}/2;
-    print $outs "$dustr\t$dupevents{$du}\n";
+    print $outd "$dustr\t$dupevents{$du}\n";
 }
-print $outs "\n\n";
 
-print $outs "EVENT: Matches\n";
+
 foreach my $ma (sort keys %matevents) {
     my @mevs = split ',', $ma;
     @mevs = sort @mevs;
     my $mastr = join(',',@mevs);
-    print $outs "$mastr\t$matevents{$ma}\n";
+    print $outm "$mastr\t$matevents{$ma}\n";
 }
-print $outs "\n\n";
 
-print $outs "EVENT: Insertion\n";
 foreach my $in (sort keys %insevents) {
     my @ievs = split ',', $in;
     @ievs = sort @ievs;
     my $instr = join(',',@ievs);
-    print $outs "$instr\t$insevents{$in}\n";
+    print $outi "$instr\t$insevents{$in}\n";
 }
-print $outs "\n\n";
 
-print $outs "EVENT: Deletion\n";
-foreach my $de (sort keys %delevents) {
-    my @deevs = split ',', $de;
-    @deevs = sort @deevs;
-    my $destr = join(',',@deevs);
-    print $outs "$destr\t$delevents{$de}\n";
-}
-print $outs "\n\n";
 
 ##exchange mismatches by pseudogenization?
 
-print $outs "EVENT: Mismatches\n";
-foreach my $mi (sort keys %misevents) {
-    my @mevs = split ',', $mi;
-    @mevs = sort @mevs;
-    my $mistr = join(',',@mevs);
-    print $outs "$mistr\t$misevents{$mi}\n";
-}
+#foreach my $mi (sort keys %misevents) {
+#    my @mevs = split ',', $mi;
+#    @mevs = sort @mevs;
+#    my $mistr = join(',',@mevs);
+#    print $outs "$mistr\t$misevents{$mi}\n";
+#}
 
 
-print $outs "\n\n";
 
 
 
@@ -492,37 +460,33 @@ print $outs "\n\n";
 #my $maxCCaln = "";
 	
 
-print $outm "===============Duplication alignments\===============\n";
-print $outm "Duplication alignments and genetic events information: \n";
-print $outm "Number of clusters: $alncount. \n";
-print $outm "The longest alignment has length $maxlen and is in file $maxlenname . \n";
-print $outm "\n";
-print $outm "The results for the analysis of genetic events are written to
- $sumary .
-Here, all events are counted, including the insertion events due to the singleton
-clusters that were not included in the graph analysis, as they only contain one node.\n";
-print $outm "For the Gain/Loss analysis, $totALNnum alignments are used that
+print $outs "===============Duplication alignments\===============\n";
+print $outs "Duplication alignments and genetic events information: \n";
+print $outs "Number of clusters: $alncount. \n";
+print $outs "The longest alignment has length $maxlen and is in file $maxlenname . \n";
+print $outs "\n";
+print $outs "For the Gain/Loss analysis, $totALNnum alignments are used that
 are subdivided in total in $totCCnum connected components.
 The alignment with the maximal number of connected components contains $maxCCnum connected
 components and is called $maxCCnumaln. 
 The connected component with most nodes contains $maxCC nodes and can be found in $maxCCaln. \n";
-print $outm "The Gain/Loss analysis for multi gene cluster is done based on the files
+print $outs "The Gain/Loss analysis for multi gene cluster is done based on the files
 that can be found in $outfolder \n";
-print $outm "\n";
-print $outm "The summary file contains information about how many genetic events were 
+print $outs "\n";
+print $outs "The summary file contains information about how many genetic events were 
 counted in a certain combination of species. This can be used to draw a 
 phylogenetic tree with genetic events at its nodes. \n";
-print $outm "The files containing the duplications alignments (.aln) for 
+print $outs "The files containing the duplications alignments (.aln) for 
 each cluster and pairs of species can be found here: 
 $outpath \n";
-print $outm "\n";
-print $outm "Format of alignment files (.aln): At first the cluster and 
+print $outs "\n";
+print $outs "Format of alignment files (.aln): At first the cluster and 
 its species are defined. Then, connected nodes get mapped to the same 
 one-letter-code (needed for the alignment). Afterwards for each species, its 
 genetic elements are sorted by coordinate and depicted by the letter code. The
  letter code is aligned to the ones of each other species in the cluster. '~' 
 stand for duplications, '-' for insertions or deletions in the alignment. \n";
-print $outm "\n";
+print $outs "\n";
 
 
 

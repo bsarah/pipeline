@@ -1,6 +1,6 @@
  
 #!/usr/bin/perl -w
-## call: collectCluster filelist pathtoinfiles pathtooutfiles summary
+## call: collectCluster filelist pathtoinfiles pseudo pathtooutfiles summary
 ##filelist = consists of a list of files called e.g. example_genes.bed
 ## input file format:
 ## Chromosome (tab) Species_IDnum (tab) startPosition (tab) endposition
@@ -28,6 +28,7 @@ my @clusters = ();
 
 my $filename = shift;
 my $inpath = shift;
+my $pseudo = shift; #if -1, deactivated
 my $outpath = shift;
 my $summary = shift;
 my $outf;
@@ -61,6 +62,12 @@ while(<FA>){
 	$elementnum++;
 	my @F = split '\t', $line;
 	my $arrlen = scalar @F; ##should be 10
+	my $len = scalar @F;
+	if($len != 10){
+	    print "incorrect format of bed file $curfile! Line has $len entries and will be skipped!\n";
+	    next;
+	}
+	
 	my $clusstart;
 	my $clusend;
 
@@ -155,14 +162,16 @@ while(<FA>){
 	my $seq2 = lc $seq;
 
 	$F[$arrlen-2]=$seq2;
-	push @F, $preseq;
-
 	my $score = $F[$arrlen-1];
-	$scoresum = $scoresum + $score;
+	$F[$arrlen-1] = $preseq;
+	push @F, $score; ##now F got 11 entries
+
 	$numseqs++;
-	if($score > $maxscore){$maxscore = $score;}
-	if($score < $minscore){$minscore = $score;}
-	
+	if($pseudo >= 0){
+	    $scoresum = $scoresum + $score;
+	    if($score > $maxscore){$maxscore = $score;}
+	    if($score < $minscore){$minscore = $score;}
+	}
 	
 	my $outline = join("\t",@F);
 	my $outname = "cluster-$clusstart-$clusend.clus";
@@ -190,15 +199,28 @@ foreach my $key (sort (keys(%species))) {
     $numspec++;
 }
 
+if($minscore == 300){$minscore = 0;}
+
 my $avscore = sprintf("%.2f",$scoresum/$numseqs);
 
 print $outs "===============Species information\===============\n";
-print $outs "Number of Species: $numspec 
+print $outs "Number of Species: $numspec\n 
 Species Number_of_genetic_elements
-    $spstr \n";
+$spstr \n";
 print $outs "===============Infernal information\===============\n";
 print $outs "Total number of sequences detected with infernal: $numseqs
 Maximal infernal score: $maxscore
 Minimal infernal score: $minscore
-Average infernal score: $avscore";
+Average infernal score: $avscore\n";
 print $outs "\n";
+
+
+
+my $astr="\n";
+my $bstr = "=";
+my $cstr = "-";
+my $dstr = " ";
+
+$spstr=~s/$astr/$bstr/g;
+$spstr=~s/$dstr/$cstr/g;
+print $spstr;
