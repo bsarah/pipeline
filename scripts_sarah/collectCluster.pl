@@ -28,7 +28,7 @@ my @clusters = ();
 
 my $filename = shift;
 my $inpath = shift;
-my $pseudo = shift; #if -1, deactivated
+my $pseudo = shift; #if -1, deactivated, if this is the infernal SCORE, all values that are SMALLER than $pseudo count for pseudo genes, if this is an evalue, it is the other way round.
 my $outpath = shift;
 my $summary = shift;
 my $outf;
@@ -40,6 +40,7 @@ my $numseqs = 0;
 #my $cluscount=0;
 
 my %species = ();
+my %pseudos = ();
 open(my $outs, ">>$summary");
 
 
@@ -171,6 +172,13 @@ while(<FA>){
 	    $scoresum = $scoresum + $score;
 	    if($score > $maxscore){$maxscore = $score;}
 	    if($score < $minscore){$minscore = $score;}
+	    ##check for pseudogenes here and write into hash that is returned and included later again
+	    ##most simple way of counting pseudogenes (extend lateron into the graphs structure)
+	    if($score <= $pseudo){
+		if(exists $pseudos{$curname}){$pseudos{$curname}++;}
+		else{$pseudos{$curname}=1;}
+	    }
+
 	}
 	
 	my $outline = join("\t",@F);
@@ -199,6 +207,15 @@ foreach my $key (sort (keys(%species))) {
     $numspec++;
 }
 
+
+my $psestr = "";
+foreach my $spi (sort (keys(%pseudos))) {
+    my @L2 = split '\/', $spi;
+    my @M2 = split '\.', $L2[(scalar @L2) -1];
+    $psestr = "$psestr$M2[0] $pseudos{$spi}\n";
+}
+if($psestr == ""){$psestr = "No pseudogenes detected.\n";}
+
 if($minscore == 300){$minscore = 0;}
 
 my $avscore = sprintf("%.2f",$scoresum/$numseqs);
@@ -213,6 +230,11 @@ Maximal infernal score: $maxscore
 Minimal infernal score: $minscore
 Average infernal score: $avscore\n";
 print $outs "\n";
+print $outs "===============Pseudogenes\===============\n";
+print $outs "Species Number_of_pseudogenes
+$psestr \n";
+print $outs "\n";
+
 
 
 
@@ -223,4 +245,10 @@ my $dstr = " ";
 
 $spstr=~s/$astr/$bstr/g;
 $spstr=~s/$dstr/$cstr/g;
+
+$psestr=~s/$astr/$bstr/g;
+$psestr=~s/$dstr/$cstr/g;
+
+my $outstr = "$spstr\!$psestr";
+
 print $spstr;

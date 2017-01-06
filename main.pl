@@ -387,9 +387,12 @@ my @out3 = readpipe("$cmd3");
 my @out4 = readpipe("$cmd4");
 my @out5 = readpipe("$cmd5");
 
-##looks like: $species\-$num_elems\=$species\-...
-my $totelemnumstr = $out3[0];
-print "$totelemnumstr\n";
+##looks like: $species\-$num_elems\=$species\-..!$species\-$num_pseudo\=$species\-..
+my $elemsNpseudos = $out3[0];
+my @R = split '!', $elemsNpseudos;
+my $totelemnumstr = $R[0];
+my $totpseudostr = $R[1];
+#print "$totelemnumstr\n";
 
 append2file($outs,$sumcollectcluster);
 append2file($outs,$sumgetnumbers);
@@ -464,7 +467,7 @@ print "Done!\n";
 my $singletoncount;
 if($out16[0] eq ""){$singletoncount = "=";}
 else{$singletoncount = "$out16[0]";}
-print "singletoncount: $singletoncount \n";
+#print "singletoncount: $singletoncount \n";
 
 ##add another summary file that includes the singleton and none cluster count
 my $singlecounts = "$summarypath\/Singleton_Counts.txt";
@@ -542,7 +545,7 @@ if($createalns == 1){
     my $cmd302 = "touch $outpath\/geneticEvents.txt 2>>$err";
     ##TODO set the pseqsim and pstruclim if we have a solution for pseudogenes
     my $cmd30b = "$perlpath\/perl $scripts_sarah\/createAlignments.pl $outpath\/graphs/edlilist $outpath\/graphs/alignments $altnwpath $seqsim $strucsim -1 $singletoncount $outpath\/graphs/GainLoss $outpath\/matches.txt $outpath\/duplications.txt $outpath\/insertions.txt $outpath\/pseudogenes.txt $sumcreatealn 2>>$err";
-    my $cmd30a = "$perlpath\/perl $scripts_sarah\/countEvents.pl $newicktree $outpath\/matches.txt $outpath\/duplications.txt $outpath\/insertions.txt $outpath\/pseudogenes.txt $outpath\/tree.out $outpath\/geneticEvents.txt $totelemnumstr $nonestr $outpath\/data_iTOL 2>>$err";
+    my $cmd30a = "$perlpath\/perl $scripts_sarah\/countEvents.pl $newicktree $outpath\/matches.txt $outpath\/duplications.txt $outpath\/insertions.txt $outpath\/pseudogenes.txt $outpath\/tree.out $outpath\/geneticEvents.txt $totelemnumstr $nonestr $totpseudostr $outpath\/data_iTOL 2>>$err";
     
     print "create duplication alignments..";
     my @out28 = readpipe("$cmd28");

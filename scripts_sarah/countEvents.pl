@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-##coutEvents.pl newickTree(with correct identifiers) matches dupl insertions pseudo treeout summary totelelemstr nonestr iTOLfolder
+##coutEvents.pl newickTree(with correct identifiers) matches dupl insertions pseudo treeout summary totelelemstr nonestr totpseudostr iTOLfolder
 ##get temporary files containing the genetic events and the corresponding numbers
 ##species,species... number
 ##output: new geneticEvents file including deletions, new newick tree including numbers at nodes
@@ -26,6 +26,7 @@ my $treeout = shift;
 my $summary = shift;
 my $totelemstr = shift; ##for later, printing iTOL files
 my $nonestr = shift; ##for later, printing iTOL files
+my $totpseudostr = shift; ##for later, printing iTOL files
 my $iTOLout = shift; ##for later, printing iTOL files
 
 open(my $outt,">>",$treeout);
@@ -645,6 +646,12 @@ my @GG = split '=', $nonestr;
 for(my $gg=0;$gg<scalar @GG;$gg++){
     my @HG = split '-', $GG[$gg];
     $nonenums{$HG[0]} = $HG[1];
+}
+
+my @GP = split '=', $totpseudostr;
+for(my $gp=0;$gp<scalar @GP;$gp++){
+    my @HP = split '-', $GP[$gp];
+    $pseudos{$HP[0]} = $HP[1];
 }
 
 
