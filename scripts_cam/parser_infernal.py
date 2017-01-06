@@ -41,7 +41,7 @@ def parseInfernal(filePath,  geneList=list()):
 
                                 #                        panTro             chr3         100          10           
                                 geneList.append(Gene(f.name.split('/')[-1].split('.')[0], chromosome, lineList[1], lineList[2],\
-                                                     lineList[3], lineList[4], lineList[5], lineList[6], lineList[7]))
+                                                     lineList[3], lineList[4], lineList[5], lineList[6], lineList[8]))
                                 #                      +             23       2nd structure   Sequence    score
                             else:
                                 break
