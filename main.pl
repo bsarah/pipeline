@@ -389,10 +389,16 @@ my @out5 = readpipe("$cmd5");
 
 ##looks like: $species\-$num_elems\=$species\-..!$species\-$num_pseudo\=$species\-..
 my $elemsNpseudos = $out3[0];
+print "all: $elemsNpseudos\n";
 my @R = split '!', $elemsNpseudos;
 my $totelemnumstr = $R[0];
-my $totpseudostr = $R[1];
-#print "$totelemnumstr\n";
+print "$totelemnumstr\n";
+my $totpseudostr = "=";
+if($pseudoscore >= 0){
+    $totpseudostr = $R[1];
+    print "$totpseudostr\n";
+}
+
 
 append2file($outs,$sumcollectcluster);
 append2file($outs,$sumgetnumbers);

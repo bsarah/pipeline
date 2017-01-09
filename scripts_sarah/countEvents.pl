@@ -26,7 +26,7 @@ my $treeout = shift;
 my $summary = shift;
 my $totelemstr = shift; ##for later, printing iTOL files
 my $nonestr = shift; ##for later, printing iTOL files
-my $totpseudostr = shift; ##for later, printing iTOL files
+my $totpseudostr = shift; ##for later, printing iTOL files, if = then nothing
 my $iTOLout = shift; ##for later, printing iTOL files
 
 open(my $outt,">>",$treeout);
@@ -637,6 +637,7 @@ print $outo "\n\nDATA\n";
 my %totnumbers = ();
 my @GT = split '=', $totelemstr;
 for(my $gt=0;$gt < scalar @GT; $gt++){
+    if($GT[$gt] eq ""){next;}
     my @HT = split '-', $GT[$gt];
     $totnumbers{$HT[0]} = $HT[1];
 }
@@ -644,12 +645,14 @@ for(my $gt=0;$gt < scalar @GT; $gt++){
 my %nonenums = ();
 my @GG = split '=', $nonestr;
 for(my $gg=0;$gg<scalar @GG;$gg++){
+    if($GG[$gg] eq ""){next;}
     my @HG = split '-', $GG[$gg];
     $nonenums{$HG[0]} = $HG[1];
 }
 
 my @GP = split '=', $totpseudostr;
 for(my $gp=0;$gp<scalar @GP;$gp++){
+    if($GP[$gp] eq ""){next;}
     my @HP = split '-', $GP[$gp];
     $pseudos{$HP[0]} = $HP[1];
 }
