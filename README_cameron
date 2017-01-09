@@ -47,14 +47,15 @@ File Formats:
 
   Gene Files:
     -modified BED format (file extension '.bed')
-      -uncompressed OR
-      -compressed with gzip (file extension '.bed.gz', '.bed.Z', '.bed.bz2')
 
       -Heading (optional):
           -line must start with a '#'
       -Body:
-          -one line = one gene
-          -tab separated elements
-          -chromosome     species     startCoord     endCoord     '+'or'-'     sequence     secondary_structure(optional)
+	-one line = one gene
+	-tab separated elements
 
+              -chromosome     species     startCoord     endCoord     '+'or'-'     sequence     secondary_structure(optional)
+
+      -uncompressed OR
+      -compressed with gzip (file extension '.bed.gz', '.bed.Z', '.bed.bz2')
 
