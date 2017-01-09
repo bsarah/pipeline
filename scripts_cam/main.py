@@ -24,9 +24,6 @@ Optional Arguments:
         Files should be in bed format, with one gene per line of the file.
   -q :Remove a percentage of the genes 
 
-It will perform the following steps:
-
-  1)
 '''
 import argparse #python module dealing with command line arguments
 import sys
@@ -72,7 +69,7 @@ args.pathToRepo = makeFullPath(args.pathToRepo)
 makeOutPutDir(args.outPutDir)
 
 if args.search_genes[0] != None:
-    print("search Genes")
+    #print("search Genes")
 
     args.genomes = args.search_genes[1]
     args.model = args.search_genes[0]
@@ -83,12 +80,12 @@ if args.search_genes[0] != None:
     listOfSpecies = makeSpeciesList([args.referenceSpecies], args.genomes)
     
     geneObjects, versionInfo = infernal(args.outPutDir, genomeFiles, args.model, args.incE, args.incT, args.infernalPath)
-    print(len(geneObjects))
-    print("chromo: {}".format(geneObjects[0].chromosome))
-    print("species: {}".format(geneObjects[0].species))
+    #print(len(geneObjects))
+    #print("chromo: {}".format(geneObjects[0].chromosome))
+    #print("species: {}".format(geneObjects[0].species))
     
 elif args.own_genes != None:
-    print("own Genes")
+    #print("own Genes")
     argList.append(args.own_genes)
     args.own_genes = endSlash([args.own_genes])
 
@@ -113,7 +110,7 @@ if len(listdir(args.multiSeq)) == 0:
     raise Exception("No multiple sequence alignments given")
 
 
-print("parsing maf files, writing valid blocks in bed format...")
+#print("parsing maf files, writing valid blocks in bed format...")
 maf2bed(args.multiSeq, args.outPutDir, args.pathToRepo, geneObjects, listOfSpecies, args.quality, versionInfo)
 #print("done. Bed files stored in {}".format(('/'.join(multiSeqFiles[0].split('/')[:-2]))+'/bed'))
 

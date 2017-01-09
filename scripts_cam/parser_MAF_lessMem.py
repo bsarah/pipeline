@@ -108,7 +108,7 @@ def maf2TempWrapper(mafDir, outputDir, repoDir, listOfSpecies):
             blockNum = oldblockNum
     #End of piping operation
     
-    print("sorting temp files")
+    #print("sorting temp files")
     for _file in speciesFiles:
         #sort -k1,1 -k2,2n outputDir/dm6_temp.bed > outputDir/dm6_temp_sorted.bed
         subprocess.call("sort -k1,1 "+_file+" > "+_file.replace('.bed','_sorted.bed', 1), shell=True)
@@ -126,74 +126,7 @@ def maf2TempWrapper(mafDir, outputDir, repoDir, listOfSpecies):
                 subprocess.call("rm "+fileName, shell=True)
             
     return sortedTempList
-    
 
-def maf2TempBed(mafFiles, outputDir, listSpeciesFiles):
-    '''
-    Purpose:
-       organize maf file allignments into their species, one bed file per
-       species. All blocks in an allignment are given a common blocknumber.
-
-
-    read all the maf files given. For each alligned sequence you find search
-    the list of files for the file that corresponds to the sequence's species.
-    Write the alligned sequence in that file. Alligned sequence written thusly:
-
-         chromo     species_blocknum     start     length     strand     isReferenceSpecies
-         string     string_int           int       int        + or -     bool
-    '''
-    blockNum = 0
-    print("converting maf files to temp files...")
-    for readFile in mafFiles:
-        lastLineA = False
-        for line in readFile:
-
-            if line[0] not in {'#','a','s','i','e','q',' ','\n'}:
-                print("Ignoring {}. File not of maf format".format(readFile.name))
-                break
-
-            if line[0] == 'a':
-                blockNum += 1
-                lastLineA = True
-                buf = line.split()[1]
-	       #read score, with and without a decimal place
-                if '.' in buf.split('=')[1]:
-                    score = int(float(buf.split('=')[1]))
-                else:
-                    score = int(buf.split('=')[1])
-
-            if line[0] == 's':
-                buf = line.split()
-                ID = buf[1].split('.')
-
-                try:
-                    test = ID[1]
-                except IndexError:
-                    print("Ignoring {}. File lacks chromosome information".format(readFile.name))
-                    break #break out of for line in readFile for loop, continue to next iteration of filename in fileNames for loop
-                else:
-                    i = 0
-                    for writeFile in listSpeciesFiles:
-                        i+=1
-                        numSearches = len(listSpeciesFiles)
-
-                        writeFileName = writeFile.name.split('/')[-1]
-                        if writeFileName.startswith(ID[0]):#ex: does dm6_temp.bed start with dm6
-                            writeFile.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(\
-                                            ID[1],ID[0]+'_'+str(blockNum), buf[2], buf[3], buf[4], lastLineA, score))
-                            #               chr   species_blocknum         start   length  strand  isRefSpecies allignmentScore
-                        
-                        
-                        elif i > numSearches:
-                            print("writeFileName: {}".format(writeFileName))
-                            raise Exception("the species of a maf allignment was not in the list of species given\n"+\
-                                            "allignment species: {}".format(ID[0]))
-                    lastLineA = False
-        readFile.close()
-        print("maf file read")
-    print("done")
-    return
-                
 def parseTempWrapper(tempFiles, listOfGenes, outputDir, threshold, infernalVersion):
     '''
     Assumptions:
@@ -213,20 +146,20 @@ def parseTempWrapper(tempFiles, listOfGenes, outputDir, threshold, infernalVersi
         subprocess.call("rm -r "+geneFileDir, shell=True)
     subprocess.call("mkdir "+geneFileDir, shell=True)        
     
-    print("parsing temp files...")    
+    #print("parsing temp files...")    
     overlappingBlockNums = set()
 
     now = datetime.datetime.now()
     
     #print(len(tempFiles))
-    print(len(listOfGenes))
-    print(listOfGenes[0])
+    #print(len(listOfGenes))
+    #print(listOfGenes[0])
     for tempBlockFileName in tempFiles:
 
         tempBlockFile = open(tempBlockFileName, 'r')
         
         species = tempBlockFile.name.split('/')[-1].split('_')[0]
-        print("species: {}".format(species))
+        #print("species: {}".format(species))
         #print("len geneList: {}".format(len(listOfGenes)))
 
         finalBlockFileName = bedFileDir+species+'.bed'
@@ -247,7 +180,7 @@ def parseTempWrapper(tempFiles, listOfGenes, outputDir, threshold, infernalVersi
         
         subprocess.call('gzip '+finalBlockFileName, shell=True)
         subprocess.call('rm '+tempBlockFileName, shell=True)
-    print("done")
+    #print("done")
 
 
     
