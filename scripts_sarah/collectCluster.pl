@@ -214,7 +214,8 @@ foreach my $spi (sort (keys(%pseudos))) {
     my @M2 = split '\.', $L2[(scalar @L2) -1];
     $psestr = "$psestr$M2[0] $pseudos{$spi}\n";
 }
-if($psestr == ""){$psestr = "No pseudogenes detected.\n";}
+my $nopseudos = 0;
+if($psestr eq ""){$psestr = "No pseudogenes detected.\n";$nopseudos = 1;}
 
 if($minscore == 300){$minscore = 0;}
 
@@ -246,9 +247,12 @@ my $dstr = " ";
 $spstr=~s/$astr/$bstr/g;
 $spstr=~s/$dstr/$cstr/g;
 
-$psestr=~s/$astr/$bstr/g;
-$psestr=~s/$dstr/$cstr/g;
+if($nopseudos){$psestr = "";}
+else{
+    $psestr=~s/$astr/$bstr/g;
+    $psestr=~s/$dstr/$cstr/g;
+}
 
 my $outstr = "$spstr\!$psestr";
 
-print $spstr;
+print $outstr;

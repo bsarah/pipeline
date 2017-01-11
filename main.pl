@@ -395,7 +395,9 @@ my $totelemnumstr = $R[0];
 print "$totelemnumstr\n";
 my $totpseudostr = "=";
 if($pseudoscore >= 0){
-    $totpseudostr = $R[1];
+    if(scalar @R > 1){
+	$totpseudostr = $R[1];
+    }
     print "$totpseudostr\n";
 }
 
