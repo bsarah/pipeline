@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-## call: buildEdgeList filelist pathtoinfiles outpath pathtoaltnw seqsim strucsim summary
+## call: buildEdgeList filelist pathtoinfiles outpath pathtoaltnw seqsim strucsim pseudoscore summary
 
 ##if seqsim or strucsim is -1 (only one of them) then just check the other one for similarity as input to altnw
 ##output: weighted graph, thus node1 node2 seq_diff struc_diff
@@ -15,6 +15,7 @@ my $outpath=shift;
 my $pathtonw=shift;
 my $seqsim = shift;
 my $strucsim = shift;
+my $pseudoscore = shift;
 my $summary = shift;
 
 open FA,"<$filename" or die "can't open $filename\n";
@@ -62,7 +63,7 @@ while(<FA>){
 	my $line = $_;
 	$line=~s/ /_/g;
 	chomp $line;
-	my @F = split '\t', $line; #chr spec_geneID start end strand blockleft blockright secstruc seq_lowercase seq_orig
+	my @F = split '\t', $line; #chr spec_geneID start end strand blockleft blockright secstruc seq_lowercase seq_orig score
 	my $chr = $F[0];
 	my $prespec = $F[1];
 	my @G = split "_", $prespec;
@@ -75,7 +76,17 @@ while(<FA>){
 	my $rightblock = $F[6];
 	my $struc = $F[7];
 	my $seq = $F[8];
-	my $nodename = "$chr\_$prespec\_$start\_$end\_$strand";
+	my $prescore = $F[10]; ##seems to look like score_, why is there a '_'?
+	my @SC = split '_', $prescore;
+	my $score = $SC[0];
+	my $suffix = "N";
+	if($pseudoscore >= 0) {
+	    ##check if element is pseudogenized
+	    if($score < $pseudoscore){
+		$suffix = "P";
+	    }
+	}
+	my $nodename = "$chr\_$prespec\_$start\_$end\_$strand\_$suffix";
 	push @nodes,$nodename;
 	push @seqs,$seq;
 	push @strucs,$struc;

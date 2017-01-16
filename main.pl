@@ -166,7 +166,7 @@ my $createalns = 1;
 
 ##Outpath
 my $outpathstr = "";
-if ($outpath){$outpathstr = "-o $outpath";}
+if ($outpath){$outpathstr = "-o $outpath ";}
 else{print "No output path given (option -o)!\n"; exit 1;}
 ##if output folder doesnt exist, create it!
 if(-e $outpath){}
@@ -178,7 +178,7 @@ else{
 
 ##Refspecies
 my $refspeciesstr = "";
-if ($refspecies){$refspeciesstr="--ref $refspecies";
+if ($refspecies){$refspeciesstr="--ref $refspecies ";
 		 #check if file exists
 		 if($genomes){
 		     my $n1 = "$refspecies\.fa";
@@ -199,24 +199,24 @@ else{print "No references species given! (option --ref)\n"; exit 1;}
 ##Parameters for modes for skipping graph analysis or alignments
 my $skipgstr = "";
 my $skipastr = "";
-if ($skipg){$checkgraphs = 0;$skipgstr = "--skipg";}
-if ($skipa){$createalns = 0;$skipastr = "--skipa";}
+if ($skipg){$checkgraphs = 0;$skipgstr = "--skipg ";}
+if ($skipa){$createalns = 0;$skipastr = "--skipa ";}
 
 
 ##Newicktree and IDs
 my $newickstr = "";
-if($newicktree && $createalns == 1){$newickstr = "--newick $newicktree";}
+if($newicktree && $createalns == 1){$newickstr = "--newick $newicktree ";}
 elsif((! $newicktree) && $createalns == 1){print "Please give a newick tree as input file (option --newick)\n"; exit 1;}
 else{}
 my $idstr = "";
-if($ids && $createalns == 1){$idstr = "--id $ids";}
+if($ids && $createalns == 1){$idstr = "--id $ids ";}
 elsif((! $ids) && $createalns == 1){print "No file given to translate newick IDs into MAF IDs (option --id). Please make sure that IDs fit!\n";}
 else{}
 
 
 
 ##similarity parameter, default = 0.9, inactivated with -1
-my $simstr = "--seqSim $seqsim --strucSim $strucsim --pseudo $pseudoscore";
+my $simstr = "--seqSim $seqsim --strucSim $strucsim --pseudo $pseudoscore ";
 if($seqsim == -1 && $strucsim == -1){
     print "Similarity thresholds for both, sequence and structure is -1! At least one has to be > 0! (Use parameter -s for sequence and -t for structure to specify the value) \n"; exit 1;
 }
@@ -228,15 +228,15 @@ my $pystr = "";
 my $pestr = "";
 my $rstr = "";
 ##Python
-if ($pythonpath){$pystr = "--python $pythonpath";}
+if ($pythonpath){$pystr = "--python $pythonpath ";}
 else{print "No path to python3 given! (option --python)\n"; exit 1;}
 
 ##Perl
-if ($perlpath){$pestr = "--perl $perlpath";}
+if ($perlpath){$pestr = "--perl $perlpath ";}
 else{print "No path to perl given! (option --perl)\n"; exit 1;}
 
 ##R (not needed at the moment)
-if ($rpath){$rstr = "--rpath $rpath";}
+if ($rpath){$rstr = "--rpath $rpath ";}
 else{print "No path to R given! (option --rpath)\n"; exit 1;}
 
 
@@ -245,13 +245,13 @@ else{print "No path to R given! (option --rpath)\n"; exit 1;}
 
 ##CM
 my $cmoptstr="";
-if($cmfile){$cmoption = "-sg $cmfile"; $cmoptstr = "--cm $cmfile";}
+if($cmfile){$cmoption = "-sg $cmfile"; $cmoptstr = "--cm $cmfile ";}
 
 
 ##Genomes
 my $genomesstr="";
 if ($genomes){ 
-    $genomesstr = "--genomes genomes";
+    $genomesstr = "--genomes genomes ";
     $cmoption = "$cmoption $genomes";
     #check if folder is not empty
     if(-e $genomes){} else{print "Genomes folder is empty! (option -g)\n"; exit 1;}
@@ -260,24 +260,24 @@ if ($genomes){
 
 ##Maf
 my $mafstr = "";
-if ($mafs){$mafstr = "--maf $mafs";}
+if ($mafs){$mafstr = "--maf $mafs ";}
 
 
 #Infernal path
 my $infstr = "";
-if ($infernalpath){$infstr = "--infernal $infernalpath";}
+if ($infernalpath){$infstr = "--infernal $infernalpath ";}
 
 
 ##infernal parameter
 my $inclopt="";
 my $incloptstr = "";
-if ($evalin){$inclopt = "-incE $evalin"; $incloptstr = "$incloptstr\--incE $evalin";}
-if ($bitvalin){$inclopt = "-incT $bitvalin";$incloptstr = "$incloptstr\--incT $bitvalin";}
+if ($evalin && $cmfile){$inclopt = "-incE $evalin"; $incloptstr = "$incloptstr\--incE $evalin ";}
+if ($bitvalin && $cmfile){$inclopt = "-incT $bitvalin";$incloptstr = "$incloptstr\--incT $bitvalin ";}
 
 
 ##Percentage of the lowest scoring blocks based on the MAF scores to be removed (between 0 and 100)
 my $filterstr = "";
-if ($perc){$filterstr = "--filter $perc";}
+if ($perc){$filterstr = "--filter $perc ";}
 
 
 if($cmfile){
@@ -288,7 +288,7 @@ if($cmfile){
 
 ###Genelist mode
 
-if($genefile){$cmoption = "-og $genefile"; $cmoptstr = "--genes $genefile";}
+if($genefile){$cmoption = "-og $genefile"; $cmoptstr = "--genes $genefile ";}
 
 ##maf and filter should already be reported
 
@@ -301,7 +301,7 @@ if($genefile){
 ###Repetition mode
 my $doitagainstr = "";
 if($pathtocam){
-    $doitagainstr="--again $pathtocam";
+    $doitagainstr="--again $pathtocam ";
     $genefile=$pathtocam;
     if(-e $pathtocam){}
     else{print "Option -a given but argument folder $pathtocam doesn't exist! \n"; exit 1;}
@@ -311,7 +311,7 @@ if($pathtocam){
 
 
 ##Program call
-my $optstr = "$outpathstr $cmoptstr $mafstr $refspeciesstr $newickstr $idstr $simstr $doitagainstr $filterstr $incloptstr $pystr $pestr $rstr $infstr";
+my $optstr = "$outpathstr$cmoptstr$mafstr$refspeciesstr$newickstr$idstr$simstr$doitagainstr$filterstr$incloptstr$skipgstr$skipastr$pystr$pestr$rstr$infstr";
 print "program called with: $optstr \n";
 
 
@@ -357,7 +357,7 @@ if(! $pathtocam){
 	open(PROG,"$pythonpath\/python3 $scripts_cam\/main.py $perc $cmoption $inclopt $mafs $infernalpath $outpath $dirname $refspecies 2>>$err0 |") or die "Couldn't start program!";
 	while(<PROG>){print "$_";}
     }
-        print "Done!\n";
+    print "Done!\n";
     $genesfolder = "$outpath\/genes";
 }
 else{
@@ -393,13 +393,13 @@ print "all: $elemsNpseudos\n";
 my @R = split '!', $elemsNpseudos;
 my $totelemnumstr = $R[0];
 print "$totelemnumstr\n";
-my $totpseudostr = "=";
-if($pseudoscore >= 0){
-    if(scalar @R > 1){
-	$totpseudostr = $R[1];
-    }
-    print "$totpseudostr\n";
-}
+#my $totpseudostr = "=";
+#if($pseudoscore >= 0){
+#    if(scalar @R > 1){
+#	$totpseudostr = $R[1];
+#    }
+#    print "$totpseudostr\n";
+#}
 
 
 append2file($outs,$sumcollectcluster);
@@ -480,22 +480,49 @@ else{$singletoncount = "$out16[0]";}
 ##add another summary file that includes the singleton and none cluster count
 my $singlecounts = "$summarypath\/Singleton_Counts.txt";
 my $cmdallsingles = "ls $outpath\/clusters/singletons\/*.clus > $outpath\/clusters/singletons\/singletonlist";
-my $cmdsingles = "$perlpath\/perl $scripts_sarah\/countElems.pl $outpath\/clusters/singletons/singletonlist $summarypath\/Singleton_Counts.txt 2>>$err";
+my $cmdsingles = "$perlpath\/perl $scripts_sarah\/countElems.pl $outpath\/clusters/singletons/singletonlist $pseudoscore $summarypath\/Singleton_Counts.txt 2>>$err";
 my $nonecounts = "$summarypath\/None_Counts.txt";
-my $cmdnones = "$perlpath\/perl $scripts_sarah\/countElems.pl $outpath\/clusters\/NoneCluster/nonecluslist $summarypath\/None_Counts.txt 2>>$err";
+my $cmdnones = "$perlpath\/perl $scripts_sarah\/countElems.pl $outpath\/clusters\/NoneCluster/nonecluslist $pseudoscore $summarypath\/None_Counts.txt 2>>$err";
 
 readpipe("$cmdallsingles");
-readpipe("$cmdsingles");
-readpipe("$cmdnones");
+my @outsingles = readpipe("$cmdsingles");
+my @outnones = readpipe("$cmdnones");
 append2file($outs,$singlecounts);
 append2file($outs,$nonecounts);
 
+my $totpseudostr = "";
+if($pseudoscore >= 0){
+    ##this is taking care for the pseudogenes that are in the singles or none cluster
+    my @SinglesPseus = split '=', $outsingles[0];
+    my @NonePseus = split '=', $outnones[0];
+    
+    my %tmppseu = ();
+    for(my $sp=0;$sp < scalar @SinglesPseus;$sp++){
+	my @TMP = split '-', $SinglesPseus[$sp];
+	if(exists $tmppseu{$TMP[0]}){$tmppseu{$TMP[0]}+=$TMP[1];}
+	else{$tmppseu{$TMP[0]}=$TMP[1];}
+	
+    }
+    for(my $np=0;$np < scalar @NonePseus;$np++){
+	my @NTMP = split '-', $NonePseus[$np];
+	if(exists $tmppseu{$NTMP[0]}){$tmppseu{$NTMP[0]}+=$NTMP[1];}
+	else{$tmppseu{$NTMP[0]}=$NTMP[1];}
+	
+    }
+    
+    foreach my $tk (keys %tmppseu){
+	$totpseudostr = "$totpseudostr$tk\-$tmppseu{$tk}\=";
+    }
+    if($totpseudostr eq ""){$totpseudostr = "=";}
+}
+else{$totpseudostr = "=";}
 
+print "totpseudostr: $totpseudostr \n";
 
 #create graphs
 my $sumbuildedges = "$summarypath\/Summary_buildedges.txt";
 my $cmd18 = "mkdir $outpath\/graphs 2>>$err";
-my $cmd19 = "$perlpath\/perl $scripts_sarah\/buildEdgeList.pl $outpath\/clusters/cluslist_nosingles $outpath\/clusters $outpath\/graphs $altnwpath $seqsim $strucsim $sumbuildedges 2>>$err";
+my $cmd19 = "$perlpath\/perl $scripts_sarah\/buildEdgeList.pl $outpath\/clusters/cluslist_nosingles $outpath\/clusters $outpath\/graphs $altnwpath $seqsim $strucsim $pseudoscore $sumbuildedges 2>>$err";
 my $cmd20 = "ls $outpath\/graphs/*.edli > $outpath\/graphs/edlilist 2>>$err";
 ##no edge graphs are graphs with node from only one species, as all other graphs have a completely connected graph (except same species)
 #my $cmd21 = "mkdir $outpath\/graphs/noEdgeGraphs 2>>$err";   
@@ -552,7 +579,7 @@ if($createalns == 1){
     my $cmd301 = "touch $outpath\/tree.out 2>>$err";
     my $cmd302 = "touch $outpath\/geneticEvents.txt 2>>$err";
     ##TODO set the pseqsim and pstruclim if we have a solution for pseudogenes
-    my $cmd30b = "$perlpath\/perl $scripts_sarah\/createAlignments.pl $outpath\/graphs/edlilist $outpath\/graphs/alignments $altnwpath $seqsim $strucsim -1 $singletoncount $outpath\/graphs/GainLoss $outpath\/matches.txt $outpath\/duplications.txt $outpath\/insertions.txt $outpath\/pseudogenes.txt $sumcreatealn 2>>$err";
+    my $cmd30b = "$perlpath\/perl $scripts_sarah\/createAlignments.pl $outpath\/graphs/edlilist $outpath\/graphs/alignments $altnwpath $seqsim $strucsim $pseudoscore $singletoncount $outpath\/graphs/GainLoss $outpath\/matches.txt $outpath\/duplications.txt $outpath\/insertions.txt $outpath\/pseudogenes.txt $sumcreatealn 2>>$err";
     my $cmd30a = "$perlpath\/perl $scripts_sarah\/countEvents.pl $newicktree $outpath\/matches.txt $outpath\/duplications.txt $outpath\/insertions.txt $outpath\/pseudogenes.txt $outpath\/tree.out $outpath\/geneticEvents.txt $totelemnumstr $nonestr $totpseudostr $outpath\/data_iTOL 2>>$err";
     
     print "create duplication alignments..";

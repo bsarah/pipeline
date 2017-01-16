@@ -26,7 +26,7 @@ my $treeout = shift;
 my $summary = shift;
 my $totelemstr = shift; ##for later, printing iTOL files
 my $nonestr = shift; ##for later, printing iTOL files
-my $totpseudostr = shift; ##for later, printing iTOL files, if = then nothing
+my $totpseudostr = shift; ##for later, printing iTOL files, if = then nothing, this is the string for singleton pseudogenes, the others are listed in the input file pseudo.txt
 my $iTOLout = shift; ##for later, printing iTOL files
 
 open(my $outt,">>",$treeout);
@@ -92,6 +92,27 @@ for(my $i = 0; $i < scalar @tr; $i++)
 #print "\n";
 #print join(" ",@L);
 #print "\n";
+
+
+##pseudogenes
+
+open PS,"<$pseudo" or die "can't open $pseudo\n";
+
+while(<PS>){
+    chomp;
+    my $psline = $_;
+    my @PS = split '\t', $psline;
+    if(scalar @PS < 2){print "misformatted input line, will be skipped! \n"; next;}
+    my @SS = split ',', $PS[0];
+    my $psnum = $PS[1];
+    my $Tstr = join('=', @T);
+    my $Sstr = join('=',@SS);
+    my @pslcas = findParentOfAll($Tstr,$Sstr);
+    for(my $i=0;$i<scalar @pslcas;$i++){
+	$pseudos{$pslcas[$i]} += $psnum;
+    }
+}
+
 
 
 
@@ -409,16 +430,17 @@ while(<FI>){
 }
 
 
+##not needed anymore, see above
 ##PSEUDOGENES
-open FP,"<$pseudo" or die "can't open $pseudo\n";
-
-while(<FP>){
-    chomp;
-    my $pline = $_;
-    my @P = split '\t', $pline; ##should have at least 2! entries
-    if(scalar @P < 2){print "misformatted input line in pseudogenes, will be skipped! \n"; next;}
-    $pseudos{$P[0]} += $P[1];
-}
+#open FP,"<$pseudo" or die "can't open $pseudo\n";
+#
+#while(<FP>){
+#    chomp;
+#    my $pline = $_;
+#    my @P = split '\t', $pline; ##should have at least 2! entries
+#    if(scalar @P < 2){print "misformatted input line in pseudogenes, will be skipped! \n"; next;}
+#    $pseudos{$P[0]} += $P[1];
+#}
 
 
 
@@ -428,12 +450,47 @@ while(<FP>){
 ##x = duplications whereas d stays as letter for indication, 
 ##y as pseudogenes whereas p stays as letter for indication
 
+
+
+my %totnumbers = ();
+my @GT = split '=', $totelemstr;
+for(my $gt=0;$gt < scalar @GT; $gt++){
+    if($GT[$gt] eq ""){next;}
+    my @HT = split '-', $GT[$gt];
+    $totnumbers{$HT[0]} = $HT[1];
+}
+
+my %nonenums = ();
+my @GG = split '=', $nonestr;
+for(my $gg=0;$gg<scalar @GG;$gg++){
+    if($GG[$gg] eq ""){next;}
+    my @HG = split '-', $GG[$gg];
+    $nonenums{$HG[0]} = $HG[1];
+}
+
+my @GP = split '=', $totpseudostr;
+for(my $gp=0;$gp<scalar @GP;$gp++){
+    if($GP[$gp] eq ""){next;}
+    my @HP = split '-', $GP[$gp];
+    $pseudos{$HP[0]} += $HP[1];
+}
+
+
+
 my @newT = ();
 for(my $t=0; $t < scalar @N; $t++){
     my $vert = $T[$t];
     if($N[$t] >= 0){ ##not a -2, thus a node in the tree
+	##check that the values we wanna get from the hash really exist
+	if(exists($plusnodes{$vert})){}else{$plusnodes{$vert}=0;}
+	if(exists($insertions{$vert})){}else{$insertions{$vert}=0;}
 	my $allplus = $plusnodes{$vert} + $insertions{$vert};
-	my $newname = "$T[$t]\[$allplus\|-$minusnodes{$vert}\|d$duplications{$vert}\|p$pseudos{$vert}\]";
+	if(exists($minusnodes{$vert})){}else{$minusnodes{$vert}=0;}
+	if(exists($totnumbers{$vert})){}else{$totnumbers{$vert} = 0;}
+	if(exists($duplications{$vert})){}else{$duplications{$vert}=0;}
+	if(exists($pseudos{$vert})){}else{$pseudos{$vert}=0;}
+	if(exists($nonenums{$vert})){}else{$nonenums{$vert}=0;}
+	my $newname = "$T[$t]\[t$totnumbers{$vert}|i$allplus\|l$minusnodes{$vert}\|d$duplications{$vert}\|p$pseudos{$vert}|n$nonenums{$vert}\]";
 	push @newT, $newname;
     }
     else{
@@ -447,11 +504,13 @@ my $tstr = join ("", @newT);
 
 print $outt "Newick tree with numbers specifying event counts at its nodes.
 Each node name contains the following numbers in event specification:
-[a|-b|dx|py] where:
-a are insertions,
-b are deletions, 
-x are duplications (indicated by d) and 
-y pseudogenes (indicated by p).\n
+[ta|ib|lc|dx|py|nz] where:
+a are total number of elements,
+b are insertions,
+c are deletions, thus losses, 
+x are duplications, 
+y pseudogenes and
+z are the elements that were excluded from the analysis.\n
 
 Tree:\n";
 print $outt "$tstr\n";
@@ -634,33 +693,10 @@ print $outp "\n\nDATA\n";
 print $outo "$header_non$inbetweentext";
 print $outo "\n\nDATA\n";
 
-my %totnumbers = ();
-my @GT = split '=', $totelemstr;
-for(my $gt=0;$gt < scalar @GT; $gt++){
-    if($GT[$gt] eq ""){next;}
-    my @HT = split '-', $GT[$gt];
-    $totnumbers{$HT[0]} = $HT[1];
-}
-
-my %nonenums = ();
-my @GG = split '=', $nonestr;
-for(my $gg=0;$gg<scalar @GG;$gg++){
-    if($GG[$gg] eq ""){next;}
-    my @HG = split '-', $GG[$gg];
-    $nonenums{$HG[0]} = $HG[1];
-}
-
-my @GP = split '=', $totpseudostr;
-for(my $gp=0;$gp<scalar @GP;$gp++){
-    if($GP[$gp] eq ""){next;}
-    my @HP = split '-', $GP[$gp];
-    $pseudos{$HP[0]} = $HP[1];
-}
-
 
 
 for(my $tt=0;$tt < scalar @T;$tt++){
-    if($N[$tt] > 0){##we do not include the artificial root 
+    if($N[$tt] >= 0){##we do include the artificial root to debug
 	my $n1 = $T[$tt];
 	my $isleaf = 0;
 	for(my $ll=0;$ll < scalar @L;$ll++){
@@ -687,9 +723,10 @@ for(my $tt=0;$tt < scalar @T;$tt++){
 	    print $outn "$T[$tt],$T[$tt],0,#000000,normal,1,0\n";
 	    my $sumi2 = $insertions{$T[$tt]} + $plusnodes{$T[$tt]};
 	    print $outi "$T[$tt],$sumi2,0.6,#00ff00,normal,1,0\n";
-	    print $outd "$T[$tt],$minusnodes{$T[$tt]},0.7,#ff0000,normal,1,0\n";
-	    print $outu "$T[$tt],$duplications{$T[$tt]},0.8,#0000ff,normal,1,0\n";
-	    print $outp "$T[$tt],$pseudos{$T[$tt]},0.9,#ff00ff,normal,1,0\n";		
+	    print $outd "$T[$tt],$minusnodes{$T[$tt]},0.8,#ff0000,normal,1,0\n";
+	    #duplications do not occur at inner nodes
+	    #print $outu "$T[$tt],$duplications{$T[$tt]},0.8,#0000ff,normal,1,0\n";
+	    print $outp "$T[$tt],$pseudos{$T[$tt]},0.95,#ff00ff,normal,1,0\n";		
 	}
     }
 }
@@ -707,3 +744,160 @@ for(my $tt=0;$tt < scalar @T;$tt++){
 ##the higher number and check if the detected father is the node
 ##with the lower number. if the numbers become the same and the father is
 ##not found, go to the first case
+
+
+##given a list of leaves and a tree, find the lca of the leaves s.t. there is NO child of the parent that is NOT in the given leaf list
+##This function will be used to determine the deletions and the pseudogenes
+##the return value is again a list of nodes in the tree
+sub findParentOfAll{
+    my @inp= @_;
+    #tree and leaf string is separated by =
+    my @T = split '=', $inp[0];
+    my @L = split '=', $inp[1];
+    my @Ltmp = split '=', $inp[1];
+
+    my @output = ();
+    
+    my @N = ();
+    my @allleaves = ();
+    my $brackets = 0;
+    my $maxbracket = 0;
+    for(my $i = 0; $i < scalar @T; $i++)
+    {
+
+	if($T[$i] eq ')' || $T[$i] eq '(' || $T[$i] eq ',' || $T[$i] eq ';'){
+
+	    push @N, -2;
+	    if($T[$i] eq '('){$brackets++;}
+	    if($T[$i] eq ')'){$brackets--;}
+	    if($brackets > $maxbracket){$maxbracket = $brackets;}
+	}
+	else{
+	    push @N, $brackets;
+	    push @allleaves, $T[$i];
+	}
+    }
+
+    for(my $j = 0; $j<scalar @Ltmp; $j++){
+	my $id = 0; ##index of leaf in T and N
+	for(my $l=0;$l < scalar @T;$l++){
+	    if($T[$l] eq $Ltmp[$j]){
+		$id = $l;
+		last;
+	    }
+	}
+	##find brothers in tree
+	my @bros = (); ##ids of brothers in T, N
+	my $curnum = $N[$id];
+	push @bros, $id;
+	my $down=$id-1;
+	while($down >=0){
+	    if($N[$down] < $curnum){last;}#break
+	    elsif($N[$down] > $curnum){}#do nothing
+	    else{#equality, this is a bro!
+		push @bros, $down;
+	    }
+	    $down--;
+	}
+	my $up = $id+1;
+	while($up < scalar @N){
+	    if($N[$up] < $curnum){last;}#break
+	    elsif($N[$up] > $curnum){}#do nothing
+	    else{#equality, this is a bro!
+		push @bros, $up;
+	    }
+	    $up++;
+	}
+	##check, if all bros are in L
+	##if yes, get their father and remove them from L
+	##if not, check if they are leaves
+	##if yes, break, no parent of all
+	##if no, find the children
+	my $allL = 1;
+	for(my $b = 0; $b<scalar @bros; $b++){
+	    if(none {$_ eq $T[$bros[$b]]} @L){
+		$allL = 0;
+		last;
+	    }
+	}
+	if($allL){
+	    ##find parent and delete bros from input Ltmp, add parent to L and Ltmp
+	    my $parent = 0;
+	    my $bronum = $N[$bros[0]];
+	    my $up = $bros[0];
+	    while($up < scalar @N){
+		if($N[$up] == $bronum -1 ){
+		    $parent = $up;
+		    last;
+		}#break
+		$up++;
+	    }
+	    #delete entries in Ltmp
+	    for(my $b = 0; $b<scalar @bros; $b++){
+		my $index = 0;
+		$index++ until $Ltmp[$index] eq $T[$bros[$b]];
+		splice(@Ltmp,$index,1);
+	    }
+	    push @Ltmp, $T[$parent];
+	    push @L, $T[$parent];	    
+	    
+	}
+	else{
+	    ##check if they are leaves
+	    my @noleaves = ();
+	    for(my $b = 0; $b<scalar @bros; $b++){
+		if(none {$_ eq $T[$bros[$b]]} @allleaves){
+		    push @noleaves, $bros[$b];
+		}
+		#delete bros from Ltmp, push them again if they are in L
+		else{
+		    my $index1 = 0;
+		    my $index2 = 0;
+		    $index1++ until ($L[$index1] eq $T[$bros[$b]] || $index1 >= scalar @L);
+		    if($index1 < scalar @L){
+			$index2++ until $Ltmp[$index2] eq $T[$bros[$b]];
+			splice(@Ltmp,$index2,1);
+			push @Ltmp, $bros[$b];
+		    }
+
+		}
+	    }
+	    if(scalar @noleaves == 0){
+		##there is no parent of all, put the bros that were in input L into output list and delete from input list Ltmp
+		for(my $b = 0; $b<scalar @bros; $b++){
+		    my $index1 = 0;
+		    my $index2 = 0;
+		    $index1++ until ($L[$index1] eq $T[$bros[$b]] || $index1 >= scalar @L);
+		    if($index1 < scalar @L){
+			$index2++ until $Ltmp[$index2] eq $T[$bros[$b]];
+			splice(@Ltmp,$index2,1);
+			push @output, $T[$bros[$b]];
+		    }
+		}
+	    }
+	    else{
+		##find the children of the ones which are not leaves
+		##push the children into Ltmp such that they will be checked recursively
+		for(my $k = 0; $k < scalar @noleaves; $k++){
+		    my $curnum = $N[$noleaves[$k]];
+		    my $down=$noleaves[$k];
+		    while($down >=0){
+			if($N[$down] <= $curnum){last;}#break
+			elsif($N[$down] = $curnum + 1){
+			    if(none {$_ eq $T[$down]} @Ltmp){
+				push @Ltmp, $T[$down];
+			    }
+			}#that's the child!
+			else{ ##bigger than +1, nothing
+			}
+			$down--;
+		    }
+		    
+		}
+	    }
+	}
+	
+	
+    }
+    
+}

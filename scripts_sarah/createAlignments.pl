@@ -47,7 +47,7 @@ my %dupevents =();
 my %matevents =();
 my %insevents =();
 ##are mismatches needed? use pseudogenes INSTEAD of mistmatches
-my %misevents =();
+#my %misevents =();
 my %psevents = ();
 
 open(my $outm,">>",$matchout);
@@ -108,7 +108,7 @@ while(<FA>){
     my %species = ();
     my %start2node = ();
     my @pgenes = (); ##pseudogenes
-
+    my %spec2pseudo = ();   
     my @vertices = ();
     my @arcs = ();
 
@@ -126,11 +126,18 @@ while(<FA>){
 	my $strsim = $F[3];
 
 	my @G = split '_', $n1;
-	my $spec = $G[(scalar @G) - 5];
+	my $spec = $G[(scalar @G) - 6];
 	$species{$spec} = "";
-	my $startvec = $G[(scalar @G) - 3] + (0.0001 * $G[(scalar @G) - 4]);
+	$spec2pseudo{$spec} = "";
+	my $startvec = $G[(scalar @G) - 4] + (0.0001 * $G[(scalar @G) - 5]);
 	if(exists $start2node{$startvec}){}
 	else{$start2node{$startvec} = $n1;}
+	my $p1 = $G[(scalar @G) - 1];
+	my @G2 = split '_', $n2;
+	my $p2 = $G2[(scalar @G2) - 1];
+	if($p1 eq "P"){push @pgenes, $n1;}
+	if($p2 eq "P"){push @pgenes, $n2;}
+
 	
 	
 	if($seqsim >= $seqlim && $strsim >= $strlim){
@@ -164,23 +171,48 @@ while(<FA>){
 	}
 
     }
+
     
+#    print $outp "pgenes\n";
+#    my $pgenestr = join(",",@pgenes);
+#    print $outp "$pgenestr \n";
 
     my $specstr = "";
     $specstr = join(',',(keys %species));
 
 
-    
+    my $null = "0";
+    my $eins = "1";
+
     
     ##for every species, sort nodes in the correct order and create the sequences to be aligned
     foreach my $k1 (sort { $a <=> $b } keys(%start2node) ) {
 	my $curnode = $start2node{$k1};
+#	print "curnode: $curnode \n";
 	my @H = split "_", $curnode;
-	my $spec = $H[(scalar @H) - 5];
+	my $spec = $H[(scalar @H) - 6];
+	my $state = $H[(scalar @H) - 1];
+#	print "state: $state \n";
+	my $pstr = $spec2pseudo{$spec};
+#	print "pstr: $pstr \n";
+	##write numbers in the same order as chars in sequence, 0 for normal, 1 for pseudo
+	if($state eq "N"){
+#	    print "blubb \n";
+	    $spec2pseudo{$spec} = "$pstr$null";
+	}
+	else{
+	    $spec2pseudo{$spec} = "$pstr$eins";
+	}
 	my $sstr = $species{$spec};
+#	print "sstr: $sstr \n";
 	$species{$spec} = "$sstr$node2letter{$curnode}";
     }
-
+    ##add extra 0 to spec2pseudo for being sure that it is not getting out of range
+    foreach my $psk (keys %spec2pseudo){
+	my $permstr = $spec2pseudo{$psk};
+	$spec2pseudo{$psk}="$permstr$null";
+    }
+    
 
     ##create graphs out of the duplciation alignments, edges are where the columns fit
     ##nodes are: letter_spec_id!!!
@@ -192,7 +224,7 @@ while(<FA>){
 	print $outgr "\@$k\t$species{$k}\n";
 #	print "\@$k\t$species{$k}\n";
 	my $match=0; #m
-	my $mismatch=0; #s
+	my $pseu=0; #s
 	my $dupl=0; #d
 	my $ins=0; #i
 	my $del=0; #l
@@ -222,24 +254,33 @@ while(<FA>){
 #	    my $p =0;
 	    my @ref = split '',$out1[1];
 	    my @oth = split '',$out1[2];
+#	    print "spec2pseudo k,k2: $spec2pseudo{$k},$spec2pseudo{$k2} \n";
+	    my @sp12pseudo = split '', $spec2pseudo{$k};
+	    my @sp22pseudo = split '', $spec2pseudo{$k2};	    
 	    my $tild = "~";
 	    my $mins = "-";
 	    my $rz = 0;
 	    my $oz = 0;
 	    #should have the same length as it is an alignment
+	    #build a graph between the chars of the aligned sequences
 	    for(my $z=0;$z < scalar @ref;$z++){
 		#create nodes and edges
 		my $curc = $ref[$z];
 		my $v1;
 		my $v2;
 		my $ed;
+		#do not declare pe1 and p2 here, use the array index directly when needed?
+		my $pe1 = $sp12pseudo[$rz];
+		my $pe2 = $sp22pseudo[$oz];
+		
+#		print "pe1: $pe1, pe2: $pe2 \n";
 		if($curc eq $oth[$z])
 		{
-		    ##add $z behin the nodes names to make them unique
+		    ##add $z behind the nodes names to make them unique
 		    $rz++;
 		    $oz++;
-		    $v1 = "$curc\_$k\_$rz";
-		    $v2 = "$oth[$z]\_$k2\_$oz";
+		    $v1 = "$curc\_$k\_$pe1\_$rz";
+		    $v2 = "$oth[$z]\_$k2\_$pe2\_$oz";
 		    if(none {$_ eq $v1} @vertices){push @vertices, $v1;}
 		    if(none {$_ eq $v2} @vertices){push @vertices, $v2;}
 		    if($v1 lt $v2){$ed = "$v1 $v2";}
@@ -252,8 +293,8 @@ while(<FA>){
 		    my $zz = $z-1;
 		    while($zz >= 0){
 			if($ref[$zz] ne $tild){
-			    $v1 = "$ref[$zz]\_$k\_$rz"; ##v1 should already exist!
-			    $v2 = "$oth[$z]\_$k2\_$oz";
+			    $v1 = "$ref[$zz]\_$k\_$pe1\_$rz"; ##v1 should already exist!
+			    $v2 = "$oth[$z]\_$k2\_$pe2\_$oz";
 			    if(none {$_ eq $v1} @vertices){push @vertices, $v1;}
 			    if(none {$_ eq $v2} @vertices){push @vertices, $v2;}
 			    if($v1 lt $v2){$ed = "$v1 $v2";}
@@ -265,12 +306,12 @@ while(<FA>){
 		}
 		elsif($curc eq $mins){
 		    $oz++;
-		    $v2 = "$oth[$z]\_$k2\_$oz";
+		    $v2 = "$oth[$z]\_$k2\_$pe2\_$oz";
 		    if(none {$_ eq $v2} @vertices){push @vertices, $v2;}
 		}
 		elsif($oth[$z] eq $mins){
 		    $rz++;
-		    $v1 = "$curc\_$k\_$rz";
+		    $v1 = "$curc\_$k\_$pe1\_$rz";
 		    if(none {$_ eq $v1} @vertices){push @vertices, $v1;}
 		}
 		elsif($oth[$z] eq $tild){
@@ -278,8 +319,8 @@ while(<FA>){
 		    my $zz2 = $z-1;
 		    while($zz2 >= 0){
 			if($oth[$zz2] ne $tild){
-			    $v1 = "$curc\_$k\_$rz"; 
-			    $v2 = "$oth[$zz2]\_$k2\_$oz"; ##v2 should already exist!
+			    $v1 = "$curc\_$k\_$pe1\_$rz"; 
+			    $v2 = "$oth[$zz2]\_$k2\_$pe2\_$oz"; ##v2 should already exist!
 			    if(none {$_ eq $v1} @vertices){push @vertices, $v1;}
 			    if(none {$_ eq $v2} @vertices){push @vertices, $v2;}
 			    if($v1 lt $v2){$ed = "$v1 $v2";}
@@ -292,8 +333,8 @@ while(<FA>){
 		else{
 		    $rz++;
 		    $oz++;
-		    $v1 = "$curc\_$k\_$rz";
-		    $v2 = "$oth[$z]\_$k2\_$oz";
+		    $v1 = "$curc\_$k\_$pe1\_$rz";
+		    $v2 = "$oth[$z]\_$k2\_$pe2\_$oz";
 		    if(none {$_ eq $v1} @vertices){push @vertices, $v1;}
 		    if(none {$_ eq $v2} @vertices){push @vertices, $v2;}
 		}
@@ -310,13 +351,15 @@ while(<FA>){
  #   print "arcs: $arcs \n";
     my @CCs = connectedComponents($vertices,$arcs);
 
-    my %spe2count = ();
+    
     ##count events for each CC, build ePoPE input for each CC
     my $ccnum = scalar @CCs;
  #   print "ccnum: $ccnum \n";
     my $cccount = 0;
     for(my $ii = 0; $ii < scalar @CCs; $ii++){
 #	print "cc: $CCs[$ii] \n";
+	my %spe2count = ();
+	my %pse2count = ();
 	my @verts = split ' ', $CCs[$ii];
 	my $outpo;
 	if(scalar @verts >= 2){
@@ -340,9 +383,12 @@ while(<FA>){
 	##only multigene clusters should be used with ePoPE, 
 	##everything else can be added by hand.
 	##in the counting file, everything from the graphs is included
+#	print "fill pse2count \n";
 	for(my $jj=0;$jj< scalar @verts; $jj++){
+#	    print "$verts[$jj] \n";
 	    my @SP = split '_', $verts[$jj];
 	    my $spe = $SP[1];
+	    my $pseudi = $SP[2];
 	    if(scalar @verts >= 2){	
 		my $word = "sequence";
 		my $outst = "$spe $word\n";
@@ -354,14 +400,31 @@ while(<FA>){
 	    else{
 		$spe2count{$spe}=1;
 	    }
+#	    if($pseudi eq "0"){print "0\n";}
+	    if($pseudi eq "1"){
+		if(exists $pse2count{$spe}){
+		    $pse2count{$spe}++;
+		}
+		else{
+		    $pse2count{$spe}=1;
+		}
+	    }
 	}
 
+#	my @kp = keys %pse2count;
+#	my $kplen = scalar @kp;
+#	print "size of pse2count: $kplen \n";
+#	if(scalar @kp >0){
+#	    print $outp "hash pse2count \n";
+#	    print $outp Dumper(\%pse2count);
+#	    print $outp "\n";
+#	}
 	
 
 #	print "count now!\n";
 	
 	##counting: only matches and dup (and pseudogenes?), losses later when adding to the tree
-	##add elements fromt the singleton clusters that were sorted
+	##add elements from the singleton clusters that were sorted
 	##and specify the number of elements per species for the None cluster
 	my $spstr = join(',',sort (keys %spe2count));
 #	print "spstr: $spstr \n";
@@ -396,7 +459,35 @@ while(<FA>){
 		}
 	    }
 	}
-    }
+	my @pseuvals = values %pse2count;
+	if(scalar @pseuvals > 0){
+	    my $psestr = join(',',sort (keys %pse2count));
+	    ##do the same distinguishing for the pseudogenes as for matching
+	    if(scalar @pseuvals == 1){#singleton
+		if(exists $psevents{$psestr}){$psevents{$psestr} += $pseuvals[0];}
+		else{$psevents{$psestr} = $pseuvals[0];}
+	    }
+	    elsif(none {$_ != $pseuvals[0]} @pseuvals)
+	    {
+		if(exists $psevents{$psestr}){$psevents{$psestr} += $pseuvals[0];}
+		else{$psevents{$psestr} = $pseuvals[0];}
+	    }
+	    else{#add the minimum common value for the complete psestr and the remainings as singletons, as the duplications have been counted already
+		my $pmin = min @pseuvals;
+		if(exists $psevents{$psestr}){$psevents{$psestr} += $pmin;}
+		else{$psevents{$psestr} = $pmin;}
+		foreach my $ppp (keys %pse2count){
+		    my $pdiff = $pse2count{$ppp} - $pmin;
+		    if($pdiff > 0){
+			if(exists $psevents{$psestr}){$psevents{$psestr} += $pdiff;}
+			else{$psevents{$psestr} = $pdiff;}	    
+		    }
+		}
+	    
+
+	    }
+	}	
+    }#done check for every CC
     
     ##how to get those events into the tree?
     
@@ -441,14 +532,12 @@ foreach my $in (sort keys %insevents) {
 }
 
 
-##exchange mismatches by pseudogenization?
-
-#foreach my $mi (sort keys %misevents) {
-#    my @mevs = split ',', $mi;
-#    @mevs = sort @mevs;
-#    my $mistr = join(',',@mevs);
-#    print $outs "$mistr\t$misevents{$mi}\n";
-#}
+foreach my $mi (sort keys %psevents) {
+    my @mevs = split ',', $mi;
+    @mevs = sort @mevs;
+    my $mistr = join(',',@mevs);
+    print $outp "$mistr\t$psevents{$mi}\n";
+}
 
 
 

@@ -174,7 +174,7 @@ while(<FA>){
 	    if($score < $minscore){$minscore = $score;}
 	    ##check for pseudogenes here and write into hash that is returned and included later again
 	    ##most simple way of counting pseudogenes (extend lateron into the graphs structure)
-	    if($score <= $pseudo){
+	    if($score < $pseudo){
 		if(exists $pseudos{$curname}){$pseudos{$curname}++;}
 		else{$pseudos{$curname}=1;}
 	    }
