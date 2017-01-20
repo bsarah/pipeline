@@ -338,7 +338,7 @@ while(<FA>){
 	my $pnum2 = $startnum2;
 	my $pidx2 = $startidx2;
 #	print "in between pidx2: $pidx2, otheridx2: $otheridx2, pnum2: $pnum2 \n";
-	while($pnum2 != $startnum2-1){
+	while($pnum2 != $startnum2-1 && $pidx2++ < scalar @N){
 	    $pidx2++;
 	    $pnum2 = $N[$pidx2];
 	}
