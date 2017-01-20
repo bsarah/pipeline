@@ -276,9 +276,16 @@ while(<FA>){
     
     ##diff between realL and intersect
     ##should give you only the leaves that are real leaves and not contained in species!
+    ##thus, those leaves need to be deleted
     my @diff = grep(!defined $intersect{$_}, @realL);
     
-    
+    my $Treestr = join('=', @T);
+    my $Leafstr = join('=',@diff);
+    my @leafsToDel = findParentOfAll($Treestr,$Leafstr); 
+ 
+
+=for comment
+   
 #    print "diff: \n";
 #    print join (" ", @diff);
 #     print "\n";
@@ -387,10 +394,13 @@ while(<FA>){
     }
     ###################
     ##llca for all is now defined, = $T[$llca]
-    $minusnodes{$T[$llca]} = $num;
-#    print "LLCA: $T[$llca] \n";
+
+=cut
+
+    for(my $ltd=0;$ltd < scalar @leafsToDel;$ltd++){
+	$minusnodes{$leafsToDel[$ltd]} += $num;
     }
-    
+#    print "LLCA: $T[$llca] \n";
 }
 
 
@@ -899,5 +909,8 @@ sub findParentOfAll{
 	
 	
     }
+
+   
+    return @output;
     
 }
