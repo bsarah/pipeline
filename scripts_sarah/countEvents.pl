@@ -105,11 +105,17 @@ while(<PS>){
     if(scalar @PS < 2){print "misformatted input line, will be skipped! \n"; next;}
     my @SS = split ',', $PS[0];
     my $psnum = $PS[1];
-    my $Tstr = join('=', @T);
-    my $Sstr = join('=',@SS);
-    my @pslcas = findParentOfAll($Tstr,$Sstr);
-    for(my $i=0;$i<scalar @pslcas;$i++){
-	$pseudos{$pslcas[$i]} += $psnum;
+    if(scalar @SS == 1){
+	$pseudos{$SS[0]} += $psnum;
+    }
+    else{
+	my $Tstr = join('=', @T);
+	my $Sstr = join('=',@SS);
+#	print $outs "findParentOfAll($Tstr,$Sstr)\n";
+	my @pslcas = findParentOfAll($Tstr,$Sstr);
+	for(my $i=0;$i<scalar @pslcas;$i++){
+	    $pseudos{$pslcas[$i]} += $psnum;
+	}
     }
 }
 
@@ -278,11 +284,19 @@ while(<FA>){
     ##should give you only the leaves that are real leaves and not contained in species!
     ##thus, those leaves need to be deleted
     my @diff = grep(!defined $intersect{$_}, @realL);
-    
-    my $Treestr = join('=', @T);
-    my $Leafstr = join('=',@diff);
-    my @leafsToDel = findParentOfAll($Treestr,$Leafstr); 
- 
+
+    if(scalar @diff == 1){
+	$minusnodes{$diff[0]} += $num;
+    }
+    else{
+	my $Treestr = join('=', @T);
+	my $Leafstr = join('=',@diff);
+	my @leafsToDel = findParentOfAll($Treestr,$Leafstr);
+	
+	for(my $ltd=0;$ltd < scalar @leafsToDel;$ltd++){
+	    $minusnodes{$leafsToDel[$ltd]} += $num;
+	}
+    }
 
 =for comment
    
@@ -397,9 +411,7 @@ while(<FA>){
 
 =cut
 
-    for(my $ltd=0;$ltd < scalar @leafsToDel;$ltd++){
-	$minusnodes{$leafsToDel[$ltd]} += $num;
-    }
+
 #    print "LLCA: $T[$llca] \n";
 }
 
@@ -765,7 +777,7 @@ sub findParentOfAll{
     my @T = split '=', $inp[0];
     my @L = split '=', $inp[1];
     my @Ltmp = split '=', $inp[1];
-
+    
     my @output = ();
     
     my @N = ();
@@ -774,9 +786,10 @@ sub findParentOfAll{
     my $maxbracket = 0;
     for(my $i = 0; $i < scalar @T; $i++)
     {
-
+	
+	
 	if($T[$i] eq ')' || $T[$i] eq '(' || $T[$i] eq ',' || $T[$i] eq ';'){
-
+	    
 	    push @N, -2;
 	    if($T[$i] eq '('){$brackets++;}
 	    if($T[$i] eq ')'){$brackets--;}
@@ -784,133 +797,255 @@ sub findParentOfAll{
 	}
 	else{
 	    push @N, $brackets;
-	    push @allleaves, $T[$i];
+	    if($i>0){
+		if($T[$i-1] eq ')'){
+		    ##this is an inner node
+		}
+		else{
+		    push @allleaves, $T[$i];
+		}
+	    }	
 	}
     }
-
-    for(my $j = 0; $j<scalar @Ltmp; $j++){
-	my $id = 0; ##index of leaf in T and N
-	for(my $l=0;$l < scalar @T;$l++){
-	    if($T[$l] eq $Ltmp[$j]){
-		$id = $l;
-		last;
-	    }
-	}
-	##find brothers in tree
-	my @bros = (); ##ids of brothers in T, N
-	my $curnum = $N[$id];
-	push @bros, $id;
-	my $down=$id-1;
-	while($down >=0){
-	    if($N[$down] < $curnum){last;}#break
-	    elsif($N[$down] > $curnum){}#do nothing
-	    else{#equality, this is a bro!
-		push @bros, $down;
-	    }
-	    $down--;
-	}
-	my $up = $id+1;
-	while($up < scalar @N){
-	    if($N[$up] < $curnum){last;}#break
-	    elsif($N[$up] > $curnum){}#do nothing
-	    else{#equality, this is a bro!
-		push @bros, $up;
-	    }
-	    $up++;
-	}
-	##check, if all bros are in L
-	##if yes, get their father and remove them from L
-	##if not, check if they are leaves
-	##if yes, break, no parent of all
-	##if no, find the children
-	my $allL = 1;
-	for(my $b = 0; $b<scalar @bros; $b++){
-	    if(none {$_ eq $T[$bros[$b]]} @L){
-		$allL = 0;
-		last;
-	    }
-	}
-	if($allL){
-	    ##find parent and delete bros from input Ltmp, add parent to L and Ltmp
-	    my $parent = 0;
-	    my $bronum = $N[$bros[0]];
-	    my $up = $bros[0];
-	    while($up < scalar @N){
-		if($N[$up] == $bronum -1 ){
-		    $parent = $up;
+    
+    #print join(" ",@T);
+    #print "\n";
+    #print join(" ",@N);
+    #print "\n";
+    #print join(" ",@allleaves);
+    #print "\n";
+    
+    
+    while(scalar @Ltmp > 0){
+	
+	for(my $j = 0; $j<scalar @Ltmp; $j++){
+	    my $id = 0; ##index of leaf in T and N
+	    for(my $l=0;$l < scalar @T;$l++){
+		if($T[$l] eq $Ltmp[$j]){
+		    $id = $l;
 		    last;
-		}#break
+		}
+	    }
+	    
+	    my $nullLtmp = $Ltmp[0];
+	    ##find brothers in tree
+	    my @bros = (); ##ids of brothers in T, N
+	    my $curnum = $N[$id];
+	    push @bros, $id;
+	    my $down=$id-1;
+	    while($down >=0){
+		if($N[$down] == -2){$down--;next;}
+		if($N[$down] < $curnum){last;}#break
+		elsif($N[$down] > $curnum){}#do nothing
+		else{#equality, this is a bro!
+		    push @bros, $down;
+		}
+		$down--;
+	    }
+	    my $up = $id+1;
+	    while($up < scalar @N){
+		if($N[$up]==-2){$up++;next;}
+		if($N[$up] < $curnum){last;}#break
+		elsif($N[$up] > $curnum){}#do nothing
+		else{#equality, this is a bro!
+		    push @bros, $up;
+		}
 		$up++;
 	    }
-	    #delete entries in Ltmp
-	    for(my $b = 0; $b<scalar @bros; $b++){
-		my $index = 0;
-		$index++ until $Ltmp[$index] eq $T[$bros[$b]];
-		splice(@Ltmp,$index,1);
-	    }
-	    push @Ltmp, $T[$parent];
-	    push @L, $T[$parent];	    
 	    
-	}
-	else{
-	    ##check if they are leaves
-	    my @noleaves = ();
+	    ##check, if all bros are in L
+	    ##if yes, get their father and remove them from L
+	    ##if not, check if they are leaves
+	    ##if yes, break, no parent of all
+	    ##if no, find the children
+	    my $allL = 1;
 	    for(my $b = 0; $b<scalar @bros; $b++){
-		if(none {$_ eq $T[$bros[$b]]} @allleaves){
-		    push @noleaves, $bros[$b];
-		}
-		#delete bros from Ltmp, push them again if they are in L
-		else{
-		    my $index1 = 0;
-		    my $index2 = 0;
-		    $index1++ until ($L[$index1] eq $T[$bros[$b]] || $index1 >= scalar @L);
-		    if($index1 < scalar @L){
-			$index2++ until $Ltmp[$index2] eq $T[$bros[$b]];
-			splice(@Ltmp,$index2,1);
-			push @Ltmp, $bros[$b];
-		    }
-
+		if(none {$_ eq $T[$bros[$b]]} @L){
+		    $allL = 0;
+		    last;
 		}
 	    }
-	    if(scalar @noleaves == 0){
-		##there is no parent of all, put the bros that were in input L into output list and delete from input list Ltmp
+	    
+	    if($allL){
+		##find parent and delete bros from input Ltmp, add parent to L and Ltmp
+		my $parent = 0;
+		my $bronum = $N[$bros[0]];
+		my $up = $bros[0];
+		while($up < scalar @N){
+		    if($N[$up] == $bronum -1 ){
+			$parent = $up;
+			last;
+		    }#break
+		    $up++;
+		}
+		#delete entries in Ltmp
 		for(my $b = 0; $b<scalar @bros; $b++){
-		    my $index1 = 0;
-		    my $index2 = 0;
-		    $index1++ until ($L[$index1] eq $T[$bros[$b]] || $index1 >= scalar @L);
-		    if($index1 < scalar @L){
-			$index2++ until $Ltmp[$index2] eq $T[$bros[$b]];
-			splice(@Ltmp,$index2,1);
-			push @output, $T[$bros[$b]];
+		    my $index = -1;
+		    for(my $ii=0;$ii < scalar @Ltmp; $ii++){
+			if($Ltmp[$ii] eq $T[$bros[$b]]){$index = $ii;last;}
+		    }
+		    if($index>=0){
+			splice(@Ltmp,$index,1);
 		    }
 		}
+		push @Ltmp, $T[$parent];
+		push @L, $T[$parent];
+		
 	    }
 	    else{
-		##find the children of the ones which are not leaves
-		##push the children into Ltmp such that they will be checked recursively
-		for(my $k = 0; $k < scalar @noleaves; $k++){
-		    my $curnum = $N[$noleaves[$k]];
-		    my $down=$noleaves[$k];
-		    while($down >=0){
-			if($N[$down] <= $curnum){last;}#break
-			elsif($N[$down] = $curnum + 1){
-			    if(none {$_ eq $T[$down]} @Ltmp){
-				push @Ltmp, $T[$down];
+		##check if they are leaves
+		my @noleaves = ();
+		for(my $b = 0; $b<scalar @bros; $b++){
+		    if(none {$_ eq $T[$bros[$b]]} @allleaves){
+			push @noleaves, $bros[$b];
+		    }
+		    #check if leaves are in L, if they are not in L, delete them from Ltmp
+		    else{
+			my $index1 = -1;
+			my $index2 = -1;
+			for(my $i1 = 0; $i1 < scalar @L;$i1++){
+			    if($L[$i1] eq $T[$bros[$b]]){$index1 = $i1;last;}
+			} 
+			if($index1 < 0){
+			    for(my $i2 = 0; $i2 < scalar @Ltmp;$i2++){
+				if($Ltmp[$i2] eq $T[$bros[$b]]){$index2 = $i2;last;}
 			    }
-			}#that's the child!
-			else{ ##bigger than +1, nothing
+			    if($index2 >0){
+				splice(@Ltmp,$index2,1);
+			    }
 			}
-			$down--;
+			
+		    }
+		}
+		
+		
+		if(scalar @noleaves == 0){##all in L are leaves
+		    print "case noleaves\n";
+		    ##there is no parent of all, put the bros that were in input L into output list and delete from input list Ltmp
+		    for(my $b = 0; $b<scalar @bros; $b++){
+			my $index1 = -1;
+			my $index2 = -1;
+			for(my $i1 = 0; $i1 < scalar @L;$i1++){
+			    if($L[$i1] eq $T[$bros[$b]]){$index1 = $i1;last;}
+			} 
+			if($index1 >= 0){
+			    for(my $i2 = 0; $i2 < scalar @Ltmp;$i2++){
+				if($Ltmp[$i2] eq $T[$bros[$b]]){$index2 = $i2;last;}
+			    }
+			    if($index2 >= 0){
+				splice(@Ltmp,$index2,1);
+			    }
+			    if(none {$_ eq $T[$bros[$b]]} @output){
+				push @output, $T[$bros[$b]];
+			    }
+			}
+			else{
+			    my $index3 = -1;
+			    for(my $i3 = 0; $i3 < scalar @Ltmp;$i3++){
+				if($Ltmp[$i3] eq $T[$bros[$b]]){$index3 = $i3;last;}
+			    }
+			    if($index3 >= 0){
+				splice(@Ltmp,$index3,1);
+			    }
+			    
+			    
+			}
+		    }
+		}
+		else{
+		    ##find the children of the ones which are not leaves
+		    #if the children are all leaves and are all in L, push their parent in to output and delete from Ltmp, if the children are not leaves, push them into Ltmp
+		    for(my $k = 0; $k < scalar @noleaves; $k++){
+			for(my $llk=0;$llk<scalar @Ltmp; $llk++){
+			    if($Ltmp[$llk] eq $noleaves[$k]){
+				splice(@Ltmp,$llk,1);
+				last;
+			    }
+			}
+			
+			
+			my $curnum2 = $N[$noleaves[$k]];
+			my $down=$noleaves[$k]-1;
+			my $notall = 0;
+			my @leafchildrentoout = ();
+			while($down >=0){
+			    if($N[$down] == -2){$down--;next;}
+			    if($N[$down] <= $curnum2){last;}#break
+			    elsif($N[$down] = $curnum2 + 1){
+				if(none {$_ eq $T[$down]} @allleaves){#check if children are leaves
+				    if(none {$_ eq $T[$down]} @L){
+					push @Ltmp, $T[$down];
+				    }
+				}
+				elsif(none {$_ eq $T[$down]} @L){#check if leafchild is not in L
+				    $notall = 1;
+				}
+				else{#leaf child is in L, thats good
+				    push @leafchildrentoout, $T[$down];
+				}
+			    }#that's the child!
+			    else{ ##bigger than +1, nothing
+			    }
+			    $down--;
+			}
+			
+			
+			if($notall == 0){#push current notleaf to output, delete from Ltmp
+			    if(none {$_ eq $T[$noleaves[$k]]} @L){}
+			    else{
+				if(none {$_ eq $T[$noleaves[$k]]} @output){
+				    push @output, $T[$noleaves[$k]];
+				}
+				my $index15 = -1;
+				for(my $i15 = 0; $i15 < scalar @Ltmp; $i15++){
+				    if($Ltmp[$i15] eq $T[$noleaves[$k]]){$index15 = $i15;last;}
+				}
+				if($index15 >= 0){
+				    splice(@Ltmp,$index15,1);
+				}
+			    }
+			}
+			else{#push all children in @leafchildrentoout in output and delete from Ltmp
+			    if(scalar @leafchildrentoout == 0){next;}
+			    for(my $lcto = 0;$lcto < scalar @leafchildrentoout;$lcto++){
+				if(none {$_ eq $leafchildrentoout[$lcto]} @output){
+				    push @output, $leafchildrentoout[$lcto];
+				}
+				my $index16 = -1;
+				for(my $i16 = 0; $i16 < scalar @Ltmp; $i16++){
+				    if($Ltmp[$i16] eq $leafchildrentoout[$lcto]){$index16 = $i16;last;}
+				}
+				if($index16 >= 0){
+				    splice(@Ltmp,$index16,1);
+				}
+				
+				
+			    }
+			}
+			
 		    }
 		    
 		}
+		##what happens if all runs through and curnum is still in Ltmp?
+		
+		if(scalar @Ltmp > 0 && $nullLtmp eq $Ltmp[0]){##put Ltmp0 in output and delete it from Ltmp
+		    if(none {$_ eq $Ltmp[0]} @output){
+			if(none {$_ eq $Ltmp[0]} @L){}
+			else{
+			    push @output, $Ltmp[0];
+			}
+		    }
+		    splice(@Ltmp,0,1);
+		}
 	    }
+	    
 	}
-	
-	
     }
-
-   
+    
+    
+    
+    
+    
     return @output;
     
-}
+} 

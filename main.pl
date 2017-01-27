@@ -406,6 +406,16 @@ append2file($outs,$sumcollectcluster);
 append2file($outs,$sumgetnumbers);
 print "Done!\n";
 
+
+###check with specieslist if the species names appear in the tree, if not, stop!
+my $checkcmd = "$perlpath\/perl $scripts_sarah\/checkTree.pl $newicktree $genesfolder\/specieslist";
+my @checkout = readpipe("$checkcmd");
+my $noneout = "none";
+if(index($checkout[0],$noneout) != -1){print "Tree file checked!\n";}
+else{
+    print "The following speciesidentifier do not appear in the tree: $checkout[0]\n"; exit 1;
+}
+
 #sort clusters without specific coordinates (none cluster)
 my $cmd6 = "mkdir $outpath\/clusters\/NoneCluster 2>>$err";
 my $cmd7 = "mv $outpath\/clusters\/cluster-None\* $outpath\/clusters\/NoneCluster 2>>$err";
