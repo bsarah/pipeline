@@ -54,7 +54,7 @@ while(<FA>){
 	$count++;
     }
     my @tmp = split '\/', $curfile;
-    my $clusname = $tmp[(scalar @tmp)-1];
+    my $clusname = $tmp[-1];
     my $newnewline = ">$clusname\t$count\n";
     print $outf $newnewline;
     for(my $i=0;$i<scalar @lines;$i++){

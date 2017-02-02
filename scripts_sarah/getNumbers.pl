@@ -29,7 +29,8 @@ while(<FA>){
     my $prename;
     ($prename,$path,$suffix) = fileparse($curfile);
     my @F = split '\.', $prename;
-    $name = $F[0];
+    if(scalar @F >= 2){$name = $F[-2];}
+    else{$name = $F[0];}
     my $newname = "$name-$count\.clus";
     system("mv $curfile $path\/$newname");
     $count++;
