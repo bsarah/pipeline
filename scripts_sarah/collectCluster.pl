@@ -203,7 +203,9 @@ my $numspec = 0;
 foreach my $key (sort (keys(%species))) {
     my @L = split '\/', $key;
     my @M = split '\.', $L[(scalar @L) -1];
-    $spstr = "$spstr$M[-2] $species{$key}\n";
+    my $tmpnum = 0;
+#    if(scalar @M >= 2){$tmpnum = -2;}
+    $spstr = "$spstr$M[$tmpnum] $species{$key}\n";
     $numspec++;
 }
 

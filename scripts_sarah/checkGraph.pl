@@ -250,15 +250,24 @@ while(<FA>){
     }
 }    
 
+my $avnumncg = 0;
+my $avnumecg = 0;
+my $avdenscg = 0;
 
-my $avnumncg = sprintf("%.2f",$sumnodescg/$numcg);
-my $avnumecg = sprintf("%.2f",$sumedgescg/$numcg);
-my $avdenscg = sprintf("%.2f",$sumdenscg/$numcg);
+if($numcg > 0){
+    $avnumncg = sprintf("%.2f",$sumnodescg/$numcg);
+    $avnumecg = sprintf("%.2f",$sumedgescg/$numcg);
+    $avdenscg = sprintf("%.2f",$sumdenscg/$numcg);
+}
+my $avnumnng = 0;
+my $avnumeng = 0;
+my $avdensng = 0;
 
-my $avnumnng = sprintf("%.2f",$sumnodesng/$numng);
-my $avnumeng = sprintf("%.2f",$sumedgesng/$numng);
-my $avdensng = sprintf("%.2f",$sumdensng/$numng);
-
+if($numng > 0){
+    $avnumnng = sprintf("%.2f",$sumnodesng/$numng);
+    $avnumeng = sprintf("%.2f",$sumedgesng/$numng);
+    $avdensng = sprintf("%.2f",$sumdensng/$numng);
+}
 
 print $outs "===============Graph analysis\===============\n";
 print $outs "Number of cographs: $numcg \n";

@@ -62,9 +62,9 @@ def infernal(outPutDir, genomes, rnaModel, incE, incT, path):
     '''
     if len(genomes) == 0:
         raise Exception("No genomes given. make sure all paths given are paths to directories not files")
-    if 'infernalIn' in listdir(outPutDir):
-        subprocess.call('rm -r '+outPutDir+'infernalIn',shell=True)
-    subprocess.call('mkdir '+outPutDir+'infernalIn',shell=True)
+#    if 'infernalIn' in listdir(outPutDir):
+#        subprocess.call('rm -r '+outPutDir+'infernalIn',shell=True)
+#    subprocess.call('mkdir '+outPutDir+'infernalIn',shell=True)
 
     i = 1 #counter for number of genes searched
 
