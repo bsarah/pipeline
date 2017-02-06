@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+!/usr/bin/perl -w
 
 
 ##to write the perl main program use pero getopts package!
@@ -251,7 +251,7 @@ if($cmfile){$cmoption = "-sg $cmfile"; $cmoptstr = "--cm $cmfile ";}
 ##Genomes
 my $genomesstr="";
 if ($genomes){ 
-    $genomesstr = "--genomes genomes ";
+    $genomesstr = "--genomes $genomes ";
     $cmoption = "$cmoption $genomes";
     #check if folder is not empty
     if(-e $genomes){} else{print "Genomes folder is empty! (option -g)\n"; exit 1;}
