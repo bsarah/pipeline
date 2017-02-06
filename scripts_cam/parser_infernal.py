@@ -47,7 +47,7 @@ def parseInfernal(filePath,  geneList=list()):
                                 break
                     f.close()
                     
-                    subprocess.call("rm "+filePlusPath, shell=True)
+                    #subprocess.call("rm "+filePlusPath, shell=True)
     #print("done")
     return geneList, infernalVersion
 
