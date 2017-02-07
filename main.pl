@@ -311,7 +311,7 @@ if($pathtocam){
 
 
 ##Program call
-my $optstr = "$outpathstr$cmoptstr$mafstr$refspeciesstr$newickstr$idstr$simstr$doitagainstr$filterstr$incloptstr$skipgstr$skipastr$pystr$pestr$rstr$infstr";
+my $optstr = "$outpathstr$cmoptstr$mafstr$genomesstr$refspeciesstr$newickstr$idstr$simstr$doitagainstr$filterstr$incloptstr$skipgstr$skipastr$pystr$pestr$rstr$infstr";
 print "program called with: $optstr \n";
 
 
