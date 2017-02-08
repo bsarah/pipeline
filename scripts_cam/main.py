@@ -68,6 +68,18 @@ args.multiSeq, args.infernalPath, args.outPutDir, args.pathToRepo = endSlash(arg
 args.pathToRepo = makeFullPath(args.pathToRepo)
 makeOutPutDir(args.outPutDir)
 
+#Catch exceptions 
+args.quality = float(args.quality)
+if args.quality < 0 or args.quality > 99:
+    raise Exception("quality value must be a number between 0 and 99 corresponding to the percentage of "\
+                    "blocks that will be thrown away.")
+
+if args.own_genes != None and args.search_genes != None:
+    raise Exception("both own_genes and search_genes given. own_genes and search_genes are mutually exclusize.")
+
+if len(listdir(args.multiSeq)) == 0:
+    raise Exception("No multiple sequence alignments in {}".format(args.multiSeq))
+
 if args.search_genes[0] != None:
     #print("search Genes")
 
@@ -96,18 +108,6 @@ elif args.own_genes != None:
     
 else:
     raise Exception("either own_genes or search_genes must be given")
-    
-#Catch Exceptions
-args.quality = float(args.quality)
-if args.quality < 0 or args.quality > 99:
-    raise Exception("quality value must be a number between 0 and 99 corresponding to the percentage of "\
-                    "blocks that will be thrown away.")
-
-if args.own_genes != None and args.search_genes != None:
-    raise Exception("both own_genes and search_genes given. own_genes and search_genes are mutually exclusize.")
-
-if len(listdir(args.multiSeq)) == 0:
-    raise Exception("No multiple sequence alignments given")
 
 
 #print("parsing maf files, writing valid blocks in bed format...")

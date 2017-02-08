@@ -83,6 +83,7 @@ def readGene(_file):
     _file.readline()
     #read len, !or?, score, strand, rank, start(+ strand) and end(+strand)
     line1 = _file.readline().split()
+    length = getGeneLength(int(line1[9]),int(line1[10]))
     #skip two lines
     _file.readline()
     _file.readline()
@@ -107,7 +108,7 @@ def readGene(_file):
     else:
         sequence = line3[0]
     #       chromosome             start                                       length                            strand     id num
-    return (line3[0], getGeneStart(line1[9],line1[10],line1[11]), getGeneLength(int(line1[9]),int(line1[10])), line1[11], int(line1[0].strip('()')),\
+    return (line3[0], getGeneStart(line1[9],line1[10],line1[11]), length, line1[11], int(line1[0].strip('()')),\
             line2[0], sequence, line1[1], line1[3])
     #secondary structure, sequence  !or?  score
     

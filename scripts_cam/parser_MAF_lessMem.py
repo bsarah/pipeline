@@ -238,6 +238,7 @@ def parseTemp(tempFile, finalFile, geneFile, listOfGenes, overlapSet, threshold)
                     geneFile.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(\
                                    chromo.name, chromo.species+"_"+str(gene.blockNum), gene.s,\
                                    gene.getEndPos(), gene.strand, fivePrime, threePrime, gene.structure, gene.sequence, gene.score))
+
                     #print('wrote a gene')
 
             #replaced deleting with creating new list. Remove had O(n) cost + n operations
