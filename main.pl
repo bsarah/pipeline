@@ -1,4 +1,4 @@
-!/usr/bin/perl -w
+#!/usr/bin/perl -w
 
 
 ##to write the perl main program use pero getopts package!
