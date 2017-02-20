@@ -107,7 +107,7 @@ def readGene(_file):
         sequence = ''.join(line3[:-1]) #join everything in the line together except the last space separated element
     else:
         sequence = line3[0]
-    #       chromosome             start                                       length                            strand     id num
+    #       chromosome             start                          length    strand     id num
     return (line3[0], getGeneStart(line1[9],line1[10],line1[11]), length, line1[11], int(line1[0].strip('()')),\
             line2[0], sequence, line1[1], line1[3])
     #secondary structure, sequence  !or?  score

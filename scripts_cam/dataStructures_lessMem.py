@@ -132,7 +132,7 @@ class Chromosome:
     isReference:  A bool. If this chromosome's species is the reference species True otherwise False
     listOfMultiZ: A list of all of the blocks in this chromosome in order of their positions. Where the
 		  Beginning of the list is the block closest to the 5' end of the + strand
-    listOfScores: A list 
+    listOfScores: A list of all of the block's scores from the multiple sequence alignment.
     '''
 
     def __init__(self, name, species):
@@ -172,7 +172,7 @@ class Chromosome:
         
         self.leftCheck(i, gene)
         self.rightCheck(i-1, gene)#since we arent inserting the gene we need to check the block
-                                  #that the gene would displace
+                                  #that the gene would displace, if it was being inserted
         return
 
     def getAdjBlock(self, gene):
