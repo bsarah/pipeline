@@ -229,7 +229,11 @@ def parseTemp(tempFile, finalFile, geneFile, listOfGenes, overlapSet, threshold)
             #We check the entire gene list for every chromosome for every species but
             #we remove genes once we have wrote them to output so the list always gets
             #shorter with each iteration.
-
+            '''
+            makeNewList = False
+            if len(remainingGenes) == 0:
+                makeNewList = True
+            '''
             for i in range(len(listOfGenes)):
                 gene = listOfGenes[i]
                 if gene.chromosome == chromo.name and gene.species == chromo.species:
@@ -240,10 +244,10 @@ def parseTemp(tempFile, finalFile, geneFile, listOfGenes, overlapSet, threshold)
                                    gene.getEndPos(), gene.strand, fivePrime, threePrime, gene.structure, gene.sequence, gene.score))
 
                     #print('wrote a gene')
-                else:
-                    print('gene chromo: {} not {}'.format(gene.chromo, chromo.name))
-                    print('gene species {} not {}'.format(gene.species, chromo.species))
-
+                '''
+                elif makeNewList:
+                    remainingGenes.append(gene)
+                '''
             #replaced deleting with creating new list. Remove had O(n) cost + n operations
             #making new list means appending O(1) + n operations
             if chromo.isReference:
