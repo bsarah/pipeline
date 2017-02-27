@@ -327,6 +327,34 @@ my $db = "$outpath\/debug.txt";
 
 
 
+##create summaries folder to collect summaries and lateron summarize them
+my $cmdsummary = "mkdir $outpath\/summaries 2>>$err";
+my @outsummary = readpipe("$cmdsummary");
+
+my $summarypath = "$outpath\/summaries";
+
+##extendtree
+my $formtree = "tree_formatted.newick";
+my $formcmd = "$perlpath\/perl $scripts_sarah\/extendTree.pl $newicktree $summarypath\/$formtree";
+my @formout = readpipe("formcmd");
+$newicktree = "$summarypath\/$formtree";
+
+####TODO change later if genome folder contains all genomes and tree is a subtree, do the other direction
+#check genelist format and species identifier in genome files and tree.
+#add inner dummy vertices to tree for the drawing
+if ($genomes){
+    my $gencmd = "ls $genomes \> $summarypath\/specieslist 2>>$err";
+    my @outgncmd = readpipe("$gencmd");
+    my $checkcmd1 = "$perlpath\/perl $scripts_sarah\/checkTree.pl $newicktree $summarypath\/specieslist";
+    my @checkout1 = readpipe("$checkcmd1");
+    my $noneout = "none";
+    if(index($checkout1[0],$noneout) != -1){print "Tree file consistent with genomes!\n";}
+    else{
+	print "The following speciesidentifier do appear in the genomes but do not appear in the tree: $checkout1[0]\n"; exit 1;
+    }
+}
+
+
 
 ##start the program
 my $start_string = strftime "%a %b %e %H:%M:%S %Y", localtime;
@@ -365,24 +393,31 @@ else{
 }
 
 
-##create summaries folder to collect summaries and lateron summarize them
-my $cmdsummary = "mkdir $outpath\/summaries 2>>$err";
-my @outsummary = readpipe("$cmdsummary");
 
-my $summarypath = "$outpath\/summaries";
 
-my $sumcollectcluster = "$summarypath\/Summary_collectCluster.txt";
-my $sumgetnumbers = "$summarypath\/Summary_getNumbers.txt";
+
+###check with specieslist if the species names appear in the tree, if not, stop!
+my $cmd2 = "ls $genesfolder\/*.bed \> $genesfolder\/specieslist 2>>$err";
+my $checkcmd = "$perlpath\/perl $scripts_sarah\/checkTree.pl $newicktree $genesfolder\/specieslist";
+my @out2 = readpipe("$cmd2");
+my @checkout = readpipe("$checkcmd");
+my $noneout = "none";
+if(index($checkout[0],$noneout) != -1){print "Tree file checked!\n";}
+else{
+    print "The following speciesidentifier do not appear in the tree: $checkout[0]\n"; exit 1;
+}
+
+
 
 ##Construct clusters
+my $sumcollectcluster = "$summarypath\/Summary_collectCluster.txt";
+my $sumgetnumbers = "$summarypath\/Summary_getNumbers.txt";
 my $cmd1 = "mkdir $outpath\/clusters 2>>$err";
-my $cmd2 = "ls $genesfolder\/*.bed \> $genesfolder\/specieslist 2>>$err";
 my $cmd3 = "$perlpath\/perl $scripts_sarah\/collectCluster\.pl $genesfolder\/specieslist $genesfolder $pseudoscore $outpath\/clusters $sumcollectcluster 2>>$err";
 my $cmd4 = "ls $outpath\/clusters/*.clus > $outpath\/clusters/precluslist 2>>$err";
 my $cmd5 = "$perlpath/perl $scripts_sarah\/getNumbers.pl $outpath\/clusters/precluslist $outpath\/clusters $sumgetnumbers 2>>$err";
 print "construct clusters..";
 my @out1 = readpipe("$cmd1");
-my @out2 = readpipe("$cmd2");
 my @out3 = readpipe("$cmd3");
 my @out4 = readpipe("$cmd4");
 my @out5 = readpipe("$cmd5");
@@ -406,15 +441,6 @@ append2file($outs,$sumcollectcluster);
 append2file($outs,$sumgetnumbers);
 print "Done!\n";
 
-
-###check with specieslist if the species names appear in the tree, if not, stop!
-my $checkcmd = "$perlpath\/perl $scripts_sarah\/checkTree.pl $newicktree $genesfolder\/specieslist";
-my @checkout = readpipe("$checkcmd");
-my $noneout = "none";
-if(index($checkout[0],$noneout) != -1){print "Tree file checked!\n";}
-else{
-    print "The following speciesidentifier do not appear in the tree: $checkout[0]\n"; exit 1;
-}
 
 #sort clusters without specific coordinates (none cluster)
 my $cmd6 = "mkdir $outpath\/clusters\/NoneCluster 2>>$err";
