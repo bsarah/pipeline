@@ -8,26 +8,19 @@ ToDo file for our pipeline project:
 - add parameter as a maximal or minimal threshold for cluster sizes (genomic distance between anchors) - see talk T. Lowe
 - some elements are not sorted into anchors (sbRNAs, distant related species)
 
-#Sarah & Anne
-## done
-- search for a student to build up our GUI
 
 #Anne
-- get newick trees of the remaining species (sources, tool for user)
-- create CM's of other repetative elements
-        - annotation of alu repeats is still missing
-        - maybe use repeatmasker tracks from genome browser/ENSEMBL
-        - Dfam (sic!) http://www.dfam.org/ elements
-- create test runs
-- compare our results from Y RNAs with https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1074747/  and   https://www.ncbi.nlm.nih.gov/pubmed/17470436
+- get newick trees of the remaining species of all MultiZ alignments 
+- tree parser based on the genome list
+- determine the cutoffs of the CMs
 ## later
-- check sbRNAs cm and run again (single cm or cambination)
 - newick tree to ePoPE format parser
 - ePoPE format to newick
-- postscript script to draw trees
-- postscript script to draw graphs -> we need a drawing algorithm, so it might be better to use python/latex/perl instead of ps
 ## done
-- create 4 other Y RNA models for testing
+- create 4 differenr YRNA CMs
+- create CM's of alu repeats
+- create sbRNAs CM
+
 
 #Cameron
 - include reading of zipped data (do not unzipped files as we get memory issues)
