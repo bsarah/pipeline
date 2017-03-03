@@ -55,15 +55,12 @@ for line in sys.stdin:
             ID = buf[1].split('.')
 
             try:
-                test = ID[1]
+                ID[1]
             except IndexError:
-                #print("Ignoring {}. File lacks chromosome information".format(readFile.name))
-                break #break out of for line in readFile for loop, continue to next filename in mafdir (recursive call)
+                continue #skip lines that do not have chromosome information
             else:
                 i = 0
                 for writeFile in writeFiles:
-                    #writeFile = open(writeFile, 'w')
-                    #writeFile.seek(0, 2)
                     i+=1
                     numSearches = len(listSpeciesFiles)
 
@@ -73,15 +70,12 @@ for line in sys.stdin:
                                         ID[1],ID[0]+'_'+str(blockNum), buf[2], buf[3], buf[4], lastLineA, score))
                         #               chr   species_blocknum         start   length  strand  isRefSpecies allignmentScore
                     elif i > numSearches:
-                        #print("writeFileName: {}".format(writeFileName))
                         raise Exception("the species of a maf allignment was not in the list of species given\n"+\
                                         "allignment species: {}".format(ID[0]))
             lastLineA = False
 
 for openFile in writeFiles:
     openFile.close()
-
-#print("closed all the files")
 
 print(blockNum)
 '''

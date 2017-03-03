@@ -110,7 +110,7 @@ else:
     raise Exception("either own_genes or search_genes must be given")
 
 
-#print("num gene Objects: {}".format(len(geneObjects)))
+print("Total genes: {}".format(len(geneObjects)))
 #print("parsing maf files, writing valid blocks in bed format...")
 maf2bed(args.multiSeq, args.outPutDir, args.pathToRepo, geneObjects, listOfSpecies, args.quality, versionInfo)
 #print("done. Bed files stored in {}".format(('/'.join(multiSeqFiles[0].split('/')[:-2]))+'/bed'))

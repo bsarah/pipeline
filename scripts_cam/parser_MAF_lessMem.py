@@ -173,14 +173,28 @@ def parseTempWrapper(tempFiles, listOfGenes, outputDir, threshold, infernalVersi
                                "\n")
         geneFile.seek(start)
         overlappingBlockNums, listOfGenes = parseTemp(tempBlockFile, finalBlockFile, geneFile, listOfGenes, overlappingBlockNums, threshold)
+        print('num Genes: {}'.format(len(listOfGenes)))
 
         tempBlockFile.close()
         finalBlockFile.close()
         geneFile.close()
         
         subprocess.call('gzip '+finalBlockFileName, shell=True)
-        subprocess.call('rm '+tempBlockFileName, shell=True)
-    #print("done")
+        subprocess.call('gzip '+tempBlockFileName, shell=True)
+        #subprocess.call('rm '+tempBlockFileName, shell=True)
+
+    if len(listOfGenes) > 0:
+        listOfSC = []
+        for i in range(len(listOfGenes)):
+            if (listOfGenes[i].species, listOfGenes[i].chromosome) not in listOfSC:
+                listOfSC.append((listOfGenes[i].species, listOfGenes[i].chromosome))
+        print('unsorted genes')
+        for tup in listOfSC:
+            if tup[0] == 'droMoj3':
+                print(tup)
+
+    else:
+        print('no unsorted genes')
 
 
     
@@ -209,11 +223,18 @@ def parseTemp(tempFile, finalFile, geneFile, listOfGenes, overlapSet, threshold)
             if threshold > 0:
                 chromo.listOfScores.append(int(lineCont[6]))
 
-        #if we reached the end of the last chromosome.
+        #if we reached the end of the chromosome.
         #check geneoverlaps, write genes that are from the last chromosome.
         #remove overlaps from the last chromosome, write it to the bed file.
         #overwrite 'chromo' to the new chromosome object.
         else:
+            if chromo.species == 'droEre2':
+
+                print('droEre2 chromo: {}'.format(chromo.name))
+                if chromo.name == 'scaffold_4929':
+                    print('in scaffold_4929')
+                    print('num blocks: {}'.format(len(chromo.listOfMultiZ)))
+
             #determine what the threshold score is based on threshold
             if len(chromo.listOfScores) > 0:
                 chromo.listOfScores.sort()
@@ -227,13 +248,11 @@ def parseTemp(tempFile, finalFile, geneFile, listOfGenes, overlapSet, threshold)
                 thresholdScore = float('-inf')#if threshold is 0 set thresholdScore to - infinity
                 
             #We check the entire gene list for every chromosome for every species but
-            #we remove genes once we have wrote them to output so the list always gets
-            #shorter with each iteration.
-            '''
-            makeNewList = False
-            if len(remainingGenes) == 0:
-                makeNewList = True
-            '''
+            #we make a new list of the unwritten genes and use that for the next iteration
+            #so the list always gets shorter with each iteration. And we can see if any genes are not sorted
+            
+            remainingGenes = []
+            
             for i in range(len(listOfGenes)):
                 gene = listOfGenes[i]
                 if gene.chromosome == chromo.name and gene.species == chromo.species:
@@ -243,11 +262,12 @@ def parseTemp(tempFile, finalFile, geneFile, listOfGenes, overlapSet, threshold)
                                    chromo.name, chromo.species+"_"+str(gene.blockNum), gene.s,\
                                    gene.getEndPos(), gene.strand, fivePrime, threePrime, gene.structure, gene.sequence, gene.score))
 
-                    #print('wrote a gene')
-                '''
-                elif makeNewList:
+                else:
                     remainingGenes.append(gene)
-                '''
+            
+            listOfGenes = remainingGenes
+            remainingGenes = None #free up memory by not having two copies of the same list
+
             #replaced deleting with creating new list. Remove had O(n) cost + n operations
             #making new list means appending O(1) + n operations
             if chromo.isReference:
@@ -263,7 +283,9 @@ def parseTemp(tempFile, finalFile, geneFile, listOfGenes, overlapSet, threshold)
             else:
                 #only blocks above threshold, have valid reference block and dont overlap gene are added
                 writeList = [block for block in chromo.listOfMultiZ if not block.Overlap and block.blockNum not in overlapSet and block.score > thresholdScore]
-
+                if chromo.species == 'droEre2' and chromo.name == 'scaffold_4929':
+                    print('num written blocks: {}'.format(len(writeList)))
+                
             #free up memory in chromo
             chromo.listOfMultiZ = None
                 
@@ -282,9 +304,7 @@ def parseTemp(tempFile, finalFile, geneFile, listOfGenes, overlapSet, threshold)
                 finalFile.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(\
                                 chromo.name, chromo.species+"_"+str(block.blockNum), block.s,\
                                 block.getEndPos(), block.strand, fivePrime, threePrime))
-                #else:
-                    #print("block with score {} thrown away".format(block.score))
-            #print("blocks wrote")
+
             #overwrite chromo to new chromosome
             chromo = Chromosome(lineCont[0], species_blockNum[0])
 
@@ -295,7 +315,33 @@ def parseTemp(tempFile, finalFile, geneFile, listOfGenes, overlapSet, threshold)
     #print("genes wrote: {}".format(numGenesWrote))
     return overlapSet, listOfGenes
 
-                        
+def readChromo(finalFile, overlapSet, listOfGenes, chromo,
+
+    if len(chromo.listOfScores) > 0:
+        chromo.listOfScores.sort()
+        thresholdIndex = int(len(chromo.listOfScores)/100*threshold)
+        if thresholdIndex < 0:
+            thresholdIndex = 0
+        elif thresholdIndex >= len(chromo.listOfScores) and len(chromo.listOfScores) > 0:
+            thresholdIndex = len(chromo.listOfScores) -1
+            thresholdScore = chromo.listOfScores[thresholdIndex]
+        else:
+            thresholdScore = float('-inf')#if threshold is 0 set thresholdScore to - infinity
+
+                           #We check the entire gene list for every chromosome for every species but
+                           #we make a new list of the unwritten genes and use that for the next iteration
+                           #so the list always gets shorter with each iteration. And we can see if any genes are not sorted
+
+        remainingGenes = []
+
+                           for i in range(len(listOfGenes)):
+                               gene = listOfGenes[i]
+                               if gene.chromosome == chromo.name and gene.species == chromo.species:
+                                   chromo.checkGene(gene)
+                                   fivePrime, threePrime = chromo.getAdjBlock(gene)
+                                   geneFile.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(\
+                                         chromo.name, chromo.spec
+               
 def maf2bed(mafDir, outputDir, repoDir, geneObjs, listOfSpecies, threshold, infernalVersion):
     '''
     Assumptions:
