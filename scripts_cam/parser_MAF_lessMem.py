@@ -228,120 +228,88 @@ def parseTemp(tempFile, finalFile, geneFile, listOfGenes, overlapSet, threshold)
         #remove overlaps from the last chromosome, write it to the bed file.
         #overwrite 'chromo' to the new chromosome object.
         else:
-            if chromo.species == 'droEre2':
+            overlapSet, listOfGenes = readChromo(finalFile, geneFile, listOfGenes, overlapSet, threshold, chromo)
+            #overwrite chromo to new chromosome
+            chromo = Chromosome(lineCont[0], species_blockNum[0])
+            
+    #read the last chomo in the file
+    overlapSet, listOfGenes = readChromo(finalFile, geneFile, listOfGenes, overlapSet, threshold, chromo)
+            
+    return overlapSet, listOfGenes
 
-                print('droEre2 chromo: {}'.format(chromo.name))
-                if chromo.name == 'scaffold_4929':
-                    print('in scaffold_4929')
-                    print('num blocks: {}'.format(len(chromo.listOfMultiZ)))
+def readChromo(finalFile, geneFile, listOfGenes, overlapSet, threshold, chromo):
 
-            #determine what the threshold score is based on threshold
-            if len(chromo.listOfScores) > 0:
-                chromo.listOfScores.sort()
-                thresholdIndex = int(len(chromo.listOfScores)/100*threshold)
-                if thresholdIndex < 0:
-                    thresholdIndex = 0
-                elif thresholdIndex >= len(chromo.listOfScores) and len(chromo.listOfScores) > 0:
-                    thresholdIndex = len(chromo.listOfScores) -1
-                thresholdScore = chromo.listOfScores[thresholdIndex]
-            else:
-                thresholdScore = float('-inf')#if threshold is 0 set thresholdScore to - infinity
+    if len(chromo.listOfScores) > 0:
+        chromo.listOfScores.sort()
+        thresholdIndex = int(len(chromo.listOfScores)/100*threshold)
+    if thresholdIndex < 0:
+        thresholdIndex = 0
+    elif thresholdIndex >= len(chromo.listOfScores) and len(chromo.listOfScores) > 0:
+        thresholdIndex = len(chromo.listOfScores) -1
+        thresholdScore = chromo.listOfScores[thresholdIndex]
+    else:
+        thresholdScore = float('-inf')#if threshold is 0 set thresholdScore to - infinity
                 
             #We check the entire gene list for every chromosome for every species but
             #we make a new list of the unwritten genes and use that for the next iteration
             #so the list always gets shorter with each iteration. And we can see if any genes are not sorted
             
-            remainingGenes = []
+    remainingGenes = []
             
-            for i in range(len(listOfGenes)):
-                gene = listOfGenes[i]
-                if gene.chromosome == chromo.name and gene.species == chromo.species:
-                    chromo.checkGene(gene)
-                    fivePrime, threePrime = chromo.getAdjBlock(gene)
-                    geneFile.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(\
-                                   chromo.name, chromo.species+"_"+str(gene.blockNum), gene.s,\
-                                   gene.getEndPos(), gene.strand, fivePrime, threePrime, gene.structure, gene.sequence, gene.score))
+    for i in range(len(listOfGenes)):
+        gene = listOfGenes[i]
+        if gene.chromosome == chromo.name and gene.species == chromo.species:
+            chromo.checkGene(gene)
+            fivePrime, threePrime = chromo.getAdjBlock(gene)
+            geneFile.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(\
+                           chromo.name, chromo.species+"_"+str(gene.blockNum), gene.s,\
+                           gene.getEndPos(), gene.strand, fivePrime, threePrime, gene.structure, gene.sequence, gene.score))
 
-                else:
-                    remainingGenes.append(gene)
+        else:
+            remainingGenes.append(gene)
             
-            listOfGenes = remainingGenes
-            remainingGenes = None #free up memory by not having two copies of the same list
+    listOfGenes = remainingGenes
+    remainingGenes = None #free up memory by not having two copies of the same list
 
             #replaced deleting with creating new list. Remove had O(n) cost + n operations
             #making new list means appending O(1) + n operations
-            if chromo.isReference:
-                writeList = []
-                for block in chromo.listOfMultiZ:
-                    if block.Overlap:
-                        overlapSet.add(block.blockNum)
-                    elif block.score < thresholdScore:
-                        continue
-                    else:
-                        #only add blocks that are above threshold and dont overlap
-                        writeList.append(block)
+    if chromo.isReference:
+        writeList = []
+        for block in chromo.listOfMultiZ:
+            if block.Overlap:
+               overlapSet.add(block.blockNum)
+            elif block.score < thresholdScore:
+               continue
             else:
+                        #only add blocks that are above threshold and dont overlap
+               writeList.append(block)
+        else:
                 #only blocks above threshold, have valid reference block and dont overlap gene are added
-                writeList = [block for block in chromo.listOfMultiZ if not block.Overlap and block.blockNum not in overlapSet and block.score > thresholdScore]
-                if chromo.species == 'droEre2' and chromo.name == 'scaffold_4929':
-                    print('num written blocks: {}'.format(len(writeList)))
+            writeList = [block for block in chromo.listOfMultiZ if not block.Overlap and block.blockNum not in overlapSet and block.score > thresholdScore]
+            if chromo.species == 'droEre2' and chromo.name == 'scaffold_4929':
+               print('num written blocks: {}'.format(len(writeList)))
                 
             #free up memory in chromo
-            chromo.listOfMultiZ = None
+    chromo.listOfMultiZ = None
                 
             #writing remaining blocks
-            for i in range(len(writeList)):
+    for i in range(len(writeList)):
                 
-                block = writeList[i]
-                if i-1 < 0:
-                    fivePrime = None
-                else:
-                    fivePrime = writeList[i-1].blockNum
-                if i+1 >= len(writeList):
-                    threePrime = None
-                else:
-                    threePrime = writeList[i+1].blockNum
-                finalFile.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(\
-                                chromo.name, chromo.species+"_"+str(block.blockNum), block.s,\
-                                block.getEndPos(), block.strand, fivePrime, threePrime))
+        block = writeList[i]
+        if i-1 < 0:
+            fivePrime = None
+        else:
+            fivePrime = writeList[i-1].blockNum
+        if i+1 >= len(writeList):
+            threePrime = None
+        else:
+            threePrime = writeList[i+1].blockNum
+            finalFile.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(\
+                            chromo.name, chromo.species+"_"+str(block.blockNum), block.s,\
+                            block.getEndPos(), block.strand, fivePrime, threePrime))
 
-            #overwrite chromo to new chromosome
-            chromo = Chromosome(lineCont[0], species_blockNum[0])
-
-        #else:
-            #print("weird chromosome with nothing inside")        
-            
-    #print("done")
-    #print("genes wrote: {}".format(numGenesWrote))
     return overlapSet, listOfGenes
 
-def readChromo(finalFile, overlapSet, listOfGenes, chromo,
-
-    if len(chromo.listOfScores) > 0:
-        chromo.listOfScores.sort()
-        thresholdIndex = int(len(chromo.listOfScores)/100*threshold)
-        if thresholdIndex < 0:
-            thresholdIndex = 0
-        elif thresholdIndex >= len(chromo.listOfScores) and len(chromo.listOfScores) > 0:
-            thresholdIndex = len(chromo.listOfScores) -1
-            thresholdScore = chromo.listOfScores[thresholdIndex]
-        else:
-            thresholdScore = float('-inf')#if threshold is 0 set thresholdScore to - infinity
-
-                           #We check the entire gene list for every chromosome for every species but
-                           #we make a new list of the unwritten genes and use that for the next iteration
-                           #so the list always gets shorter with each iteration. And we can see if any genes are not sorted
-
-        remainingGenes = []
-
-                           for i in range(len(listOfGenes)):
-                               gene = listOfGenes[i]
-                               if gene.chromosome == chromo.name and gene.species == chromo.species:
-                                   chromo.checkGene(gene)
-                                   fivePrime, threePrime = chromo.getAdjBlock(gene)
-                                   geneFile.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(\
-                                         chromo.name, chromo.spec
-               
 def maf2bed(mafDir, outputDir, repoDir, geneObjs, listOfSpecies, threshold, infernalVersion):
     '''
     Assumptions:
