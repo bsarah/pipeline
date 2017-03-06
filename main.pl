@@ -336,7 +336,7 @@ my $summarypath = "$outpath\/summaries";
 ##extendtree
 my $formtree = "tree_formatted.newick";
 my $formcmd = "$perlpath\/perl $scripts_sarah\/extendTree.pl $newicktree $summarypath\/$formtree";
-my @formout = readpipe("formcmd");
+my @formout = readpipe("$formcmd");
 $newicktree = "$summarypath\/$formtree";
 
 ####TODO change later if genome folder contains all genomes and tree is a subtree, do the other direction
