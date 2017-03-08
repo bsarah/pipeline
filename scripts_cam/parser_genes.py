@@ -19,33 +19,37 @@ File Format:
     -chromosome     species     startCoord     endCoord     +or-     sequence     secondary_structure(optional)
 '''
 
-
-
 def parseGenes(filePath, outputDir, speciesList=list()):
     listOfGenes = list()
     geneNumber = 0
 
-    for fileName in listdir(filePath):
-        filePlusPath= join(filePath, fileName)
-        if isfile(filePlusPath):
-            f = catchExceptions(filePlusPath, outputDir)
+    if not len(listdir(filePath)) > 0:
+        raise Exception("no gene inputs to parse in {}".format(filePath))
 
-            for line in f:
-                if line[0] in '# \n':
-                    pass
+    for fileName in listdir(filePath):
+
+        filePlusPath= join(filePath, fileName)
+        f = catchExceptions(filePlusPath, outputDir)
+
+        if f == None:
+            continue
+        
+        for line in f:
+            if line[0] in '# \n':
+                pass
+            else:
+                geneNumber += 1
+                lineList = line.split()
+                if lineList[1] not in speciesList:
+                    speciesList.append(lineList[1])
+                if len(lineList) == 7:
+                    structure = lineList[6]
                 else:
-                    geneNumber += 1
-                    lineList = line.split()
-                    if lineList[1] not in speciesList:
-                        speciesList.append(lineList[1])
-                    if len(lineList) == 7:
-                        structure = lineList[6]
-                    else:
-                        structure = None
-                        #                       panTro       chr3         84545             85
-                        listOfGenes.append(Gene(lineList[1], lineList[0], int(lineList[2]), getGeneLength(int(lineList[2]), int(lineList[3])),\
-                                                lineList[4], geneNumber, structure, lineList[5]))
-                        #                       +            32          ((___>><<) ATTCGTAGCAT
+                    structure = None
+                    #                       panTro       chr3         84545             85
+                    listOfGenes.append(Gene(lineList[1], lineList[0], int(lineList[2]), getGeneLength(int(lineList[2]), int(lineList[3])),\
+                                            lineList[4], geneNumber, structure, lineList[5]))
+                    #                       +            32          ((___>><<) ATTCGTAGCAT
 
     return listOfGenes, speciesList
 
@@ -60,9 +64,15 @@ def catchExceptions(fileName, outputDir):
 
     unzips file if zipped
     '''
-    
+
     name = fileName.split('/')[-1]#fileName without pathway ex: test1.bed.gz
+
+    returnFile = True
     
+    if not isfile(fileName):
+        raise Warning("'{}' in given directory is not a file. Skipping".format(fileName))
+        returnFile = False
+
     #proper extension
     if fileName.endswith('.bed'):
         pass
@@ -74,14 +84,14 @@ def catchExceptions(fileName, outputDir):
             subprocess.call("rm -r "+unzippedDir, shell=True)
         subprocess.call('mkdir '+unzippedDir,shell=True)
         
-        #unzippedFileName = ('/'.join(fileName.split('/')[:-1]))+'/'+name.split('.')[0]+'.maf'
         unzippedFileName = unzippedDir + name.split('.')[0]+'.bed'
         print("unzipping maf file...")
         subprocess.call('/usr/bin/zcat '+fileName+' > '+unzippedFileName, shell=True)
         print("done")
         fileName = unzippedFileName
     else:
-        raise Exception("{} not of bed format. Use a .bed file or gziped .bed file('.bed.gz','.bed.Z','.bed.bz2')".format(fileName))
+        raise Warning("'{}' not of bed format, skipping file. Use a .bed file or gziped .bed file('.bed.gz','.bed.Z','.bed.bz2')".format(fileName))
+        returnFile = False
 
     #can unzipped file be opened
     #try:
@@ -89,8 +99,10 @@ def catchExceptions(fileName, outputDir):
     #except IOError:
         #raise Exception("cannot open {}".format(fileName))
     #else:
-    return f
-
+    if returnFile:
+        return f
+    return None
+    
 def getGeneLength(start, end):
     '''
     returns the length of the gene

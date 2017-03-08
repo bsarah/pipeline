@@ -176,7 +176,7 @@ def parseTempWrapper(tempFiles, listOfListOfGenes, outputDir, threshold, inferna
                 listOfGenes = _list
 
         overlappingBlockNums = parseTemp(tempBlockFile, finalBlockFile, geneFile, listOfGenes, overlappingBlockNums, threshold)
-        print('done')
+        #print('done')
 
         tempBlockFile.close()
         finalBlockFile.close()
@@ -185,7 +185,7 @@ def parseTempWrapper(tempFiles, listOfListOfGenes, outputDir, threshold, inferna
         subprocess.call('gzip '+finalBlockFileName, shell=True)
         #subprocess.call('gzip '+tempBlockFileName, shell=True)
         subprocess.call('rm '+tempBlockFileName, shell=True)
-
+    '''
     if len(listOfGenes) > 0:
         listOfSC = []
         for i in range(len(listOfGenes)):
@@ -198,7 +198,7 @@ def parseTempWrapper(tempFiles, listOfListOfGenes, outputDir, threshold, inferna
 
     else:
         print('no unsorted genes')
-
+    '''
 
 
 def parseTemp(tempFile, finalFile, geneFile, listOfGenes, overlapSet, threshold):
@@ -239,9 +239,9 @@ def parseTemp(tempFile, finalFile, geneFile, listOfGenes, overlapSet, threshold)
     overlapSet, listOfGenes = readChromo(finalFile, geneFile, listOfGenes, overlapSet, threshold, chromo)
 
     if len(listOfGenes) > 0:
-        print('writing orphin')
-        print("species: {}".format(chromo.species))
-        print('chromos:  {}'.format([gene.chromosome for gene in listOfGenes]))
+        #print('writing orphin')
+        #print("species: {}".format(chromo.species))
+        #print('chromos:  {}'.format([gene.chromosome for gene in listOfGenes]))
         for gene in listOfGenes:
             fivePrime, threePrime = None, None
             geneFile.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(\
