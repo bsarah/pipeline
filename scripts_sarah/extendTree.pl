@@ -43,7 +43,11 @@ for(my $i  = 1; $i < scalar @T; $i++){
 	if($T[$i] eq $space){$i++;}
 	if($T[$i] eq $obrac || $T[$i] eq $com || $T[$i] eq $semco || $T[$i] eq $cbrac){ #add dummy node
 	    my $dumstr = "inode$count";
-	    $newtree = "$newtree$dumstr";
+	    $newtree = "$newtree$dumstr$T[$i]";
+	    $count++;
+	}
+	else{
+	    $newtree = "$newtree$T[$i]";
 	}
     }
     else{
