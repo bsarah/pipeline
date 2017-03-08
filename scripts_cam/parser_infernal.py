@@ -19,6 +19,7 @@ def parseInfernal(filePath,  geneList=list()):
     else:
         for _file in listdir(filePath):
             filePlusPath = join(filePath,_file)
+            geneList.append(list())
             if isfile(filePlusPath):
                 try:
                     f = open(filePlusPath, 'r')
@@ -40,7 +41,7 @@ def parseInfernal(filePath,  geneList=list()):
                             if lineList[7] == "!":
 
                                 #                        panTro             chr3         100          10           
-                                geneList.append(Gene(f.name.split('/')[-1].split('.')[0], chromosome, lineList[1], lineList[2],\
+                                geneList[len(geneList)-1].append(Gene(f.name.split('/')[-1].split('.')[0], chromosome, lineList[1], lineList[2],\
                                                      lineList[3], lineList[4], lineList[5], lineList[6], lineList[8]))
                                 #                      +             23       2nd structure   Sequence    score
                             else:

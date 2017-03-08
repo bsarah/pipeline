@@ -127,7 +127,7 @@ def maf2TempWrapper(mafDir, outputDir, repoDir, listOfSpecies):
             
     return sortedTempList
 
-def parseTempWrapper(tempFiles, listOfGenes, outputDir, threshold, infernalVersion):
+def parseTempWrapper(tempFiles, listOfListOfGenes, outputDir, threshold, infernalVersion):
     '''
     Assumptions:
         The first file in tempFiles must be the file for the reference Species. As a result this means
@@ -151,9 +151,6 @@ def parseTempWrapper(tempFiles, listOfGenes, outputDir, threshold, infernalVersi
 
     now = datetime.datetime.now()
     
-    #print(len(tempFiles))
-    #print(len(listOfGenes))
-    #print(listOfGenes[0])
     for tempBlockFileName in tempFiles:
 
         tempBlockFile = open(tempBlockFileName, 'r')
@@ -172,16 +169,22 @@ def parseTempWrapper(tempFiles, listOfGenes, outputDir, threshold, infernalVersi
                                "# "+infernalVersion+"\n"+\
                                "\n")
         geneFile.seek(start)
-        overlappingBlockNums, listOfGenes = parseTemp(tempBlockFile, finalBlockFile, geneFile, listOfGenes, overlappingBlockNums, threshold)
-        print('num Genes: {}'.format(len(listOfGenes)))
+
+        listOfGenes = None
+        for _list in listOfListOfGenes:
+            if _list[0].species == species:
+                listOfGenes = _list
+
+        overlappingBlockNums = parseTemp(tempBlockFile, finalBlockFile, geneFile, listOfGenes, overlappingBlockNums, threshold)
+        print('done')
 
         tempBlockFile.close()
         finalBlockFile.close()
         geneFile.close()
-        
+
         subprocess.call('gzip '+finalBlockFileName, shell=True)
-        subprocess.call('gzip '+tempBlockFileName, shell=True)
-        #subprocess.call('rm '+tempBlockFileName, shell=True)
+        #subprocess.call('gzip '+tempBlockFileName, shell=True)
+        subprocess.call('rm '+tempBlockFileName, shell=True)
 
     if len(listOfGenes) > 0:
         listOfSC = []
@@ -197,7 +200,7 @@ def parseTempWrapper(tempFiles, listOfGenes, outputDir, threshold, infernalVersi
         print('no unsorted genes')
 
 
-    
+
 def parseTemp(tempFile, finalFile, geneFile, listOfGenes, overlapSet, threshold):
     '''
     Read a single chromosome, check all the overlaps and gene collisions, write the chromosome to
@@ -218,7 +221,7 @@ def parseTemp(tempFile, finalFile, geneFile, listOfGenes, overlapSet, threshold)
 
         #if we are still on the same chromosome
         if lineCont[0] == chromo.name:
-            
+
             chromo.add(Block(int(lineCont[2]),int(lineCont[3]),lineCont[4],int(species_blockNum[1]), int(lineCont[6])))
             if threshold > 0:
                 chromo.listOfScores.append(int(lineCont[6]))
@@ -231,22 +234,32 @@ def parseTemp(tempFile, finalFile, geneFile, listOfGenes, overlapSet, threshold)
             overlapSet, listOfGenes = readChromo(finalFile, geneFile, listOfGenes, overlapSet, threshold, chromo)
             #overwrite chromo to new chromosome
             chromo = Chromosome(lineCont[0], species_blockNum[0])
-            
+
     #read the last chomo in the file
     overlapSet, listOfGenes = readChromo(finalFile, geneFile, listOfGenes, overlapSet, threshold, chromo)
-            
-    return overlapSet, listOfGenes
+
+    if len(listOfGenes) > 0:
+        print('writing orphin')
+        print("species: {}".format(chromo.species))
+        print('chromos:  {}'.format([gene.chromosome for gene in listOfGenes]))
+        for gene in listOfGenes:
+            fivePrime, threePrime = None, None
+            geneFile.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(\
+                           gene.chromosome, chromo.species+"_"+str(gene.blockNum), gene.s,\
+                           gene.getEndPos(), gene.strand, fivePrime, threePrime, gene.structure, gene.sequence, gene.score))
+
+    return overlapSet
 
 def readChromo(finalFile, geneFile, listOfGenes, overlapSet, threshold, chromo):
 
     if len(chromo.listOfScores) > 0:
         chromo.listOfScores.sort()
         thresholdIndex = int(len(chromo.listOfScores)/100*threshold)
-    if thresholdIndex < 0:
-        thresholdIndex = 0
-    elif thresholdIndex >= len(chromo.listOfScores) and len(chromo.listOfScores) > 0:
-        thresholdIndex = len(chromo.listOfScores) -1
-        thresholdScore = chromo.listOfScores[thresholdIndex]
+        if thresholdIndex < 0:
+            thresholdIndex = 0
+        elif thresholdIndex >= len(chromo.listOfScores) and len(chromo.listOfScores) > 0:
+            thresholdIndex = len(chromo.listOfScores) -1
+            thresholdScore = chromo.listOfScores[thresholdIndex]
     else:
         thresholdScore = float('-inf')#if threshold is 0 set thresholdScore to - infinity
                 
@@ -258,13 +271,13 @@ def readChromo(finalFile, geneFile, listOfGenes, overlapSet, threshold, chromo):
             
     for i in range(len(listOfGenes)):
         gene = listOfGenes[i]
-        if gene.chromosome == chromo.name and gene.species == chromo.species:
+        if gene.chromosome == chromo.name:
             chromo.checkGene(gene)
             fivePrime, threePrime = chromo.getAdjBlock(gene)
             geneFile.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(\
                            chromo.name, chromo.species+"_"+str(gene.blockNum), gene.s,\
                            gene.getEndPos(), gene.strand, fivePrime, threePrime, gene.structure, gene.sequence, gene.score))
-
+        
         else:
             remainingGenes.append(gene)
             
@@ -281,18 +294,16 @@ def readChromo(finalFile, geneFile, listOfGenes, overlapSet, threshold, chromo):
             elif block.score < thresholdScore:
                continue
             else:
-                        #only add blocks that are above threshold and dont overlap
+               #only add blocks that are above threshold and dont overlap
                writeList.append(block)
-        else:
+    else:
                 #only blocks above threshold, have valid reference block and dont overlap gene are added
-            writeList = [block for block in chromo.listOfMultiZ if not block.Overlap and block.blockNum not in overlapSet and block.score > thresholdScore]
-            if chromo.species == 'droEre2' and chromo.name == 'scaffold_4929':
-               print('num written blocks: {}'.format(len(writeList)))
-                
-            #free up memory in chromo
+        writeList = [block for block in chromo.listOfMultiZ if not block.Overlap and block.blockNum not in overlapSet and block.score > thresholdScore]
+
+    #free up memory in chromo
     chromo.listOfMultiZ = None
-                
-            #writing remaining blocks
+
+    #writing blocks
     for i in range(len(writeList)):
                 
         block = writeList[i]
