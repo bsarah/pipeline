@@ -37,14 +37,14 @@ from helperFunctions import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument("multiSeq", type=str, help="directory where the multiple sequence allignments are")
-parser.add_argument("infernalPath", type=str, help="path to infernal")
 parser.add_argument("outPutDir", type=str, help="directory where you want the output files to be placed")
 parser.add_argument("pathToRepo", type=str, help="absolute path of the git repo")
 parser.add_argument("referenceSpecies", type=str, help="the name of the reference species as it appears in the "\
                     + "multiple sequence alignment.")
-parser.add_argument("-sg","--search_genes", action="store", nargs=2,help="search for genes using infernal cmsearch. "\
+parser.add_argument("-sg","--search_genes", action="store", nargs=3,help="search for genes using infernal cmsearch. "\
                     + "First argument must be a file pathway to a RNA Model. "\
-                    + "Second argument must be a file pathway to the Genomes.")
+                    + "Second argument must be a file pathway to the Genomes."\
+                    + "Third argument must be a file path to the infernal.")
 parser.add_argument("-og","--own_genes", action="store", help="use prespecified genes in analysis. File path "\
                     + "provided should be a directory. Files in this directory should be named for the species "\
                     + "that it concerns. The names of the species should match those in the multiple sequence "\
@@ -61,8 +61,8 @@ args = parser.parse_args()
 '''
 handel irregularites in args
 '''
-argList = [args.multiSeq, args.infernalPath, args.outPutDir, args.pathToRepo]
-args.multiSeq, args.infernalPath, args.outPutDir, args.pathToRepo = endSlash(argList)
+argList = [args.multiSeq, args.outPutDir, args.pathToRepo]
+args.multiSeq, args.outPutDir, args.pathToRepo = endSlash(argList)
 
 #Call helper functions
 args.pathToRepo = makeFullPath(args.pathToRepo)
@@ -80,13 +80,14 @@ if args.own_genes != None and args.search_genes != None:
 if len(listdir(args.multiSeq)) == 0:
     raise Exception("No multiple sequence alignments in {}".format(args.multiSeq))
 
-if args.search_genes[0] != None:
+if args.search_genes != None:
     #print("search Genes")
 
     args.genomes = args.search_genes[1]
     args.model = args.search_genes[0]
-
-    args.genomes = endSlash([args.genomes])
+    args.infernalPath = args.search_genes[2]
+    
+    args.genomes, args.infernalPath = endSlash([args.genomes, args.infernalPath])
 
     genomeFiles = [join(args.genomes,f) for f in listdir(args.genomes) if isfile(join(args.genomes,f))]
     listOfSpecies = makeSpeciesList([args.referenceSpecies], args.genomes)
@@ -98,12 +99,8 @@ if args.search_genes[0] != None:
     
 elif args.own_genes != None:
     #print("own Genes")
-    argList.append(args.own_genes)
-    args.own_genes = endSlash([args.own_genes])
 
-    listOfSpecies = makeSpeciesList([args.referenceSpecies], args.own_genes)
-
-    geneObjects = parseGenes(args.own_genes, args.outPutDir)
+    geneObjects, listOfSpecies = parseGenes(args.own_genes, [args.referenceSpecies])
     versionInfo = "User provided genes"
     
 else:
@@ -111,10 +108,12 @@ else:
 
 
 #print("num species: {}".format(len(geneObjects)))
+'''
 g = 0
 for _list in geneObjects:
     g += len(_list)
+    print(_list[0])
 print("num genes: {}".format(g))
-
+'''
 maf2bed(args.multiSeq, args.outPutDir, args.pathToRepo, geneObjects, listOfSpecies, args.quality, versionInfo)
 

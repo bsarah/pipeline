@@ -77,19 +77,26 @@ class Block:
 
 class Gene (Block):
     '''
-    Species:    A string containing the name of the species
-    Chromosome: A string containing the name of the chromosome
-    StartPos:   An int of the nucleotide position in the chromosome sequence
-    length:     An int of the length of the sequence
-    strand:     A + or - char depending if the alignment is on the positive or negative strand.
-                  If the strand is + add the len to start to get the end pos. If the strand is -
-                  subtract the len from the start to get the end.
-    geneNum:    The unique int asociated with each gene
-    structure:  A string of the ascii representation of the secondary structure of the genes found by cmsearch
-    sequence:   A string of the DNA sequence of the gene in single letter bases (ex: TGCTA)
+    Species:      A string containing the name of the species
+    Chromosome:   A string containing the name of the chromosome
+    StartPos:     An int of the nucleotide position in the chromosome sequence
+    length:       An int of the length of the sequence
+    strand:       A + or - char depending if the alignment is on the positive or negative strand.
+                    If the strand is + add the len to start to get the end pos. If the strand is -
+                    subtract the len from the start to get the end.
+    geneNum:      The unique int asociated with each gene
+    structure:    A string of the ascii representation of the secondary structure of the genes found by cmsearch
+    sequence:     A string of the DNA sequence of the gene in single letter bases (ex: TGCTA)
+
+    if searching for genes:
+        Score:    An int of the Infernal score for the element. Used for determingin pseudogenes later on. 
+    if own genes:
+        _type:    A string of the type of gene given (ex: 'tRNA' or 'heme_isoform').
+        pseudo:   A bool if the gene given is a pseudogene or not.
+        comment:  A string a comment the user wants to leave about a particular element.
     '''
 
-    def __init__(self, species, chromosome, startPos, length, strand, geneNum, structure, sequence, score=None):
+    def __init__(self, species, chromosome, startPos, length, strand, geneNum, structure, sequence, score=None, ownGene=False, _type=None, pseudoGene=None, comment=None):
         self.species = species
         self.chromosome = chromosome
         self.s = startPos
@@ -98,8 +105,14 @@ class Gene (Block):
         self.blockNum = geneNum
         self.sequence = sequence
         self.structure = structure
-        self.score = score
-
+        self.ownGene = ownGene
+        if not ownGene:
+            self.score = score
+        if ownGene:
+            self._type = _type
+            self.pseudo = pseudoGene
+            self.comment = comment
+        
     def __lt__(self, multiZ):
         '''
         called when python evaluates Sequence < Sequence

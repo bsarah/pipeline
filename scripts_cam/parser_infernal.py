@@ -40,15 +40,15 @@ def parseInfernal(filePath,  geneList=list()):
                             lineList = readGene(f)
                             if lineList[7] == "!":
 
-                                #                        panTro             chr3         100          10           
+                                #                                               panTro                      chr3         100          10           
                                 geneList[len(geneList)-1].append(Gene(f.name.split('/')[-1].split('.')[0], chromosome, lineList[1], lineList[2],\
-                                                     lineList[3], lineList[4], lineList[5], lineList[6], lineList[8]))
-                                #                      +             23       2nd structure   Sequence    score
+                                                                      lineList[3], lineList[4], lineList[5], lineList[6], score=lineList[8]))
+                                #                                       +             23       2nd structure   Sequence    score
                             else:
                                 break
                     f.close()
                     
-                    #subprocess.call("rm "+filePlusPath, shell=True)
+                    subprocess.call("rm "+filePlusPath, shell=True)
     #print("done")
     return geneList, infernalVersion
 

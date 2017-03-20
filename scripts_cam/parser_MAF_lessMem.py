@@ -38,12 +38,7 @@ def catchExceptions(fileName):#, outputDir):
     checks if file is in correct format( '.maf', '.maf.gz', '.maf.Z', '.maf.bz2')
     checks if file is zipped
     checks if file can be opened
-    checks if file can be read
-
-    unzips file if zipped
     '''
-
-    name = fileName.split('/')[-1]#fileName without pathway ex: test1.maf.gz
 
     #proper extension
     if fileName.endswith(('.maf.gz','.maf.Z','.maf.bz2','.maf')):
@@ -208,7 +203,6 @@ def parseTemp(tempFile, finalFile, geneFile, listOfGenes, overlapSet, threshold)
     of the chromosomes are read. If the 
     '''
     chromo = None
-    numGenesWrote = 0
     #print("parsing temp file...")
     for line in tempFile:
         lineCont = line.split()
@@ -244,9 +238,15 @@ def parseTemp(tempFile, finalFile, geneFile, listOfGenes, overlapSet, threshold)
         #print('chromos:  {}'.format([gene.chromosome for gene in listOfGenes]))
         for gene in listOfGenes:
             fivePrime, threePrime = None, None
-            geneFile.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(\
-                           gene.chromosome, chromo.species+"_"+str(gene.blockNum), gene.s,\
-                           gene.getEndPos(), gene.strand, fivePrime, threePrime, gene.structure, gene.sequence, gene.score))
+            if not gene.ownGene:
+                geneFile.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(\
+                               gene.chromosome, chromo.species+"_"+str(gene.blockNum), gene.s,\
+                               gene.getEndPos(), gene.strand, fivePrime, threePrime, gene.structure, gene.sequence, gene.score))
+            else:
+                geneFile.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(\
+                               gene.chromosome, chromo.species+"_"+str(gene.blockNum), gene.s,\
+                               gene.getEndPos(), gene.strand, fivePrime, threePrime, gene.structure, gene.sequence, \
+                               gene._type, gene.pseudo, gene.comment))
 
     return overlapSet
 
@@ -274,10 +274,16 @@ def readChromo(finalFile, geneFile, listOfGenes, overlapSet, threshold, chromo):
         if gene.chromosome == chromo.name:
             chromo.checkGene(gene)
             fivePrime, threePrime = chromo.getAdjBlock(gene)
-            geneFile.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(\
-                           chromo.name, chromo.species+"_"+str(gene.blockNum), gene.s,\
-                           gene.getEndPos(), gene.strand, fivePrime, threePrime, gene.structure, gene.sequence, gene.score))
-        
+            if not gene.ownGene:
+                geneFile.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(\
+                               chromo.name, chromo.species+"_"+str(gene.blockNum), gene.s,\
+                               gene.getEndPos(), gene.strand, fivePrime, threePrime, gene.structure, gene.sequence, gene.score))
+            else:
+                geneFile.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(\
+                               gene.chromosome, chromo.species+"_"+str(gene.blockNum), gene.s,\
+                               gene.getEndPos(), gene.strand, fivePrime, threePrime, gene.structure, gene.sequence, \
+                               gene._type, gene.pseudo, gene.comment))
+                            
         else:
             remainingGenes.append(gene)
             

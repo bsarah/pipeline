@@ -1,13 +1,13 @@
 import subprocess
+#import argparse
 from os import listdir
 from os.path import isfile, join
 from dataStructures_lessMem import Gene
 
 '''
-files given to the gene parser should be: 
+files given to the gene parser should be:
   -in the modified BED format below.
   -end with .bed (or .bed.gz, .bed.Z, .bed.bz2)
-  -zipped in gzip or unzipped
   -species in list must match those in the MAF files given
 
 File Format:
@@ -18,91 +18,68 @@ File Format:
     -tab separated elements
     -chromosome     species     startCoord     endCoord     +or-     sequence     secondary_structure(optional)
 '''
+'''
+parser = argparse.ArgumentParser()
+#parser.add_argument("input_file", type=str)
+parser.add_argument("outputDir", type=str)
 
-def parseGenes(filePath, outputDir, speciesList=list()):
+args = parser.parse_args()
+'''
+
+def parseGenes(input_file, speciesList):
     listOfGenes = list()
     geneNumber = 0
+    
+    f = catchExceptions(input_file)
+    
+    for line in f:
+        if line[0] in '# \n':
+            pass
+        else:
+            geneNumber += 1
+            lineList = line.split('\t')
+            if lineList[1] not in speciesList:
+                speciesList.append(lineList[3])
+                listOfGenes.append(list())
+            if len(lineList) != 10:
+                raise Exception("Input file does not have all of the fields. File shoud include 10 tab\nseparated elements. All elements not present should have an 'NA' instead")
+            #                                              panTro       chr3         84545             85
+            listOfGenes[len(listOfGenes)-1].append(Gene(lineList[3], lineList[0], int(lineList[1]), getGeneLength(int(lineList[1]), int(lineList[2])),\
+                                                        lineList[4], geneNumber, lineList[8], lineList[7], ownGene=True, _type=lineList[5], pseudoGene=lineList[6], comment=lineList[9]))
+            #                                              +            32          ((___>><<) ATTCGTAGCAT               tRNA                False                   NA
 
-    if not len(listdir(filePath)) > 0:
-        raise Exception("no gene inputs to parse in {}".format(filePath))
-
-    for fileName in listdir(filePath):
-
-        filePlusPath= join(filePath, fileName)
-        f = catchExceptions(filePlusPath, outputDir)
-
-        if f == None:
-            continue
-        
-        for line in f:
-            if line[0] in '# \n':
-                pass
-            else:
-                geneNumber += 1
-                lineList = line.split()
-                if lineList[1] not in speciesList:
-                    speciesList.append(lineList[1])
-                if len(lineList) == 7:
-                    structure = lineList[6]
-                else:
-                    structure = None
-                    #                       panTro       chr3         84545             85
-                    listOfGenes.append(Gene(lineList[1], lineList[0], int(lineList[2]), getGeneLength(int(lineList[2]), int(lineList[3])),\
-                                            lineList[4], geneNumber, structure, lineList[5]))
-                    #                       +            32          ((___>><<) ATTCGTAGCAT
-
+            
+    f.close()
+    if f.name != input_file:
+        subprocess.call('rm '+f.name, shell=True)
     return listOfGenes, speciesList
 
-
-
-def catchExceptions(fileName, outputDir):
+def catchExceptions(fileName):
     '''
     checks if file is in correct format( '.bed', '.bed.gz', '.bed.Z', '.bed.bz2')
     checks if file is zipped
     checks if file can be opened
-    checks if file can be read
-
-    unzips file if zipped
     '''
-
-    name = fileName.split('/')[-1]#fileName without pathway ex: test1.bed.gz
-
-    returnFile = True
     
     if not isfile(fileName):
-        raise Warning("'{}' in given directory is not a file. Skipping".format(fileName))
-        returnFile = False
-
-    #proper extension
+        raise Exception("'{}' is not a file.".format(fileName))
+    
     if fileName.endswith('.bed'):
         pass
-
     elif fileName.endswith(('.bed.gz','.bed.Z','.bed.bz2')):
-
-        unzippedDir = outputDir+'unzippedGenes/'
-        if 'unzippedGenes' in listdir(outputDir):
-            subprocess.call("rm -r "+unzippedDir, shell=True)
-        subprocess.call('mkdir '+unzippedDir,shell=True)
-        
-        unzippedFileName = unzippedDir + name.split('.')[0]+'.bed'
-        print("unzipping maf file...")
-        subprocess.call('/usr/bin/zcat '+fileName+' > '+unzippedFileName, shell=True)
-        print("done")
-        fileName = unzippedFileName
+        unzippedname = fileName.rstrip('.gz.Z.bz2')
+        subprocess.call('zcat '+fileName+' > '+unzippedname)
+        fileName = unzippedname
     else:
-        raise Warning("'{}' not of bed format, skipping file. Use a .bed file or gziped .bed file('.bed.gz','.bed.Z','.bed.bz2')".format(fileName))
-        returnFile = False
+        raise Exception("'{}' not of bed format. Use a .bed file or gziped .bed file('.bed.gz','.bed.Z','.bed.bz2')".format(fileName))
 
-    #can unzipped file be opened
-    #try:
-    f = open(fileName, 'r')
-    #except IOError:
-        #raise Exception("cannot open {}".format(fileName))
-    #else:
-    if returnFile:
-        return f
-    return None
-    
+    try:
+        f = open(fileName, 'r')
+    except IOError:
+        raise Exception("cannot open {}".format(fileName))
+
+    return f
+
 def getGeneLength(start, end):
     '''
     returns the length of the gene
