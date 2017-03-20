@@ -1,11 +1,19 @@
  
 #!/usr/bin/perl -w
-## call: collectCluster filelist pathtoinfiles pseudo pathtooutfiles summary
+## call: collectCluster filelist mode pathtoinfiles pseudo pathtooutfiles summary
 ##filelist = consists of a list of files called e.g. example_genes.bed
-## input file format:
+
+##mode input: 1 = genelist, 0=cm
+
+## input file format for cm mode:
 ## Chromosome (tab) Species_IDnum (tab) startPosition (tab) endposition
 ## (tab) '+' or '-' for the strand (tab) 5'blocknum (tab) 3'blocknum
 ## (tab) secondary structure(including (,),,,<,>,.,_,:) (tab) sequence(including *,[,],numbers,-,upper case, lower case) (tab) Infernal score
+
+##input file format for genellist mode:
+##Chromosome (tab) Species_IDnum (tab) startPosition (tab) endposition
+## (tab) '+' or '-' for the strand (tab) 5'blocknum (tab) 3'blocknum
+## (tab) sequence (tab) structure (tab) type (tab) pseudogene (tab) comment
 
 
 ## further input parameter: path to where the clus files should be written?
@@ -19,6 +27,9 @@
 ## (tab) secondary structure(including (,),,,<,>,.,_,:) (tab) sequence(only lower case) (tab) (intron1 start,intron1 end);(intron2 start, intron2 end)...
 ## without intron: last col  = (0,0);
 
+#output for cm additional column: sequence_orig score
+#output for genelist format got additional columns: type pseudogene comment
+
 
 use Data::Dumper;
 use strict;
@@ -27,6 +38,7 @@ use warnings;
 my @clusters = ();
 
 my $filename = shift;
+my $mode = shift; #1=genelist, 0=cm
 my $inpath = shift;
 my $pseudo = shift; #if -1, deactivated, if this is the infernal SCORE, all values that are SMALLER than $pseudo count for pseudo genes, if this is an evalue, it is the other way round.
 my $outpath = shift;
@@ -41,6 +53,7 @@ my $numseqs = 0;
 
 my %species = ();
 my %pseudos = ();
+my %types = ();
 open(my $outs, ">>$summary");
 
 
@@ -62,9 +75,13 @@ while(<FA>){
 	if($line =~ /^$/) {next;}
 	$elementnum++;
 	my @F = split '\t', $line;
-	my $arrlen = scalar @F; ##should be 10
+	my $arrlen = scalar @F; ##should be 10 in cm mode, 12 in genelist mode
 	my $len = scalar @F;
-	if($len != 10){
+	if($len != 10 && $mode == 0){
+	    print "incorrect format of bed file $curfile! Line has $len entries and will be skipped!\n";
+	    next;
+	}
+	if($len != 12 && $mode == 1){
 	    print "incorrect format of bed file $curfile! Line has $len entries and will be skipped!\n";
 	    next;
 	}
@@ -72,27 +89,50 @@ while(<FA>){
 	my $clusstart;
 	my $clusend;
 
-	## clusstart is always the smaller number
-	if($F[$arrlen-5] eq "None")
-	{
-	    $clusstart = $F[$arrlen-5];
-	    $clusend = $F[$arrlen-4];
+	if($mode == 0){
+	    ## clusstart is always the smaller number
+	    if($F[$arrlen-5] eq "None")
+	    {
+		$clusstart = $F[$arrlen-5];
+		$clusend = $F[$arrlen-4];
+	    }
+	    elsif($F[$arrlen-4] eq "None"){
+		$clusstart = $F[$arrlen-4];
+		$clusend = $F[$arrlen-5];
+	    }
+	    elsif($F[$arrlen-5] < $F[$arrlen-4]){
+		$clusstart = $F[$arrlen-5];
+		$clusend = $F[$arrlen-4];
+	    }
+	    else{
+		$clusstart = $F[$arrlen-4];
+		$clusend = $F[$arrlen-5];
+	    }
 	}
-	elsif($F[$arrlen-4] eq "None"){
-	    $clusstart = $F[$arrlen-4];
-	    $clusend = $F[$arrlen-5];
+	else{#mode==1
+	    ## clusstart is always the smaller number
+	    if($F[$arrlen-7] eq "None")
+	    {
+		$clusstart = $F[$arrlen-7];
+		$clusend = $F[$arrlen-6];
+	    }
+	    elsif($F[$arrlen-6] eq "None"){
+		$clusstart = $F[$arrlen-6];
+		$clusend = $F[$arrlen-7];
+	    }
+	    elsif($F[$arrlen-7] < $F[$arrlen-6]){
+		$clusstart = $F[$arrlen-7];
+		$clusend = $F[$arrlen-6];
+	    }
+	    else{
+		$clusstart = $F[$arrlen-6];
+		$clusend = $F[$arrlen-7];
+	    }
 	}
-	elsif($F[$arrlen-5] < $F[$arrlen-4]){
-	    $clusstart = $F[$arrlen-5];
-	    $clusend = $F[$arrlen-4];
-	}
-	else{
-	    $clusstart = $F[$arrlen-4];
-	    $clusend = $F[$arrlen-5];
-	}
-
 	#standardize secondary structure
-	my $struc = $F[$arrlen-3];
+	my $struc;
+	if($mode==0){$struc = $F[$arrlen-3];}
+	else{$struc = $F[$arrlen-4];}
 	my $a = "<";
 	my $b="(";
 	my $c=">";
@@ -110,10 +150,16 @@ while(<FA>){
 	$struc =~ s/$us/$p/g;
 	$struc =~ s/$til/$p/g;
 	$struc =~ s/$mini/$p/g;
-	$F[$arrlen-3]=$struc;
-	
+	if($mode == 0){
+	    $F[$arrlen-3]=$struc;
+	}
+	else{$F[$arrlen-4]=$struc;}
+	    
 	# work on sequence, find intron, delete - and turn to lower case
-	my $preseq = $F[$arrlen-2];
+
+	my $preseq;
+	if($mode == 0){$preseq = $F[$arrlen-2];}
+	else{$preseq = $F[$arrlen-5];}
 	my @introns = ();
 	my @intronpos = ();
 	my $pos1 = index($preseq,"*");
@@ -162,23 +208,46 @@ while(<FA>){
 	$seq =~ s/$minu//g;
 	my $seq2 = lc $seq;
 
-	$F[$arrlen-2]=$seq2;
-	my $score = $F[$arrlen-1];
-	$F[$arrlen-1] = $preseq;
-	push @F, $score; ##now F got 11 entries
+	if($mode ==0){$F[$arrlen-2]=$seq2;}
+	else{$F[$arrlen-5]=$seq2;}
 
+	if($mode == 0){
+	    my $score = $F[$arrlen-1];
+	    $F[$arrlen-1] = $preseq;
+	    push @F, $score; ##now F got 11 entries
+	}
+	else{
+	    my $pretype = $F[$arrlen-3];
+	    my @L3 = split '\/', $curname;
+	    my @M3 = split '\.', $L3[(scalar @L3) -1];
+	    my $type = "$M3[0]\_$pretype";
+	    if(exists $types{$type}){$types{$type}++;}
+	    else{$types{$type}=1;}
+
+	}
+	
 	$numseqs++;
-	if($pseudo >= 0){
-	    $scoresum = $scoresum + $score;
-	    if($score > $maxscore){$maxscore = $score;}
-	    if($score < $minscore){$minscore = $score;}
-	    ##check for pseudogenes here and write into hash that is returned and included later again
-	    ##most simple way of counting pseudogenes (extend lateron into the graphs structure)
-	    if($score < $pseudo){
+	if($mode ==0){
+	    if($pseudo >= 0){
+		$scoresum = $scoresum + $score;
+		if($score > $maxscore){$maxscore = $score;}
+		if($score < $minscore){$minscore = $score;}
+		##check for pseudogenes here and write into hash that is returned and included later again
+		##most simple way of counting pseudogenes (extend lateron into the graphs structure)
+		if($score < $pseudo){
+		    if(exists $pseudos{$curname}){$pseudos{$curname}++;}
+		    else{$pseudos{$curname}=1;}
+		}
+		
+	    }
+	}
+	else{
+	    my $pseulabel = $F[$arrlen-2];
+	    if($pseulabel eq "T" || $pseulabel eq "TRUE" ||  $pseulabel eq "true" || $pseulabel eq "t" || $pseulabel eq "1")
+	    {
 		if(exists $pseudos{$curname}){$pseudos{$curname}++;}
 		else{$pseudos{$curname}=1;}
 	    }
-
 	}
 	
 	my $outline = join("\t",@F);
@@ -219,20 +288,40 @@ foreach my $spi (sort (keys(%pseudos))) {
 my $nopseudos = 0;
 if($psestr eq ""){$psestr = "No pseudogenes detected.\n";$nopseudos = 1;}
 
+my $typstr = "";
+foreach my $ty (sort (keys(%types))) {
+    $typstr = "$ty $types{$ty}\n";
+}
+my $nopseudos = 0;
+if($psestr eq ""){$psestr = "No pseudogenes detected.\n";$nopseudos = 1;}
+
+
+
+
 if($minscore == 300){$minscore = 0;}
 
-my $avscore = sprintf("%.2f",$scoresum/$numseqs);
+
 
 print $outs "===============Species information\===============\n";
 print $outs "Number of Species: $numspec\n 
 Species Number_of_genetic_elements
 $spstr \n";
-print $outs "===============Infernal information\===============\n";
-print $outs "Total number of sequences detected with infernal: $numseqs
-Maximal infernal score: $maxscore
-Minimal infernal score: $minscore
-Average infernal score: $avscore\n";
-print $outs "\n";
+if($mode==0){
+    my $avscore = sprintf("%.2f",$scoresum/$numseqs);
+    print $outs "===============Infernal information\===============\n";
+    print $outs "Total number of sequences detected with infernal: $numseqs
+		Maximal infernal score: $maxscore
+		Minimal infernal score: $minscore
+		Average infernal score: $avscore\n";
+    print $outs "\n";
+}
+else{
+    #report types?
+    print $outs "===============Element types\===============\n";
+    print $outs "Species_Type Number_of_type\n";
+    print $outs	"$typstr \n";
+    print $outs "\n";
+}
 print $outs "===============Pseudogenes\===============\n";
 print $outs "Species Number_of_pseudogenes
 $psestr \n";

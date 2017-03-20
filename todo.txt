@@ -31,24 +31,19 @@ ToDo file for our pipeline project:
 - delete temp and bed folder?
 
 #Sarah
-- accept a phylogenetic tree in newick format as input to add the genetic events directly to the tree (one tree for each event?)
+- add parameter such that only the element type in the genelist mode is used for orthology detection.
 - solution for noncographs 
 - write drawGraphs.pl
-- set a further similarity threshold for pseudogenes!
 ##more parameters?
 - update help page/github page about new parameters
 - give input parameters for alignment (possible for altNW?)
 - parameter to set cluster length limits
-- option to include newick tree
 ##later to optimize and make nice
 - test: with cm, with gene list, with seq and struc, with only sec/struc, ... 
-- do not print camerons output (too much)
 - check all 'list' files such that only the real names of the clusters are printed, not all the paths.
 - format help page
-- counting of events
 - do more statistics: in how many clusters is each species represented, percentages of elements in certain clusters/cographs/noncographs..., 
   length of clusters, (report cluster information when only looking at synteny!), average number of elements in clusters, average number of matches/mismatches etc, average alignment score. Averages per element? sort elements by type?
-- more detailed counting of duplication etc (how is it done? write it down!)
 - parallelize checking of graphs? http://search.cpan.org/dist/Parallel-Iterator/lib/Parallel/Iterator.pm#Example
 ##done
 - give option for user to switch off several parts of the pipeline (-a for cam's part, -x for not checking graphs for cographs, -z for not creating alignments thus not counting events)

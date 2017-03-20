@@ -239,13 +239,13 @@ else{print "No path to perl given! (option --perl)\n"; exit 1;}
 if ($rpath){$rstr = "--rpath $rpath ";}
 else{print "No path to R given! (option --rpath)\n"; exit 1;}
 
-
+my $mode = -1;
 
 ###Parameters for infernal mode
 
 ##CM
 my $cmoptstr="";
-if($cmfile){$cmoption = "-sg $cmfile"; $cmoptstr = "--cm $cmfile ";}
+if($cmfile){$cmoption = "-sg $cmfile"; $cmoptstr = "--cm $cmfile "; $mode = 0;}
 
 
 ##Genomes
@@ -257,15 +257,16 @@ if ($genomes){
     if(-e $genomes){} else{print "Genomes folder is empty! (option -g)\n"; exit 1;}
 }
 
+#infernal
+my $infstr = "";
+if ($infernalpath){
+    $infstr = "--infernal $infernalpath ";
+    $cmoption = "$cmoption $infernalpath";
+}
 
 ##Maf
 my $mafstr = "";
 if ($mafs){$mafstr = "--maf $mafs ";}
-
-
-#Infernal path
-my $infstr = "";
-if ($infernalpath){$infstr = "--infernal $infernalpath ";}
 
 
 ##infernal parameter
@@ -288,7 +289,7 @@ if($cmfile){
 
 ###Genelist mode
 
-if($genefile){$cmoption = "-og $genefile"; $cmoptstr = "--genes $genefile ";}
+if($genefile){$cmoption = "-og $genefile"; $cmoptstr = "--genes $genefile "; $mode = 1;}
 
 ##maf and filter should already be reported
 
@@ -296,6 +297,13 @@ if($genefile){
     if($mafs){}
     else{print "Genelist mode but --maf parameter is missing! See --help for more information! \n"; exit 1;}
 }
+
+
+
+##TODO: include that the genefile is checked, e.g. a table with 10 columns such that
+##chr start end species strand type pseudogene sequence structure comment
+##not all the information has to be given, if there is none, put NA
+
 
 
 ###Repetition mode
@@ -307,7 +315,7 @@ if($pathtocam){
     else{print "Option -a given but argument folder $pathtocam doesn't exist! \n"; exit 1;}
 }
 
-
+if($mode == -1){print "either enter a genelist or a cm file option! \n"; exit 1;}
 
 
 ##Program call
@@ -378,11 +386,11 @@ my $genesfolder="";
 if(! $pathtocam){
     print "analysis of maf files started (this might take a while)..\n";
     if($perc eq ""){
-	open(PROG,"$pythonpath\/python3 $scripts_cam\/main.py $cmoption $inclopt $mafs $infernalpath $outpath $dirname $refspecies 2>>$err0 |") or die "Couldn't start program!";
+	open(PROG,"$pythonpath\/python3 $scripts_cam\/main.py $cmoption $inclopt $mafs $outpath $dirname $refspecies 2>>$err0 |") or die "Couldn't start program!";
 	while(<PROG>){print "$_";}
     }
     else{
-	open(PROG,"$pythonpath\/python3 $scripts_cam\/main.py $perc $cmoption $inclopt $mafs $infernalpath $outpath $dirname $refspecies 2>>$err0 |") or die "Couldn't start program!";
+	open(PROG,"$pythonpath\/python3 $scripts_cam\/main.py $perc $cmoption $inclopt $mafs $outpath $dirname $refspecies 2>>$err0 |") or die "Couldn't start program!";
 	while(<PROG>){print "$_";}
     }
     print "Done!\n";
@@ -413,7 +421,7 @@ else{
 my $sumcollectcluster = "$summarypath\/Summary_collectCluster.txt";
 my $sumgetnumbers = "$summarypath\/Summary_getNumbers.txt";
 my $cmd1 = "mkdir $outpath\/clusters 2>>$err";
-my $cmd3 = "$perlpath\/perl $scripts_sarah\/collectCluster\.pl $genesfolder\/specieslist $genesfolder $pseudoscore $outpath\/clusters $sumcollectcluster 2>>$err";
+my $cmd3 = "$perlpath\/perl $scripts_sarah\/collectCluster\.pl $genesfolder\/specieslist $mode $genesfolder $pseudoscore $outpath\/clusters $sumcollectcluster 2>>$err";
 my $cmd4 = "ls $outpath\/clusters/*.clus > $outpath\/clusters/precluslist 2>>$err";
 my $cmd5 = "$perlpath/perl $scripts_sarah\/getNumbers.pl $outpath\/clusters/precluslist $outpath\/clusters $sumgetnumbers 2>>$err";
 print "construct clusters..";
@@ -558,7 +566,7 @@ print "totpseudostr: $totpseudostr \n";
 #create graphs
 my $sumbuildedges = "$summarypath\/Summary_buildedges.txt";
 my $cmd18 = "mkdir $outpath\/graphs 2>>$err";
-my $cmd19 = "$perlpath\/perl $scripts_sarah\/buildEdgeList.pl $outpath\/clusters/cluslist_nosingles $outpath\/clusters $outpath\/graphs $altnwpath $seqsim $strucsim $pseudoscore $sumbuildedges 2>>$err";
+my $cmd19 = "$perlpath\/perl $scripts_sarah\/buildEdgeList.pl $outpath\/clusters/cluslist_nosingles $outpath\/clusters $mode $outpath\/graphs $altnwpath $seqsim $strucsim $pseudoscore $sumbuildedges 2>>$err";
 my $cmd20 = "ls $outpath\/graphs/*.edli > $outpath\/graphs/edlilist 2>>$err";
 ##no edge graphs are graphs with node from only one species, as all other graphs have a completely connected graph (except same species)
 #my $cmd21 = "mkdir $outpath\/graphs/noEdgeGraphs 2>>$err";   

@@ -1,8 +1,10 @@
 #!/usr/bin/perl -w
-## call: buildEdgeList filelist pathtoinfiles outpath pathtoaltnw seqsim strucsim pseudoscore summary
+## call: buildEdgeList filelist pathtoinfiles mode outpath pathtoaltnw seqsim strucsim pseudoscore summary
 
 ##if seqsim or strucsim is -1 (only one of them) then just check the other one for similarity as input to altnw
 ##output: weighted graph, thus node1 node2 seq_diff struc_diff
+
+##TODO: add parameter which excludes the sequence comparison and only checks equality between types for orthology measure
 
 
 use Data::Dumper;
@@ -11,6 +13,7 @@ use warnings;
 
 my $filename = shift;
 my $inpath=shift;
+my $mode = shift; #1=genelist, 0=cm
 my $outpath=shift;
 my $pathtonw=shift;
 my $seqsim = shift;
@@ -64,29 +67,54 @@ while(<FA>){
 	$line=~s/ /_/g;
 	chomp $line;
 	my @F = split '\t', $line; #chr spec_geneID start end strand blockleft blockright secstruc seq_lowercase seq_orig score
-	my $chr = $F[0];
-	my $prespec = $F[1];
-	my @G = split "_", $prespec;
-	my $spec = $G[0];
-	my $id = $G[1];
-	my $start = $F[2];
-	my $end = $F[3];
-	my $strand = $F[4];
-	my $leftblock = $F[5];
-	my $rightblock = $F[6];
-	my $struc = $F[7];
-	my $seq = $F[8];
-	my $prescore = $F[10]; ##seems to look like score_, why is there a '_'?
-	my @SC = split '_', $prescore;
-	my $score = $SC[0];
-	my $suffix = "N";
-	if($pseudoscore >= 0) {
-	    ##check if element is pseudogenized
-	    if($score < $pseudoscore){
-		$suffix = "P";
+
+	if($mode == 0){
+	    my $chr = $F[0];
+	    my $prespec = $F[1];
+	    my @G = split "_", $prespec;
+	    my $spec = $G[0];
+	    my $id = $G[1];
+	    my $start = $F[2];
+	    my $end = $F[3];
+	    my $strand = $F[4];
+	    my $leftblock = $F[5];
+	    my $rightblock = $F[6];
+	    my $struc = $F[7];
+	    my $seq = $F[8];
+	    my $prescore = $F[10]; ##seems to look like score_, why is there a '_'?
+	    my @SC = split '_', $prescore;
+	    my $score = $SC[0];
+	    my $suffix = "N";
+	    if($pseudoscore >= 0) {
+		##check if element is pseudogenized
+		if($score < $pseudoscore){
+		    $suffix = "P";
+		}
 	    }
+	    my $nodename = "$chr\_$prespec\_$start\_$end\_$strand\_$suffix";
 	}
-	my $nodename = "$chr\_$prespec\_$start\_$end\_$strand\_$suffix";
+	else{
+    	    my $chr = $F[0];
+	    my $prespec = $F[1];
+	    my @G = split "_", $prespec;
+	    my $spec = $G[0];
+	    my $id = $G[1];
+	    my $start = $F[2];
+	    my $end = $F[3];
+	    my $strand = $F[4];
+	    my $leftblock = $F[5];
+	    my $rightblock = $F[6];
+	    my $struc = $F[7];
+	    my $seq = $F[8];
+	    my $type = $F[9]; 
+	    my $pseudogene = $F[10];
+	    my $comment = $F[11];
+	    my $nodename = "$chr\_$prespec\_$start\_$end\_$strand\_$type\_$pseudogene";
+	}
+
+
+
+	
 	push @nodes,$nodename;
 	push @seqs,$seq;
 	push @strucs,$struc;
