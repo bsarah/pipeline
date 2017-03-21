@@ -215,19 +215,6 @@ while(<FA>){
 	    my $score = $F[$arrlen-1];
 	    $F[$arrlen-1] = $preseq;
 	    push @F, $score; ##now F got 11 entries
-	}
-	else{
-	    my $pretype = $F[$arrlen-3];
-	    my @L3 = split '\/', $curname;
-	    my @M3 = split '\.', $L3[(scalar @L3) -1];
-	    my $type = "$M3[0]\_$pretype";
-	    if(exists $types{$type}){$types{$type}++;}
-	    else{$types{$type}=1;}
-
-	}
-	
-	$numseqs++;
-	if($mode ==0){
 	    if($pseudo >= 0){
 		$scoresum = $scoresum + $score;
 		if($score > $maxscore){$maxscore = $score;}
@@ -240,15 +227,27 @@ while(<FA>){
 		}
 		
 	    }
+
 	}
 	else{
+	    my $pretype = $F[$arrlen-3];
+	    my @L3 = split '\/', $curname;
+	    my @M3 = split '\.', $L3[(scalar @L3) -1];
+	    my $type = "$M3[0]\_$pretype";
+	    if(exists $types{$type}){$types{$type}++;}
+	    else{$types{$type}=1;}
+
 	    my $pseulabel = $F[$arrlen-2];
 	    if($pseulabel eq "T" || $pseulabel eq "TRUE" ||  $pseulabel eq "true" || $pseulabel eq "t" || $pseulabel eq "1")
 	    {
 		if(exists $pseudos{$curname}){$pseudos{$curname}++;}
 		else{$pseudos{$curname}=1;}
 	    }
+
+	    
 	}
+	
+	$numseqs++;
 	
 	my $outline = join("\t",@F);
 	my $outname = "cluster-$clusstart-$clusend.clus";
@@ -292,9 +291,6 @@ my $typstr = "";
 foreach my $ty (sort (keys(%types))) {
     $typstr = "$ty $types{$ty}\n";
 }
-my $nopseudos = 0;
-if($psestr eq ""){$psestr = "No pseudogenes detected.\n";$nopseudos = 1;}
-
 
 
 

@@ -31,6 +31,7 @@ ToDo file for our pipeline project:
 - delete temp and bed folder?
 
 #Sarah
+- add checks if a column in the gene list input is NA
 - add parameter such that only the element type in the genelist mode is used for orthology detection.
 - solution for noncographs 
 - write drawGraphs.pl
