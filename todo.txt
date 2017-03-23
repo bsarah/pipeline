@@ -10,13 +10,12 @@ ToDo file for our pipeline project:
 
 
 #Anne
-- get newick trees of the remaining species of all MultiZ alignments 
 - tree parser based on the genome list
-- determine the cutoffs of the CMs
-## later
-- newick tree to ePoPE format parser
-- ePoPE format to newick
 ## done
+- downloaded all multiZ alignmnents
+- downloaded all newick trees of the remaining species of all MultiZ alignments
+- created genlists as bed format for sbRNAs, Y RNAs, Alus, tRNAs
+- determine the cutoffs of the CMs
 - create 4 differenr YRNA CMs
 - create CM's of alu repeats
 - create sbRNAs CM
