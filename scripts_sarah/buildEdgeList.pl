@@ -68,19 +68,23 @@ while(<FA>){
 	chomp $line;
 	my @F = split '\t', $line; #chr spec_geneID start end strand blockleft blockright secstruc seq_lowercase seq_orig score
 
+	my $nodename = "";
+	my $seq = "";
+	my $struc = "";
+	my $spec = "";
 	if($mode == 0){
 	    my $chr = $F[0];
 	    my $prespec = $F[1];
 	    my @G = split "_", $prespec;
-	    my $spec = $G[0];
+	    $spec = $G[0];
 	    my $id = $G[1];
 	    my $start = $F[2];
 	    my $end = $F[3];
 	    my $strand = $F[4];
 	    my $leftblock = $F[5];
 	    my $rightblock = $F[6];
-	    my $struc = $F[7];
-	    my $seq = $F[8];
+	    $struc = $F[7];
+	    $seq = $F[8];
 	    my $prescore = $F[10]; ##seems to look like score_, why is there a '_'?
 	    my @SC = split '_', $prescore;
 	    my $score = $SC[0];
@@ -91,25 +95,25 @@ while(<FA>){
 		    $suffix = "P";
 		}
 	    }
-	    my $nodename = "$chr\_$prespec\_$start\_$end\_$strand\_$suffix";
+	    $nodename = "$chr\_$prespec\_$start\_$end\_$strand\_$suffix";
 	}
 	else{
     	    my $chr = $F[0];
 	    my $prespec = $F[1];
 	    my @G = split "_", $prespec;
-	    my $spec = $G[0];
+	    $spec = $G[0];
 	    my $id = $G[1];
 	    my $start = $F[2];
 	    my $end = $F[3];
 	    my $strand = $F[4];
 	    my $leftblock = $F[5];
 	    my $rightblock = $F[6];
-	    my $struc = $F[7];
-	    my $seq = $F[8];
+	    $struc = $F[7];
+	    $seq = $F[8];
 	    my $type = $F[9]; 
 	    my $pseudogene = $F[10];
 	    my $comment = $F[11];
-	    my $nodename = "$chr\_$prespec\_$start\_$end\_$strand\_$type\_$pseudogene";
+	    $nodename = "$chr\_$prespec\_$start\_$end\_$strand\_$type\_$pseudogene";
 	}
 
 
