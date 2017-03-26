@@ -38,8 +38,8 @@ def parseGenes(input_file, speciesList):
         else:
             geneNumber += 1
             lineList = line.split('\t')
-            if lineList[1] not in speciesList:
-                speciesList.append(lineList[3])
+            if lineList[3] not in speciesList:
+                speciesList.append(lineList[3])                
                 listOfGenes.append(list())
             if len(lineList) != 10:
                 raise Exception("Input file does not have all of the fields. File shoud include 10 tab\nseparated elements. All elements not present should have an 'NA' instead")
