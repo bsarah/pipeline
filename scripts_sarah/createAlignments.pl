@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-## perl createAlignments.pl edlilist outpath pathtonw secsim strsim pseudoscore singletoncount outfolder match dupl ins pseudo summary
+## perl createAlignments.pl edlilist outpath pathtonw secsim strsim pseudoscore singletoncount mode outfolder match dupl ins pseudo summary
 
 ##program will produce sequences of letters, where the same letter means similar sequences, depending on the threshold.
 ##thus one letter for each connected component.
@@ -27,6 +27,7 @@ my $seqlim = shift;
 my $strlim = shift;
 my $pseudosc = shift;
 my $singletoncount = shift;
+my $mode = shift;
 my $outfolder = shift; ##write files for ePoPE
 my $matchout = shift;
 my $duplout = shift;
@@ -41,14 +42,13 @@ my $summary = shift; #usual summary after running the script
 #in this way, genetic events occuring in just this combination of species can
 #be counted
 
-##TODO implement pseudocounting
-
 my %dupevents =();
 my %matevents =();
 my %insevents =();
 ##are mismatches needed? use pseudogenes INSTEAD of mistmatches
 #my %misevents =();
 my %psevents = ();
+my @remoldings = ();
 
 open(my $outm,">>",$matchout);
 open(my $outd,">>",$duplout);
@@ -126,18 +126,48 @@ while(<FA>){
 	my $strsim = $F[3];
 
 	my @G = split '_', $n1;
-	my $spec = $G[(scalar @G) - 6];
-	$species{$spec} = "";
-	$spec2pseudo{$spec} = "";
-	my $startvec = $G[(scalar @G) - 4] + (0.0001 * $G[(scalar @G) - 5]);
-	if(exists $start2node{$startvec}){}
-	else{$start2node{$startvec} = $n1;}
-	my $p1 = $G[(scalar @G) - 1];
 	my @G2 = split '_', $n2;
-	my $p2 = $G2[(scalar @G2) - 1];
-	if($p1 eq "P"){push @pgenes, $n1;}
-	if($p2 eq "P"){push @pgenes, $n2;}
+	if($mode == 0){
+	    #nodes look like: chr_spec_id_start_end_strand_pseudo
+	    my $spec = $G[(scalar @G) - 6];
+	    $species{$spec} = "";
+	    $spec2pseudo{$spec} = "";
+	    my $startvec = $G[(scalar @G) - 4] + (0.0001 * $G[(scalar @G) - 5]);
+	    if(exists $start2node{$startvec}){}
+	    else{$start2node{$startvec} = $n1;}
+	    my $p1 = $G[(scalar @G) - 1];
+	    
+	    my $p2 = $G2[(scalar @G2) - 1];
+	    if($p1 eq "P"){push @pgenes, $n1;}
+	    if($p2 eq "P"){push @pgenes, $n2;}
+	}
+	else{
+	    #nodes look like: chr_spec_id_start_end_strand_type_pseudo
+	    my $spec = $G[(scalar @G) - 7];
+	    $species{$spec} = "";
+	    $spec2pseudo{$spec} = "";
+	    my $startvec = $G[(scalar @G) - 5] + (0.0001 * $G[(scalar @G) - 6]);
+	    if(exists $start2node{$startvec}){}
+	    else{$start2node{$startvec} = $n1;}
+	    my $p1 = $G[(scalar @G) - 1];
+	    my $p2 = $G2[(scalar @G2) - 1];
+	    if($p1 eq "T" || $p1 eq "t" || $p1 eq "True" || $p1 eq "true"
+	       || $p1 eq "1" || $p1 eq "TRUE"){push @pgenes, $n1;}
+	    if($p2 eq "T" || $p2 eq "t" || $p2 eq "True" || $p2 eq "true"
+	       || $p2 eq "1" || $p2 eq "TRUE"){push @pgenes, $n2;}
 
+	    ##check types:
+	    my $t1 = $G[(scalar @G) - 2];
+	    my $t2 = $G2[(scalar @G2) - 2];
+	    if($seqsim >= $seqlim && $strsim >= $strlim && $t1 ne $t2){
+		##sequence similarity is high but types seem to be different
+		my $remstr = "";
+		if($n1 le $n2){$remstr = "$n1\:$n2";}
+		else{$remstr = "$n2\:$n1";}
+		if(grep( /^$remstr$/, @remoldings)){}
+		else{push @remoldings, $remstr;}
+	    }
+	}
 	
 	
 	if($seqsim >= $seqlim && $strsim >= $strlim){
@@ -190,18 +220,35 @@ while(<FA>){
 	my $curnode = $start2node{$k1};
 #	print "curnode: $curnode \n";
 	my @H = split "_", $curnode;
-	my $spec = $H[(scalar @H) - 6];
-	my $state = $H[(scalar @H) - 1];
+	my $spec = "";
+	my $state = "";
+	if($mode == 0){
+	    $spec = $H[(scalar @H) - 6];
+	    $state = $H[(scalar @H) - 1];
+	}
+	else{
+	    $spec = $H[(scalar @H) - 7];
+	    $state = $H[(scalar @H) - 1];
+	}
 #	print "state: $state \n";
 	my $pstr = $spec2pseudo{$spec};
 #	print "pstr: $pstr \n";
 	##write numbers in the same order as chars in sequence, 0 for normal, 1 for pseudo
-	if($state eq "N"){
-#	    print "blubb \n";
-	    $spec2pseudo{$spec} = "$pstr$null";
+	if($mode == 0){ ##cm mode or genelist mode
+	    if($state eq "N"){
+		#	    print "blubb \n";
+		$spec2pseudo{$spec} = "$pstr$null";
+	    }
+	    else{
+		$spec2pseudo{$spec} = "$pstr$eins";
+	    }
 	}
 	else{
-	    $spec2pseudo{$spec} = "$pstr$eins";
+	    if($state eq "T" || $state eq "t" || $state eq "True" || $state eq "true"
+	       || $state eq "1" || $state eq "TRUE"){
+		$spec2pseudo{$spec} = "$pstr$eins";
+	    }
+	    else{$spec2pseudo{$spec} = "$pstr$null";}
 	}
 	my $sstr = $species{$spec};
 #	print "sstr: $sstr \n";
@@ -577,6 +624,13 @@ genetic elements are sorted by coordinate and depicted by the letter code. The
 stand for duplications, '-' for insertions or deletions in the alignment. \n";
 print $outs "\n";
 
+if(scalar @remoldings > 0){
+    print $outs "The following pairs of elements (separated with ':') are defined 
+as orthologs based on the similarity score but have distinct types according to the input:\n";
+    for(my $i=0;$i< scalar @remoldings; $i++){
+	print $outs "$remoldings[$i] \n";
+    }
+}
 
 
 

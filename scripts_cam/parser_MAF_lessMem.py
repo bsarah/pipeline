@@ -279,7 +279,7 @@ def readChromo(finalFile, geneFile, listOfGenes, overlapSet, threshold, chromo):
                                chromo.name, chromo.species+"_"+str(gene.blockNum), gene.s,\
                                gene.getEndPos(), gene.strand, fivePrime, threePrime, gene.structure, gene.sequence, gene.score))
             else:
-                geneFile.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(\
+                geneFile.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(\
                                gene.chromosome, chromo.species+"_"+str(gene.blockNum), gene.s,\
                                gene.getEndPos(), gene.strand, fivePrime, threePrime, gene.structure, gene.sequence, \
                                gene._type, gene.pseudo, gene.comment))
