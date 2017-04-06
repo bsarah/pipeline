@@ -151,8 +151,8 @@ def parseTempWrapper(tempFiles, listOfListOfGenes, outputDir, threshold, inferna
         tempBlockFile = open(tempBlockFileName, 'r')
         
         species = tempBlockFile.name.split('/')[-1].split('_')[0]
-        #print("species: {}".format(species))
-        #print("len geneList: {}".format(len(listOfGenes)))
+#        print("species: {}".format(species))
+#        print("len geneList: {}".format(len(listOfListOfGenes)))
 
         finalBlockFileName = bedFileDir+species+'.bed'
         finalBlockFile = open(finalBlockFileName, 'w')
@@ -166,10 +166,11 @@ def parseTempWrapper(tempFiles, listOfListOfGenes, outputDir, threshold, inferna
         geneFile.seek(start)
 
         listOfGenes = None
-        for _list in listOfListOfGenes:
+        for _list in listOfListOfGenes:  
             if _list[0].species == species:
                 listOfGenes = _list
 
+                
         overlappingBlockNums = parseTemp(tempBlockFile, finalBlockFile, geneFile, listOfGenes, overlappingBlockNums, threshold)
         #print('done')
 
@@ -178,8 +179,8 @@ def parseTempWrapper(tempFiles, listOfListOfGenes, outputDir, threshold, inferna
         geneFile.close()
 
         subprocess.call('gzip '+finalBlockFileName, shell=True)
-        #subprocess.call('gzip '+tempBlockFileName, shell=True)
-        subprocess.call('rm '+tempBlockFileName, shell=True)
+        subprocess.call('gzip '+tempBlockFileName, shell=True)
+        #subprocess.call('rm '+tempBlockFileName, shell=True)
     '''
     if len(listOfGenes) > 0:
         listOfSC = []
@@ -202,17 +203,22 @@ def parseTemp(tempFile, finalFile, geneFile, listOfGenes, overlapSet, threshold)
     the finalFile (output file). Read the next chromosome on the temp file, continue as such till all
     of the chromosomes are read. If the 
     '''
+    #print("len listOfGenes begin parseTemp: {}".format(len(listOfGenes)))
+    #print("threshold parsetemp: {}".format(threshold))
     chromo = None
     #print("parsing temp file...")
     for line in tempFile:
         lineCont = line.split()
         species_blockNum = lineCont[1].split('_')
-
+#        print("species blockNum read Chromo: {}".format(species_blockNum))
+        
         if chromo == None:
             chromo = Chromosome(lineCont[0], species_blockNum[0])
             if lineCont[5] == 'True':
                 chromo.isReference = True
 
+ #       print("chromo.name: {}".format(chromo.name))
+ #       print("lineCont[0]: {}".format(lineCont[0]))
         #if we are still on the same chromosome
         if lineCont[0] == chromo.name:
 
@@ -225,25 +231,30 @@ def parseTemp(tempFile, finalFile, geneFile, listOfGenes, overlapSet, threshold)
         #remove overlaps from the last chromosome, write it to the bed file.
         #overwrite 'chromo' to the new chromosome object.
         else:
-            overlapSet, listOfGenes = readChromo(finalFile, geneFile, listOfGenes, overlapSet, threshold, chromo)
+#            print("len chromoListOfScores bef readChromo: {}".format(len(chromo.listOfScores)))
+#            print("len listOfGenes bef readChromo: {}".format(len(listOfGenes)))
+            overlapSet, listOfGenes2 = readChromo(finalFile, geneFile, listOfGenes, overlapSet, threshold, chromo)
             #overwrite chromo to new chromosome
             chromo = Chromosome(lineCont[0], species_blockNum[0])
 
     #read the last chomo in the file
-    overlapSet, listOfGenes = readChromo(finalFile, geneFile, listOfGenes, overlapSet, threshold, chromo)
+    overlapSet, listOfGenes3 = readChromo(finalFile, geneFile, listOfGenes, overlapSet, threshold, chromo)
 
-    if len(listOfGenes) > 0:
-        #print('writing orphin')
-        #print("species: {}".format(chromo.species))
-        #print('chromos:  {}'.format([gene.chromosome for gene in listOfGenes]))
-        for gene in listOfGenes:
+    listOfGenes4 = listOfGenes2 + listOfGenes3
+    #print("len geneList parseTemp: {}".format(len(listOfGenes4)))
+    
+    if len(listOfGenes4) > 0:
+#        print('writing orphin')
+#        print("species: {}".format(chromo.species))
+#        print('chromos:  {}'.format([gene.chromosome for gene in listOfGenes4]))
+        for gene in listOfGenes4:
             fivePrime, threePrime = None, None
             if not gene.ownGene:
                 geneFile.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(\
                                gene.chromosome, chromo.species+"_"+str(gene.blockNum), gene.s,\
                                gene.getEndPos(), gene.strand, fivePrime, threePrime, gene.structure, gene.sequence, gene.score))
             else:
-                geneFile.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(\
+                geneFile.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(\
                                gene.chromosome, chromo.species+"_"+str(gene.blockNum), gene.s,\
                                gene.getEndPos(), gene.strand, fivePrime, threePrime, gene.structure, gene.sequence, \
                                gene._type, gene.pseudo, gene.comment))
@@ -252,6 +263,9 @@ def parseTemp(tempFile, finalFile, geneFile, listOfGenes, overlapSet, threshold)
 
 def readChromo(finalFile, geneFile, listOfGenes, overlapSet, threshold, chromo):
 
+#    print("len geneList readChromo: {}".format(len(listOfGenes)))
+#    print("len chromo.listOfScores readchromo: {}".format(len(chromo.listOfScores)))
+    
     if len(chromo.listOfScores) > 0:
         chromo.listOfScores.sort()
         thresholdIndex = int(len(chromo.listOfScores)/100*threshold)

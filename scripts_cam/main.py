@@ -101,11 +101,11 @@ elif args.own_genes != None:
     #print("own Genes")
 
     geneObjects, listOfSpecies = parseGenes(args.own_genes, [args.referenceSpecies])
-    print("search Genes")
+    #print("search Genes")
     numgenes = len(geneObjects)
     numspecs = len(listOfSpecies)
-    print("num genes: {}".format(numgenes))
-    print("num species: {}".format(numspecs))
+    #print("num genes: {}".format(numgenes))
+    #print("num species: {}".format(numspecs))
     versionInfo = "User provided genes"
     
 else:

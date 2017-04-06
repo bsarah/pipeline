@@ -49,6 +49,11 @@ my %insevents =();
 #my %misevents =();
 my %psevents = ();
 my @remoldings = ();
+# The pairs of elements (separated with ':') are defined 
+#as orthologs based on the similarity score but have distinct types according to the input";
+
+my @inremoldings = ();
+#The pairs of elements are defined as orthologs as they have the same types but the similarity is below the orthology threshold.
 
 open(my $outm,">>",$matchout);
 open(my $outd,">>",$duplout);
@@ -166,6 +171,15 @@ while(<FA>){
 		else{$remstr = "$n2\:$n1";}
 		if(grep( /^$remstr$/, @remoldings)){}
 		else{push @remoldings, $remstr;}
+	    }
+	    if($t1 eq $t2 && $seqsim < $seqlim){
+		##equal types but low sequence similarity
+		my $inremstr = "";
+		if($n1 le $n2){$inremstr = "$n1\:$n2";}
+		else{$inremstr = "$n2\:$n1";}
+		if(grep( /^$inremstr$/, @inremoldings)){}
+		else{push @inremoldings, $inremstr;}
+		
 	    }
 	}
 	
@@ -629,6 +643,14 @@ if(scalar @remoldings > 0){
 as orthologs based on the similarity score but have distinct types according to the input:\n";
     for(my $i=0;$i< scalar @remoldings; $i++){
 	print $outs "$remoldings[$i] \n";
+    }
+}
+
+if(scalar @inremoldings > 0){
+    print $outs "The following pairs of elements (separated with ':') are defined 
+as orthologs as they have the same types but they sequence similarity is below the given threshold:\n";
+    for(my $i=0;$i< scalar @inremoldings; $i++){
+	print $outs "$inremoldings[$i] \n";
     }
 }
 

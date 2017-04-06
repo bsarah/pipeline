@@ -29,8 +29,10 @@ args = parser.parse_args()
 def parseGenes(input_file, speciesList):
     listOfGenes = list()
     geneNumber = 0
+    emptySpecList = list()
     
     f = catchExceptions(input_file)
+    #input file sorted by species
     
     for line in f:
         if line[0] in '# \n':
@@ -38,14 +40,15 @@ def parseGenes(input_file, speciesList):
         else:
             geneNumber += 1
             lineList = line.split('\t')
-            if lineList[3] not in speciesList:
-                speciesList.append(lineList[3])
-#            if lineList[1] not in speciesList:
-#                listOfGenes.append(list())
+            if lineList[3] not in emptySpecList:
+                emptySpecList.append(lineList[3])
+                #print("species in specieslist: {}".format(lineList[3]))
+                listOfGenes.append(list())
+                if lineList[3] not in speciesList:
+                    speciesList.append(lineList[3])
             if len(lineList) != 10:
                 raise Exception("Input file does not have all of the fields. File shoud include 10 tab\nseparated elements. All elements not present should have an 'NA' instead")
             #                                              panTro       chr3         84545             85
-            listOfGenes.append(list())
             listOfGenes[len(listOfGenes)-1].append(Gene(lineList[3], lineList[0], int(lineList[1]), getGeneLength(int(lineList[1]), int(lineList[2])),\
                                                         lineList[4], geneNumber, lineList[8], lineList[7], ownGene=True, _type=lineList[5], pseudoGene=lineList[6], comment=lineList[9]))
             #                                              +            32          ((___>><<) ATTCGTAGCAT               tRNA                False                   NA
