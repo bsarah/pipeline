@@ -96,8 +96,13 @@ my $skipg;
 my $skipa;
 
 
-my $dirname = dirname(__FILE__);
-
+my $pwdcmd = "pwd";
+my @outpwd = readpipe("$pwdcmd");
+my $dirname = $outpwd[0];
+chomp($dirname);
+#my $dirname = dirname(__FILE__);
+#my $dirname = File::Spec->rel2abs(__FILE__);
+print "dirname: $dirname \n";
 
 #define other information
 my $toolname = "FindAFancyAbbrevation";
@@ -385,6 +390,7 @@ print $outs "\n";
 my $genesfolder="";
 if(! $pathtocam){
     print "analysis of maf files started (this might take a while)..\n";
+    print "call to cam's prog:\n $pythonpath\/python3 $scripts_cam\/main.py $cmoption $inclopt $mafs $outpath $dirname $refspecies 2>>$err0 | \n";
     if($perc eq ""){
 	open(PROG,"$pythonpath\/python3 $scripts_cam\/main.py $cmoption $inclopt $mafs $outpath $dirname $refspecies 2>>$err0 |") or die "Couldn't start program!";
 	while(<PROG>){print "$_";}

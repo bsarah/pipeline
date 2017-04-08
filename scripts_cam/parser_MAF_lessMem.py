@@ -1,5 +1,4 @@
-
-#this program takes multiple sequence alignments in MAF format and parses them.
+#his program takes multiple sequence alignments in MAF format and parses them.
 #It then makes BED files for each species that contain the allignments for that species.
 import subprocess
 import datetime #module that can give the current day month and year
