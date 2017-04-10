@@ -232,21 +232,21 @@ def parseTemp(tempFile, finalFile, geneFile, listOfGenes, overlapSet, threshold)
         else:
 #            print("len chromoListOfScores bef readChromo: {}".format(len(chromo.listOfScores)))
 #            print("len listOfGenes bef readChromo: {}".format(len(listOfGenes)))
-            overlapSet, listOfGenes2 = readChromo(finalFile, geneFile, listOfGenes, overlapSet, threshold, chromo)
+            overlapSet, listOfGenes = readChromo(finalFile, geneFile, listOfGenes, overlapSet, threshold, chromo)
             #overwrite chromo to new chromosome
             chromo = Chromosome(lineCont[0], species_blockNum[0])
 
     #read the last chomo in the file
-    overlapSet, listOfGenes3 = readChromo(finalFile, geneFile, listOfGenes, overlapSet, threshold, chromo)
+    overlapSet, listOfGenes = readChromo(finalFile, geneFile, listOfGenes, overlapSet, threshold, chromo)
 
-    listOfGenes4 = listOfGenes2 + listOfGenes3
+    listOfGenes = listOfGenes + listOfGenes
     #print("len geneList parseTemp: {}".format(len(listOfGenes4)))
     
-    if len(listOfGenes4) > 0:
+    if len(listOfGenes) > 0:
 #        print('writing orphin')
 #        print("species: {}".format(chromo.species))
 #        print('chromos:  {}'.format([gene.chromosome for gene in listOfGenes4]))
-        for gene in listOfGenes4:
+        for gene in listOfGenes:
             fivePrime, threePrime = None, None
             if not gene.ownGene:
                 geneFile.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(\

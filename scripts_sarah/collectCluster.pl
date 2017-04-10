@@ -54,6 +54,7 @@ my $numseqs = 0;
 my %species = ();
 my %pseudos = ();
 my %types = ();
+my %difftypes = ();
 open(my $outs, ">>$summary");
 
 
@@ -231,6 +232,8 @@ while(<FA>){
 	}
 	else{
 	    my $pretype = $F[$arrlen-3];
+	    if(exists $difftypes{$pretype}){$difftypes{$pretype}++;}
+	    else{$difftypes{$pretype}=1;}
 	    my @L3 = split '\/', $curname;
 	    my @M3 = split '\.', $L3[(scalar @L3) -1];
 	    my $type = "$M3[0]\_$pretype";
@@ -289,7 +292,7 @@ if($psestr eq ""){$psestr = "No pseudogenes detected.\n";$nopseudos = 1;}
 
 my $typstr = "";
 foreach my $ty (sort (keys(%types))) {
-    $typstr = "$ty $types{$ty}\n";
+    $typstr = "$typstr$ty $types{$ty}\n";
 }
 
 
@@ -341,5 +344,10 @@ else{
 }
 
 my $outstr = "$spstr\!$psestr";
+
+#include typeinformation in order to hand it over
+my $numdifftypes = scalar (keys %difftypes);
+
+my $outstr = "$numdifftypes\!$outstr";
 
 print $outstr;

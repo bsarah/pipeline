@@ -436,12 +436,14 @@ my @out3 = readpipe("$cmd3");
 my @out4 = readpipe("$cmd4");
 my @out5 = readpipe("$cmd5");
 
-##looks like: $species\-$num_elems\=$species\-..!$species\-$num_pseudo\=$species\-..
+##looks like: $numdifftypes!$species\-$num_elems\=$species\-..!$species\-$num_pseudo\=$species\-..
 my $elemsNpseudos = $out3[0];
 print "all: $elemsNpseudos\n";
 my @R = split '!', $elemsNpseudos;
-my $totelemnumstr = $R[0];
+my $totelemnumstr = $R[1];
 print "$totelemnumstr\n";
+my $numdifftypes = $R[0];
+print "Number of different types: $numdifftypes\n";
 #my $totpseudostr = "=";
 #if($pseudoscore >= 0){
 #    if(scalar @R > 1){
@@ -629,7 +631,7 @@ if($createalns == 1){
     my $cmd301 = "touch $outpath\/tree.out 2>>$err";
     my $cmd302 = "touch $outpath\/geneticEvents.txt 2>>$err";
     ##TODO set the pseqsim and pstruclim if we have a solution for pseudogenes
-    my $cmd30b = "$perlpath\/perl $scripts_sarah\/createAlignments.pl $outpath\/graphs/edlilist $outpath\/graphs/alignments $altnwpath $seqsim $strucsim $pseudoscore $singletoncount $mode $outpath\/graphs/GainLoss $outpath\/matches.txt $outpath\/duplications.txt $outpath\/insertions.txt $outpath\/pseudogenes.txt $sumcreatealn 2>>$err";
+    my $cmd30b = "$perlpath\/perl $scripts_sarah\/createAlignments.pl $outpath\/graphs/edlilist $outpath\/graphs/alignments $altnwpath $seqsim $strucsim $pseudoscore $singletoncount $mode $numdifftypes $outpath\/graphs/GainLoss $outpath\/matches.txt $outpath\/duplications.txt $outpath\/insertions.txt $outpath\/pseudogenes.txt $sumcreatealn 2>>$err";
     my $cmd30a = "$perlpath\/perl $scripts_sarah\/countEvents.pl $newicktree $outpath\/matches.txt $outpath\/duplications.txt $outpath\/insertions.txt $outpath\/pseudogenes.txt $outpath\/tree.out $outpath\/geneticEvents.txt $totelemnumstr $nonestr $totpseudostr $outpath\/data_iTOL 2>>$err";
     
     print "create duplication alignments..";

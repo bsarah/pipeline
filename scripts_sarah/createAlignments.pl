@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-## perl createAlignments.pl edlilist outpath pathtonw secsim strsim pseudoscore singletoncount mode outfolder match dupl ins pseudo summary
+## perl createAlignments.pl edlilist outpath pathtonw secsim strsim pseudoscore singletoncount mode numdifftypes outfolder match dupl ins pseudo summary
 
 ##program will produce sequences of letters, where the same letter means similar sequences, depending on the threshold.
 ##thus one letter for each connected component.
@@ -28,6 +28,7 @@ my $strlim = shift;
 my $pseudosc = shift;
 my $singletoncount = shift;
 my $mode = shift;
+my $numdifftypes = shift;
 my $outfolder = shift; ##write files for ePoPE
 my $matchout = shift;
 my $duplout = shift;
@@ -54,6 +55,7 @@ my @remoldings = ();
 
 my @inremoldings = ();
 #The pairs of elements are defined as orthologs as they have the same types but the similarity is below the orthology threshold.
+#this is only reported IFF there are more than just one type!
 
 open(my $outm,">>",$matchout);
 open(my $outd,">>",$duplout);
@@ -172,7 +174,7 @@ while(<FA>){
 		if(grep( /^$remstr$/, @remoldings)){}
 		else{push @remoldings, $remstr;}
 	    }
-	    if($t1 eq $t2 && $seqsim < $seqlim){
+	    if($numdifftypes > 0 && $t1 eq $t2 && $seqsim < $seqlim){
 		##equal types but low sequence similarity
 		my $inremstr = "";
 		if($n1 le $n2){$inremstr = "$n1\:$n2";}
