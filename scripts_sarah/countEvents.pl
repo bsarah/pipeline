@@ -251,7 +251,7 @@ while(<FA>){
 
     ##curlca of all species for this event found
     ##add corresponding number to this event and do deletions for all species not involved but child of lca
-    $plusnodes{$T[$curlca]} = $num;
+    $plusnodes{$T[$curlca]} += $num;
     ##find all nodes under curlca and check if it is leaves
     my @leaves = (); 
     for(my $m = $curlca -1; $m >=0; $m--){

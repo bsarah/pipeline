@@ -166,25 +166,27 @@ while(<FA>){
 	    ##check types:
 	    my $t1 = $G[(scalar @G) - 2];
 	    my $t2 = $G2[(scalar @G2) - 2];
-	    if($seqsim >= $seqlim && $strsim >= $strlim && $t1 ne $t2){
-		##sequence similarity is high but types seem to be different
-		my $remstr = "";
-		if($n1 le $n2){$remstr = "$n1\:$n2";}
-		else{$remstr = "$n2\:$n1";}
-		if(grep( /^$remstr$/, @remoldings)){}
-		else{push @remoldings, $remstr;}
-	    }
-	    if($numdifftypes > 0 && $t1 eq $t2 && $seqsim < $seqlim){
-		##equal types but low sequence similarity
-		my $inremstr = "";
-		if($n1 le $n2){$inremstr = "$n1\:$n2";}
-		else{$inremstr = "$n2\:$n1";}
-		if(grep( /^$inremstr$/, @inremoldings)){}
-		else{push @inremoldings, $inremstr;}
-		
+	    if($numdifftypes > 0){
+		if($numdifftypes > 0 && $seqsim >= $seqlim && $strsim >= $strlim && $t1 ne $t2){
+		    ##sequence similarity is high but types seem to be different
+		    my $remstr = "";
+		    if($n1 le $n2){$remstr = "$n1\:$n2";}
+		    else{$remstr = "$n2\:$n1";}
+		    if(grep( /^$remstr$/, @remoldings)){}
+		    else{push @remoldings, $remstr;}
+		}
+		if($numdifftypes > 0 && $t1 eq $t2 && $seqsim < $seqlim){
+		    ##equal types but low sequence similarity
+		    my $inremstr = "";
+		    if($n1 le $n2){$inremstr = "$n1\:$n2";}
+		    else{$inremstr = "$n2\:$n1";}
+		    if(grep( /^$inremstr$/, @inremoldings)){}
+		    else{push @inremoldings, $inremstr;}
+		    
+		}
 	    }
 	}
-	
+	    
 	
 	if($seqsim >= $seqlim && $strsim >= $strlim){
 	    ##similarity fits, nodes get the same letter
@@ -218,6 +220,8 @@ while(<FA>){
 
     }
 
+
+    
     
 #    print $outp "pgenes\n";
 #    my $pgenestr = join(",",@pgenes);
@@ -564,7 +568,8 @@ my @SC = split "=", $singletoncount;
 for(my $s = 0; $s < scalar @SC; $s++){
     if($SC[$s] eq ""){next;}
     my @stmp = split "-", $SC[$s];
-    if(exists $insevents{$stmp[0]}){$insevents{$stmp[0]} += $stmp[1];}
+    my $tmpnum = $insevents{$stmp[0]};
+    if(exists $insevents{$stmp[0]}){$insevents{$stmp[0]} = $tmpnum + $stmp[1];}
     else{$insevents{$stmp[0]} = $stmp[1];}
 }
 

@@ -320,7 +320,7 @@ if($pathtocam){
     else{print "Option -a given but argument folder $pathtocam doesn't exist! \n"; exit 1;}
 }
 
-if($mode == -1){print "either enter a genelist or a cm file option! \n"; exit 1;}
+if($mode == -1 && ! $pathtocam){print "either enter a genelist or a cm file option! \n"; exit 1;}
 
 
 ##Program call
@@ -576,6 +576,9 @@ my $sumbuildedges = "$summarypath\/Summary_buildedges.txt";
 my $cmd18 = "mkdir $outpath\/graphs 2>>$err";
 my $cmd19 = "$perlpath\/perl $scripts_sarah\/buildEdgeList.pl $outpath\/clusters/cluslist_nosingles $outpath\/clusters $mode $outpath\/graphs $altnwpath $seqsim $strucsim $pseudoscore $sumbuildedges 2>>$err";
 my $cmd20 = "ls $outpath\/graphs/*.edli > $outpath\/graphs/edlilist 2>>$err";
+##count elems per species that are in the graphs files to check if the numbers fit
+my $summary_countGraphelems = "$summarypath\/Summary_countGraphElems.txt";
+my $cmd21 = "$perlpath\/perl $scripts_sarah\/countElemsGraphs.pl $outpath\/graphs/edlilist $summary_countGraphelems 2>>$err";
 ##no edge graphs are graphs with node from only one species, as all other graphs have a completely connected graph (except same species)
 #my $cmd21 = "mkdir $outpath\/graphs/noEdgeGraphs 2>>$err";   
 #my $cmd22 = "$perlpath\/perl $scripts_sarah\/sortEdli.pl $outpath\/graphs/edlilist $outpath\/graphs $outpath\/graphs/noEdgeGraphs 2>>$err";
@@ -585,7 +588,7 @@ my @out18 = readpipe("$cmd18");
 my @out19 = readpipe("$cmd19");
 my @out20 = readpipe("$cmd20");
 append2file($outs,$sumbuildedges);
-#my @out21 = readpipe("$cmd21");
+my @out21 = readpipe("$cmd21");
 #my @out22 = readpipe("$cmd22");
 #my @out22 = readpipe("$cmd22");
 print "Done!\n";

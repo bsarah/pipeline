@@ -348,6 +348,6 @@ my $outstr = "$spstr\!$psestr";
 #include typeinformation in order to hand it over
 my $numdifftypes = scalar (keys %difftypes);
 
-my $outstr = "$numdifftypes\!$outstr";
+$outstr = "$numdifftypes\!$outstr";
 
 print $outstr;
