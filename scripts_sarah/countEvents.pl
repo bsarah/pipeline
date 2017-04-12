@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-##coutEvents.pl newickTree(with correct identifiers) matches dupl insertions pseudo treeout summary totelelemstr nonestr totpseudostr iTOLfolder
+##coutEvents.pl newickTree(with correct identifiers) singletoncount matches dupl insertions pseudo treeout summary totelelemstr nonestr totpseudostr iTOLfolder
 ##get temporary files containing the genetic events and the corresponding numbers
 ##species,species... number
 ##output: new geneticEvents file including deletions, new newick tree including numbers at nodes
@@ -18,6 +18,7 @@ use POSIX qw(strftime);
 
 
 my $treefile = shift;
+my $singletoncount = shift;
 my $matches = shift;
 my $dupl = shift;
 my $ins = shift;
@@ -38,6 +39,7 @@ my %minusnodes = (); ##nodes of the tree with numbers (-)
 my %duplications = ();
 my %insertions = ();
 my %pseudos = ();
+my %singletons = ();
 
 open TF,"<$treefile" or die "can't open $treefile\n";
 
@@ -50,6 +52,8 @@ while(<TF>){
 }
     
 if($tree eq ""){print "tree format doesn't fit!\n"; exit 1;}
+
+print $outs "tree: $tree \n";
 
 ##split the tree into an array of its elements
 my @T = (); ##tree with its components
@@ -426,6 +430,13 @@ while(<FA>){
 #might be changed later
 
 
+#singletoncount
+my @SC = split "=", $singletoncount;
+for(my $s = 0; $s < scalar @SC; $s++){
+    if($SC[$s] eq ""){next;}
+    my @stmp = split "-", $SC[$s];
+    $singletons{$stmp[0]} = $stmp[1];
+}
 
 
 ##DUPLICATIONS
@@ -499,6 +510,10 @@ for(my $gp=0;$gp<scalar @GP;$gp++){
 
 
 
+
+
+
+
 my @newT = ();
 for(my $t=0; $t < scalar @N; $t++){
     my $vert = $T[$t];
@@ -510,9 +525,10 @@ for(my $t=0; $t < scalar @N; $t++){
 	if(exists($minusnodes{$vert})){}else{$minusnodes{$vert}=0;}
 	if(exists($totnumbers{$vert})){}else{$totnumbers{$vert} = 0;}
 	if(exists($duplications{$vert})){}else{$duplications{$vert}=0;}
+	if(exists($singletons{$vert})){}else{$singletons{$vert}=0;}
 	if(exists($pseudos{$vert})){}else{$pseudos{$vert}=0;}
 	if(exists($nonenums{$vert})){}else{$nonenums{$vert}=0;}
-	my $newname = "$T[$t]\[t$totnumbers{$vert}|i$allplus\|l$minusnodes{$vert}\|d$duplications{$vert}\|p$pseudos{$vert}|n$nonenums{$vert}\]";
+	my $newname = "$T[$t]\[t$totnumbers{$vert}|i$allplus\|l$minusnodes{$vert}\|d$duplications{$vert}\|s$singletons{$vert}\|p$pseudos{$vert}|n$nonenums{$vert}\]";
 	push @newT, $newname;
     }
     else{
@@ -520,22 +536,72 @@ for(my $t=0; $t < scalar @N; $t++){
     }
 }
 
+my %numdiffs = ();
+
+###############Test numbers, thus sum up all the numbers for each species and check the difference to the total number of elems
+for(my $ll=0;$ll<scalar @L;$ll++){
+    #go through all leaves
+    #add up all the numbers from nodes that have a N-val < N[$ll] and are not leaves, each number appears once!!!
+    #find ID of leave in T
+    my $curid;
+    for(my $t0=0;$t0<scalar @T;$t0++){
+	if($L[$ll] eq $T[$t0]){
+	    $curid = $t0;
+	    last;
+	}
+    }
+    my $allelems = 0;
+    my $elemsum = 0;
+    my $curval = $N[$curid];
+    #go through Tnew and N and add up all the numbers
+    for(my $t1 = $curid;$t1<scalar @newT;$t1++){
+	if($N[$t1] != $curval){next;}
+	$curval--;
+	my $curel = $newT[$t1];
+	my @split1 = split ']', $curel;
+	my @split2 = split '|', $split1[1];
+	for(my $s2 = 0;$s2 < scalar @split2; $s2++){
+	    #letters are: t,i,-l,d,n,s
+	    my $curnum = $split2[$s2];
+	    if($curnum =~ /^t/){$allelems += substr($curnum,1);}#total
+	    if($curnum =~ /^i/){$elemsum += substr($curnum,1);}#ins
+	    if($curnum =~ /^l/){$elemsum -= substr($curnum,1);}#loss
+	    if($curnum =~ /^d/){$elemsum += substr($curnum,1);}#dupl
+	    if($curnum =~ /^s/){$elemsum += substr($curnum,1);}#single	    
+	    if($curnum =~ /^p/){$elemsum += substr($curnum,1);}#pseudo
+	    if($curnum =~ /^n/){$elemsum += substr($curnum,1);}#none
+	}
+    }
+    my $diff = $allelems-$elemsum;
+    $numdiffs{$curid} = $diff;
+}
+
+#add the diff numbers to the tree?
+
 my $tstr = join ("", @newT);
 #print "final tree:\n";
 #print "$tstr \n";
 
 print $outt "Newick tree with numbers specifying event counts at its nodes.
 Each node name contains the following numbers in event specification:
-[ta|ib|lc|dx|py|nz] where:
+[ta|ib|lc|dx|se|py|nz] where:
 a are total number of elements,
 b are insertions,
 c are deletions, thus losses, 
-x are duplications, 
+x are duplications,
+e are singletons, 
 y pseudogenes and
 z are the elements that were excluded from the analysis.\n
 
 Tree:\n";
 print $outt "$tstr\n";
+
+#print diff numbers first here:
+foreach my $dif (keys %numdiffs){
+    print $outt "$dif $numdiffs{$dif}\n";
+}
+
+
 close $outt;
 
 
@@ -579,6 +645,29 @@ foreach my $mi (sort keys %pseudos) {
 }
 print $outs "\n\n";
 
+
+print $outs "EVENT: Singletons\n";
+foreach my $si (sort keys %singletons) {
+    print $outs "$si\t$singletons{$si}\n";
+}
+print $outs "\n\n";
+
+
+print $outs "EVENT: No Anchors\n";
+foreach my $ni (sort keys %nonenums) {
+    print $outs "$ni\t$nonenums{$ni}\n";
+}
+print $outs "\n\n";
+
+
+print $outs "EVENT: Others\n";
+foreach my $oi (sort keys %numdiffs) {
+    print $outs "$oi\t$numdiffs{$oi}\n";
+}
+print $outs "\n\n";
+
+
+##TODO add extra files for singletons and numdiffs?
 
 ####print output files for iTOL input
 my $treeout2 = "$iTOLout\/tree.txt";

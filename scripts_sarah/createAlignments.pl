@@ -167,7 +167,7 @@ while(<FA>){
 	    my $t1 = $G[(scalar @G) - 2];
 	    my $t2 = $G2[(scalar @G2) - 2];
 	    if($numdifftypes > 0){
-		if($numdifftypes > 0 && $seqsim >= $seqlim && $strsim >= $strlim && $t1 ne $t2){
+		if($numdifftypes > 1 && $seqsim >= $seqlim && $strsim >= $strlim && $t1 ne $t2){
 		    ##sequence similarity is high but types seem to be different
 		    my $remstr = "";
 		    if($n1 le $n2){$remstr = "$n1\:$n2";}
@@ -175,7 +175,7 @@ while(<FA>){
 		    if(grep( /^$remstr$/, @remoldings)){}
 		    else{push @remoldings, $remstr;}
 		}
-		if($numdifftypes > 0 && $t1 eq $t2 && $seqsim < $seqlim){
+		if($numdifftypes > 1 && $t1 eq $t2 && $seqsim < $seqlim){
 		    ##equal types but low sequence similarity
 		    my $inremstr = "";
 		    if($n1 le $n2){$inremstr = "$n1\:$n2";}
@@ -500,12 +500,13 @@ while(<FA>){
 #	print "hash spe2count \n";
 #	print Dumper(\%spe2count);
 #	print "\n";
-#	print "num vals: $vnum\n";
+	#	print "num vals: $vnum\n";
+	my @smallvals = splice(@vals,1);
 	if(scalar @vals == 1){##singleton/insertion
 	    if(exists $insevents{$spstr}){$insevents{$spstr} += $vals[0];}
 	    else{$insevents{$spstr} = $vals[0];}
 	}
-	elsif(none {$_ != $vals[0]} @vals)
+	elsif(none {$_ != $vals[0]} @smallvals)#check if all values are equal
 	{
 	    if(exists $matevents{$spstr}){$matevents{$spstr} += $vals[0];}
 	    else{$matevents{$spstr} = $vals[0];}
@@ -563,15 +564,17 @@ while(<FA>){
 #my $now_string = strftime "%a %b %e %H:%M:%S %Y", localtime;
 
 
+
+##shift the singletoncount to countEvents.pl
 ##include insertion events from the singleton clusters that were not included in the graph analysis, as they were sorted out before
-my @SC = split "=", $singletoncount;
-for(my $s = 0; $s < scalar @SC; $s++){
-    if($SC[$s] eq ""){next;}
-    my @stmp = split "-", $SC[$s];
-    my $tmpnum = $insevents{$stmp[0]};
-    if(exists $insevents{$stmp[0]}){$insevents{$stmp[0]} = $tmpnum + $stmp[1];}
-    else{$insevents{$stmp[0]} = $stmp[1];}
-}
+#my @SC = split "=", $singletoncount;
+#for(my $s = 0; $s < scalar @SC; $s++){
+#    if($SC[$s] eq ""){next;}
+#    my @stmp = split "-", $SC[$s];
+#    my $tmpnum = $insevents{$stmp[0]};
+#    if(exists $insevents{$stmp[0]}){$insevents{$stmp[0]} = $tmpnum + $stmp[1];}
+#    else{$insevents{$stmp[0]} = $stmp[1];}
+#}
 
 
 

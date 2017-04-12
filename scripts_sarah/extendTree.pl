@@ -37,6 +37,7 @@ my $semco = ";";
 my $space = " ";
 my $count = 0;
 my $newtree = "";
+$newtree = "$newtree$T[0]";
 for(my $i  = 1; $i < scalar @T; $i++){
     if($T[$i-1] eq $cbrac){
 	#check if current position is != ( ) , ;
