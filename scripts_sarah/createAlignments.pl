@@ -501,12 +501,12 @@ while(<FA>){
 #	print Dumper(\%spe2count);
 #	print "\n";
 	#	print "num vals: $vnum\n";
-	my @smallvals = splice(@vals,1);
+#	my @smallvals = splice(@vals,1);
 	if(scalar @vals == 1){##singleton/insertion
 	    if(exists $insevents{$spstr}){$insevents{$spstr} += $vals[0];}
 	    else{$insevents{$spstr} = $vals[0];}
 	}
-	elsif(none {$_ != $vals[0]} @smallvals)#check if all values are equal
+	elsif(none {$_ != $vals[0]} @vals)#check if all values are equal
 	{
 	    if(exists $matevents{$spstr}){$matevents{$spstr} += $vals[0];}
 	    else{$matevents{$spstr} = $vals[0];}

@@ -90,12 +90,22 @@ for(my $i = 0; $i < scalar @tr; $i++)
 }
 
 
-#print join(" ",@T);
-#print "\n";
-#print join(" ",@N);
-#print "\n";
-#print join(" ",@L);
-#print "\n";
+#define root ids
+my $rootid=-1;
+for(my $nn = (scalar @N) -1;$nn>=0;$nn--){
+    if($N[$nn]==0){$rootid =$nn;last;}
+}
+
+if($rootid == -1){
+    print "no root in the tree!\n"; exit;
+}
+
+print join(" ",@T);
+print "\n";
+print join(" ",@N);
+print "\n";
+print join(" ",@L);
+print "\n";
 
 
 ##pseudogenes
@@ -168,7 +178,91 @@ while(<FA>){
 #    print "\n";
 #    print join(" ",@nums);
 #    print "\n";
+    my $pstr1="";
+    my $pstr2="";
+
+    ##try to find curlca by always looking at two species at the same time
+    ##then, get set of nodes from the pathes from the current leaves to the root and intersect them
+    ##if there are several nodes in the intersection, take the one with the highest N
+    my $curlca = $ids[0]; #start with species at $S[0]
+    for(my $k=1; $k < scalar @S; $k++){
+	my @path1 = ();
+	my @path2 = ();
+	push @path1, $curlca;
+	push @path2, $ids[$k];
+	my $num1 = $N[$curlca];
+	for(my $t4=$curlca;$t4<scalar @T;$t4++){
+	    if($N[$t4] != $num1){next;}
+	    $num1--;
+	    if($num1 < 0){push @path1, $rootid;last;}
+	    print "t4: $t4 \n";
+	    push @path1, $t4;
+	}
+
+	my $num2 = $N[$ids[$k]];
+	for(my $t5=$ids[$k];$t5<scalar @T;$t5++){
+	    if($N[$t5] != $num2){next;}
+	    $num2--;
+	    if($num2 < 0){push @path2, $rootid;last;}
+	    push @path2, $t5;
+	}
+
+	if(scalar @path1 == 0){
+	    print $outs "path1 zero: $F[0]\n";
+	}
+	else{$pstr1 = join("=",@path1);}
+
+	if(scalar @path2 == 0){
+	    print $outs "path2 zero: $F[0]\n";
+	}
+
+	if(scalar @path1 == 0 || scalar @path2 == 0){
+	    next;
+	}
+	else{$pstr2 = join("=",@path2);}
+
+	
+
+
+	#do the intersection of both
+	##as we go from leaves to root, we take the first element that we have in common
+	my @pdiff = ();
+	for(my $a1 = 0; $a1 < scalar @path1;$a1++){
+	    for(my $b1 = 0; $b1 < scalar @path2; $b1++){
+		if($path1[$a1] == $path2[$b1]){
+		    push @pdiff, $path2[$b1];
+		    last; #this can be deleted later on in order to get all overlapping nodes
+		}
+	    }
+
+	}
+
+	if(scalar @pdiff == 0){
+	    print $outs "son mist pathes: $pstr1; $pstr2\n";
+	}
+	elsif(scalar @pdiff == 1){
+	    $curlca = $pdiff[0];
+	}
+	else{
+	    #choose the curlca with the highest N
+	    my $curplca = $N[$pdiff[0]];
+	    my $curpid = 0;
+	    for(my $pd=1;$pd<scalar @pdiff;$pd++){
+		if($N[$pdiff[$pd]] >= $curplca){
+		    $curplca = $N[$pdiff[$pd]];
+		    $curpid = $pdiff[$pd];
+		}
+	    }
+	    $curlca = $curpid;
+	}
+    }
+
+    if($N[$curlca] < 0){
+	print $outs "strange curlca $T[$curlca], species: $F[0], pathes: $pstr1; $pstr2\n";
+    }
+
     
+=for comment    
     ##find lca
     my $curlca = $ids[0]; #start with species at $S[0]
     for(my $k=1; $k < scalar @S; $k++){
@@ -184,7 +278,8 @@ while(<FA>){
 	    $otheridx = $ids[$k];
 	    $othernum = $N[$ids[$k]]
 	}
-	else{
+	else{#if N[ids[k]] < N[curlca] then idsk is above curlca
+	    $curlca = $ids[$k];
 	    $startidx = $ids[$k];
 	    $startnum = $N[$ids[$k]];
 	    $otheridx = $curlca;
@@ -194,8 +289,11 @@ while(<FA>){
 	if($startnum == 0 && $othernum == 0)##both are the root
 	{
 	    $curlca = $startidx;
-	    next;
-	}
+	    last;
+	}	
+    
+
+        #try to find the common parent of both current nodes in order to get the curlca
 	my $pnum = $startnum;
 	my $pidx = $startidx;
 #	print "in between pidx: $pidx, otheridx: $otheridx, pnum: $pnum, othernum: $othernum \n";
@@ -251,7 +349,7 @@ while(<FA>){
 	    }
 	}
     }
-
+=cut
 
     ##curlca of all species for this event found
     ##add corresponding number to this event and do deletions for all species not involved but child of lca
@@ -267,7 +365,7 @@ while(<FA>){
 #    print join(" ", @leaves);
 #    print "\n";
 
-    my @lili = ();
+    my @lili = (); #names of leaves
     for(my $p = 0; $p < scalar @leaves; $p++){
 	push @lili, $T[$leaves[$p]];
     }
@@ -282,21 +380,32 @@ while(<FA>){
 
     ##intersection of species and realL
     my @intersect = grep( $species{$_}, @realL);
+    
     my %intersect = map{$_=>1} @intersect;
     
     ##diff between realL and intersect
     ##should give you only the leaves that are real leaves and not contained in species!
     ##thus, those leaves need to be deleted
     my @diff = grep(!defined $intersect{$_}, @realL);
+    if(scalar @diff == 0 && scalar @intersect == 0 && scalar @realL == 0){
+	print $outs "no elements with $T[$curlca]; pathes: $pstr1; $pstr2\n";
+    }
 
+    if(scalar @diff >= scalar @L){
+	print $outs "all leaves deleted?\n";
+    }
+    
     if(scalar @diff == 1){
 	$minusnodes{$diff[0]} += $num;
     }
+    elsif(scalar @diff == 0){next;}
     else{
 	my $Treestr = join('=', @T);
 	my $Leafstr = join('=',@diff);
 	my @leafsToDel = findParentOfAll($Treestr,$Leafstr);
-	
+	if(scalar @leafsToDel == 0){
+	    print $outs "no parent of all: $Leafstr\n";
+	}
 	for(my $ltd=0;$ltd < scalar @leafsToDel;$ltd++){
 	    $minusnodes{$leafsToDel[$ltd]} += $num;
 	}
@@ -558,8 +667,9 @@ for(my $ll=0;$ll<scalar @L;$ll++){
 	if($N[$t1] != $curval){next;}
 	$curval--;
 	my $curel = $newT[$t1];
-	my @split1 = split ']', $curel;
-	my @split2 = split '|', $split1[1];
+	my @split1 = split '\[', $curel;
+	my @split1b = split '\]', $split1[1];
+	my @split2 = split '\|', $split1b[0];
 	for(my $s2 = 0;$s2 < scalar @split2; $s2++){
 	    #letters are: t,i,-l,d,n,s
 	    my $curnum = $split2[$s2];
@@ -573,7 +683,7 @@ for(my $ll=0;$ll<scalar @L;$ll++){
 	}
     }
     my $diff = $allelems-$elemsum;
-    $numdiffs{$curid} = $diff;
+    $numdiffs{$L[$ll]} = $diff;
 }
 
 #add the diff numbers to the tree?
@@ -617,10 +727,20 @@ print $outs "\n\n";
 
 ##sort the entries in each entry for the hashes alphabetically
 
+
+my %allins = ();
+foreach my $in1 (sort keys %insertions) {
+    if(exists($allins{$in1})){$allins{$in1} += $insertions{$in1};}
+    else{$allins{$in1} = $insertions{$in1};}
+}
+foreach my $in2 (sort keys %plusnodes) {
+    if(exists($allins{$in2})){$allins{$in2} += $plusnodes{$in2};}
+    else{$allins{$in2} = $plusnodes{$in2};}
+}
+
 print $outs "EVENT: Insertion\n";
-foreach my $in (sort keys %insertions) {
-    my $sum = $insertions{$in} + $plusnodes{$in};
-    print $outs "$in\t$sum\n";
+foreach my $in (sort keys %allins) {
+    print $outs "$in\t$allins{$in}\n";
 }
 print $outs "\n\n";
 
