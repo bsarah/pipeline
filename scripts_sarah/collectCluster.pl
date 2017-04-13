@@ -133,7 +133,7 @@ while(<FA>){
 	#standardize secondary structure
 	my $struc;
 	if($mode==0){$struc = $F[$arrlen-3];}
-	else{$struc = $F[$arrlen-4];}
+	else{$struc = $F[$arrlen-5];}
 	my $a = "<";
 	my $b="(";
 	my $c=">";
@@ -154,13 +154,13 @@ while(<FA>){
 	if($mode == 0){
 	    $F[$arrlen-3]=$struc;
 	}
-	else{$F[$arrlen-4]=$struc;}
+	else{$F[$arrlen-5]=$struc;}
 	    
 	# work on sequence, find intron, delete - and turn to lower case
 
 	my $preseq;
 	if($mode == 0){$preseq = $F[$arrlen-2];}
-	else{$preseq = $F[$arrlen-5];}
+	else{$preseq = $F[$arrlen-4];}
 	my @introns = ();
 	my @intronpos = ();
 	my $pos1 = index($preseq,"*");
@@ -210,7 +210,7 @@ while(<FA>){
 	my $seq2 = lc $seq;
 
 	if($mode ==0){$F[$arrlen-2]=$seq2;}
-	else{$F[$arrlen-5]=$seq2;}
+	else{$F[$arrlen-4]=$seq2;}
 
 	if($mode == 0){
 	    my $score = $F[$arrlen-1];
