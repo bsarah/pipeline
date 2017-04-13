@@ -57,6 +57,9 @@ my @inremoldings = ();
 #The pairs of elements are defined as orthologs as they have the same types but the similarity is below the orthology threshold.
 #this is only reported IFF there are more than just one type!
 
+my %elemcount = (); #count how many elements of which species occur during the creation of alignments
+
+
 open(my $outm,">>",$matchout);
 open(my $outd,">>",$duplout);
 open(my $outi,">>",$insout);
@@ -137,7 +140,9 @@ while(<FA>){
 	if($mode == 0){
 	    #nodes look like: chr_spec_id_start_end_strand_pseudo
 	    my $spec = $G[(scalar @G) - 6];
+	    my $spec2 = $G2[(scalar @G2) - 6];
 	    $species{$spec} = "";
+	    $species{$spec2} = "";
 	    $spec2pseudo{$spec} = "";
 	    my $startvec = $G[(scalar @G) - 4] + (0.0001 * $G[(scalar @G) - 5]);
 	    if(exists $start2node{$startvec}){}
@@ -152,6 +157,8 @@ while(<FA>){
 	    #nodes look like: chr_spec_id_start_end_strand_type_pseudo
 	    my $spec = $G[(scalar @G) - 7];
 	    $species{$spec} = "";
+	    my $spec2 = $G2[(scalar @G2) - 7];
+	    $species{$spec2} = "";
 	    $spec2pseudo{$spec} = "";
 	    my $startvec = $G[(scalar @G) - 5] + (0.0001 * $G[(scalar @G) - 6]);
 	    if(exists $start2node{$startvec}){}
@@ -284,10 +291,28 @@ while(<FA>){
     ##create graphs out of the duplciation alignments, edges are where the columns fit
     ##nodes are: letter_spec_id!!!
     ##edges are alphabetically sorted e1 < e2 (unique edges), written with e1 e2
-    
 
+ 
+    
+    
+    my $lseq1sum = 0;
+    my $jump = 0;
     ##get alignments for each species against each other
     foreach my $k (keys %species){
+	my $lseq1 = $species{$k};
+	my $lseq1len = length($lseq1);
+	$lseq1sum += $lseq1len;
+	if(exists($elemcount{$k})){$elemcount{$k}+=$lseq1len;}
+	else{$elemcount{$k}=$lseq1len;}
+	##skip if it is the same species as there cannot be an edge
+	##problem, if the cluster consists of only nodes of the same species!
+	##thus, add those elements directly to the insertions
+	if(scalar (keys %species) == 1){
+	    if(exists $insevents{$k}){$insevents{$k} += $lseq1len;}
+	    else{$insevents{$k} = $lseq1len;}
+	    $jump=1;
+	    last;
+	}
 	print $outgr "\@$k\t$species{$k}\n";
 #	print "\@$k\t$species{$k}\n";
 	my $match=0; #m
@@ -297,8 +322,8 @@ while(<FA>){
 	my $del=0; #l
 	foreach my $k2 (keys %species){
 	    if($k eq $k2) {next;}
-	    my $lseq1 = $species{$k};
 	    my $lseq2 = $species{$k2};
+	    my $lseq2len = length($lseq2);
 	    my $cmd1 = "$pathtonw/altNW 1 1 \"$lseq1\" \"$lseq2\"";
 #	    print "altnwcmd: $cmd1 \n";
 	    my @out1 = readpipe("$cmd1");
@@ -321,6 +346,19 @@ while(<FA>){
 #	    my $p =0;
 	    my @ref = split '',$out1[1];
 	    my @oth = split '',$out1[2];
+	    if(scalar @ref != scalar @oth){print $outs "alignment does not fit! file: $curfile \n";}
+	    my $rcount =0;
+	    my $ocount=0;
+	    for(my $r=0;$r<scalar @ref;$r++){
+		if($ref[$r] eq '-' || $ref[$r] eq '~'){}
+		else{$rcount++;}
+		if($oth[$r] eq '-' || $oth[$r] eq '~'){}
+		else{$ocount++;}
+	    }
+	    #compare sequence lengths with seq len in alignment
+	    if($lseq1len != $rcount){print $outs "lengths don't fit! sequence:$lseq1len, alnseq: $rcount, file: $curfile \n";}
+	    if($lseq2len != $ocount){print $outs "lengths don't fit! sequence:$lseq2len, alnseq: $ocount, file: $curfile \n";}
+
 #	    print "spec2pseudo k,k2: $spec2pseudo{$k},$spec2pseudo{$k2} \n";
 	    my @sp12pseudo = split '', $spec2pseudo{$k};
 	    my @sp22pseudo = split '', $spec2pseudo{$k2};	    
@@ -367,6 +405,7 @@ while(<FA>){
 			    if($v1 lt $v2){$ed = "$v1 $v2";}
 			    else{$ed = "$v2 $v1";}
 			    if(none {$_ eq $ed} @arcs){push @arcs, $ed;}
+			    last;
 			}
 			$zz--;
 		    }
@@ -393,6 +432,7 @@ while(<FA>){
 			    if($v1 lt $v2){$ed = "$v1 $v2";}
 			    else{$ed = "$v2 $v1";}
 			    if(none {$_ eq $ed} @arcs){push @arcs, $ed;}
+			    last;
 			}
 			$zz2--;
 		    }
@@ -409,25 +449,34 @@ while(<FA>){
 	}
 
     }
+    ##if jump==1, no graph could be built
+    if($jump==1){
+	next;
+    }
+
     
     ##graph for this cluster is built.
     ##get connected components
     my $vertices = join(',',@vertices);
+    my $curvertnum = scalar @vertices;
+    if($lseq1sum != $curvertnum){print $outs "Sequence sum does not fit vertex num: seq: $lseq1sum, vertex: $curvertnum, vertices: $vertices, file: $curfile \n";}
     my $arcs = join(',',@arcs);
  #   print "vertices: $vertices \n";
  #   print "arcs: $arcs \n";
     my @CCs = connectedComponents($vertices,$arcs);
-
+    
     
     ##count events for each CC, build ePoPE input for each CC
-    my $ccnum = scalar @CCs;
- #   print "ccnum: $ccnum \n";
+    my $perccnum = scalar @CCs; #add all nodes of each cc for this graph to see if it fits the curvertnum
+    #   print "ccnum: $ccnum \n";
+    my $ccnodecount = 0;
     my $cccount = 0;
     for(my $ii = 0; $ii < scalar @CCs; $ii++){
 #	print "cc: $CCs[$ii] \n";
 	my %spe2count = ();
 	my %pse2count = ();
 	my @verts = split ' ', $CCs[$ii];
+	$ccnodecount += scalar @verts;
 	my $outpo;
 	if(scalar @verts >= 2){
 	    my $outname = "$newname\_$cccount\.ali";
@@ -556,6 +605,10 @@ while(<FA>){
 	    }
 	}	
     }#done check for every CC
+    #check if ccnodecount == curvertnum
+    if($ccnodecount != $curvertnum){
+	print $outs "numbers don't fit! previous nodenum: $curvertnum, now: $ccnodecount\n";
+    }
     
     ##how to get those events into the tree?
     
@@ -618,7 +671,11 @@ foreach my $mi (sort keys %psevents) {
 #my $totCCnum = 0; ##num of CCs for ePoPE in total
 #my $maxCC = 0;
 #my $maxCCaln = "";
-	
+
+#print $outs "===============Element counts\===============\n";
+#for my $kel (keys %elemcount){
+#    print $outs "$kel $elemcount{$kel}\n";
+#}
 
 print $outs "===============Duplication alignments\===============\n";
 print $outs "Duplication alignments and genetic events information: \n";

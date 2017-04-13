@@ -53,7 +53,7 @@ while(<TF>){
     
 if($tree eq ""){print "tree format doesn't fit!\n"; exit 1;}
 
-print $outs "tree: $tree \n";
+#print $outs "tree: $tree \n";
 
 ##split the tree into an array of its elements
 my @T = (); ##tree with its components
@@ -134,7 +134,7 @@ while(<PS>){
 }
 
 
-
+my %totcounts = ();
 
 ##MATCHES
 ##analyse match nodes first as they include several species
@@ -152,7 +152,10 @@ while(<FA>){
     my $num = $F[1];
     my @nums = (); ##get bracket numbers for each species
     my @ids = (); ##indices in the tree array
-
+    for(my $s = 0;$s<scalar @S;$s++){
+	if(exists($totcounts{$S[$s]})){$totcounts{$S[$s]}+=$num;}
+	else{$totcounts{$S[$s]}=$num;}
+    }
     
     
  #   print "species: $F[0] \n";
@@ -195,7 +198,6 @@ while(<FA>){
 	    if($N[$t4] != $num1){next;}
 	    $num1--;
 	    if($num1 < 0){push @path1, $rootid;last;}
-	    print "t4: $t4 \n";
 	    push @path1, $t4;
 	}
 
@@ -231,7 +233,7 @@ while(<FA>){
 	    for(my $b1 = 0; $b1 < scalar @path2; $b1++){
 		if($path1[$a1] == $path2[$b1]){
 		    push @pdiff, $path2[$b1];
-		    last; #this can be deleted later on in order to get all overlapping nodes
+#		    last; #this can be deleted later on in order to get all overlapping nodes
 		}
 	    }
 
@@ -246,7 +248,7 @@ while(<FA>){
 	else{
 	    #choose the curlca with the highest N
 	    my $curplca = $N[$pdiff[0]];
-	    my $curpid = 0;
+	    my $curpid = $rootid;
 	    for(my $pd=1;$pd<scalar @pdiff;$pd++){
 		if($N[$pdiff[$pd]] >= $curplca){
 		    $curplca = $N[$pdiff[$pd]];
@@ -355,61 +357,52 @@ while(<FA>){
     ##add corresponding number to this event and do deletions for all species not involved but child of lca
     $plusnodes{$T[$curlca]} += $num;
     ##find all nodes under curlca and check if it is leaves
-    my @leaves = (); 
+    my @leaves = (); #indices of leaves
+    my @lili = (); #names of leaves
     for(my $m = $curlca -1; $m >=0; $m--){
 	if($N[$m] == $N[$curlca]){last;}
-	if($N[$m] > $N[$curlca]){push @leaves, $m;}
+	if($N[$m] > $N[$curlca]){
+	    #check if the current element is in L and not in S
+	    for(my $l = 0; $l<scalar @L;$l++){
+		if($T[$m] eq $L[$l]){
+		    #it is a leaf
+		    my $isSpec = 0;
+		    for(my $s = 0; $s < scalar @S;$s++){
+			#check if it is in the current species, then not in leaves to delete
+			if($T[$m] eq $S[$s]){$isSpec=1;last;}
+		    }
+		    if($isSpec == 1){last;}
+		    else{push @leaves, $m; push @lili, $T[$m];}
+		}
+	    }
+	}
     }
+
+    #lili and leaves are no the names and indices of leaves to delete
+    if(scalar @lili == 1){
+	$minusnodes{$lili[0]} += $num;
+    }
+    elsif(scalar @lili == 0){next;}
+    else{
+	my $Treestr = join('=', @T);
+	my $Leafstr = join('=',@lili);
+	my @leafsToDel = findParentOfAll($Treestr,$Leafstr);
+	if(scalar @leafsToDel == 0){
+	    next;
+	}
+	my $leafstodelstr = join("=",@leafsToDel);
+	for(my $ltd=0;$ltd < scalar @leafsToDel;$ltd++){
+	    $minusnodes{$leafsToDel[$ltd]} += $num;
+	}
+    }
+
+    
 
 #    print "leaves: \n";
 #    print join(" ", @leaves);
 #    print "\n";
 
-    my @lili = (); #names of leaves
-    for(my $p = 0; $p < scalar @leaves; $p++){
-	push @lili, $T[$leaves[$p]];
-    }
 
-    
-    my %species = map{$_=>1} @S;
-    my %lili = map{$_=>1} @lili;
-    my %L = map{$_=>1} @L;
-
-    ##intersection of leaves and L
-    my @realL = grep( $L{$_}, @lili);
-
-    ##intersection of species and realL
-    my @intersect = grep( $species{$_}, @realL);
-    
-    my %intersect = map{$_=>1} @intersect;
-    
-    ##diff between realL and intersect
-    ##should give you only the leaves that are real leaves and not contained in species!
-    ##thus, those leaves need to be deleted
-    my @diff = grep(!defined $intersect{$_}, @realL);
-    if(scalar @diff == 0 && scalar @intersect == 0 && scalar @realL == 0){
-	print $outs "no elements with $T[$curlca]; pathes: $pstr1; $pstr2\n";
-    }
-
-    if(scalar @diff >= scalar @L){
-	print $outs "all leaves deleted?\n";
-    }
-    
-    if(scalar @diff == 1){
-	$minusnodes{$diff[0]} += $num;
-    }
-    elsif(scalar @diff == 0){next;}
-    else{
-	my $Treestr = join('=', @T);
-	my $Leafstr = join('=',@diff);
-	my @leafsToDel = findParentOfAll($Treestr,$Leafstr);
-	if(scalar @leafsToDel == 0){
-	    print $outs "no parent of all: $Leafstr\n";
-	}
-	for(my $ltd=0;$ltd < scalar @leafsToDel;$ltd++){
-	    $minusnodes{$leafsToDel[$ltd]} += $num;
-	}
-    }
 
 =for comment
    
@@ -557,6 +550,8 @@ while(<FD>){
     my @D = split '\t', $dline; ##should have at least 2! entries
     if(scalar @D < 2){print "misformatted input line in duplications, will be skipped! \n"; next;}
     $duplications{$D[0]} += $D[1];
+    if(exists($totcounts{$D[0]})){$totcounts{$D[0]}+=$D[1];}
+    else{$totcounts{$D[0]}=$D[1];}
 }
 
     
@@ -569,6 +564,8 @@ while(<FI>){
     my @I = split '\t', $iline; ##should have at least 2! entries
     if(scalar @I < 2){print "misformatted input line in insertions, will be skipped! \n"; next;}
     $insertions{$I[0]} += $I[1];
+    if(exists($totcounts{$I[0]})){$totcounts{$I[0]}+=$I[1];}
+    else{$totcounts{$I[0]}=$I[1];}
 }
 
 
@@ -738,6 +735,14 @@ foreach my $in2 (sort keys %plusnodes) {
     else{$allins{$in2} = $plusnodes{$in2};}
 }
 
+#print $outs "Check: filecounts (match, dupl, insertions)\n";
+#foreach my $tc (sort keys %totcounts) {
+#    print $outs "$tc\t$totcounts{$tc}\n";
+#}
+#print $outs "\n\n";
+
+
+
 print $outs "EVENT: Insertion\n";
 foreach my $in (sort keys %allins) {
     print $outs "$in\t$allins{$in}\n";
@@ -790,19 +795,21 @@ print $outs "\n\n";
 ##TODO add extra files for singletons and numdiffs?
 
 ####print output files for iTOL input
-my $treeout2 = "$iTOLout\/tree.txt";
-my $namesout = "$iTOLout\/tree_labels.txt";
-my $totout = "$iTOLout\/tree_labels_tot.txt";
-my $insout = "$iTOLout\/tree_labels_ins.txt";
-my $delout = "$iTOLout\/tree_labels_del.txt";
-my $dupout = "$iTOLout\/tree_labels_dup.txt";
-my $pseout=  "$iTOLout\/tree_labels_pse.txt";
-my $nonout=  "$iTOLout\/tree_labels_non.txt";
+my $treeout2 = "$iTOLout\/F1tree.txt";
+my $namesout = "$iTOLout\/F2tree_labels.txt";
+my $totout = "$iTOLout\/F3tree_labels_tot.txt";
+my $insout = "$iTOLout\/F4tree_labels_ins.txt";
+my $sinout = "$iTOLout\/F5tree_labels_sin.txt";
+my $delout = "$iTOLout\/F6tree_labels_del.txt";
+my $dupout = "$iTOLout\/F7tree_labels_dup.txt";
+my $pseout=  "$iTOLout\/F8tree_labels_pse.txt";
+my $nonout=  "$iTOLout\/F9tree_labels_non.txt";
 
 open(my $outt2,">>",$treeout2);
 open(my $outn,">>",$namesout);
 open(my $outx,">>",$totout);
 open(my $outi,">>",$insout);
+open(my $outz,">>",$sinout);
 open(my $outd,">>",$delout);
 open(my $outu,">>",$dupout);
 open(my $outp,">>",$pseout);
@@ -828,6 +835,12 @@ my $header_ins =
 SEPARATOR COMMA
 DATASET_LABEL,Insertions
 COLOR,#00ff00\n";
+
+my $header_sin =
+"DATASET_TEXT
+SEPARATOR COMMA
+DATASET_LABEL,Singletons
+COLOR,#0059ff\n";
 
 my $header_del =
 "DATASET_TEXT
@@ -895,8 +908,8 @@ my $legend =
 "
 LEGEND_TITLE,Element Counts
 LEGEND_SHAPES,1,1,1,1,1,1
-LEGEND_COLORS,#000000,#00ff00,#ff0000,#0000ff,#ff00ff,#00ffff
-LEGEND_LABELS,Total,Insertions,Deletions,Duplications,Pseudogenizations,Excluded
+LEGEND_COLORS,#000000,#00ff00,#0059ff,#ff0000,#0000ff,#ff00ff,#00ffff
+LEGEND_LABELS,Total,Insertions,Singletons,Deletions,Duplications,Pseudogenizations,Excluded
 ";
 
 
@@ -911,6 +924,10 @@ print $outx "\n\nDATA\n";
 
 print $outi "$header_ins$inbetweentext";
 print $outi "\n\nDATA\n";
+
+print $outz "$header_sin$inbetweentext";
+print $outz "\n\nDATA\n";
+
 
 print $outd "$header_del$inbetweentext";
 print $outd "\n\nDATA\n";
@@ -942,6 +959,7 @@ for(my $tt=0;$tt < scalar @T;$tt++){
 	    print $outx "$T[$tt],$nline,-1,#000000,normal,1,0\n";
 	    my $sumi = $insertions{$T[$tt]} + $plusnodes{$T[$tt]};
 	    print $outi "$T[$tt],$sumi,-1,#00ff00,normal,1,0\n";
+	    print $outz "$T[$tt],$singletons{$T[$tt]},-1,#0059ff,normal,1,0\n";
 	    print $outd "$T[$tt],$minusnodes{$T[$tt]},-1,#ff0000,normal,1,0\n";
 	    print $outu "$T[$tt],$duplications{$T[$tt]},-1,#0000ff,normal,1,0\n";
 	    print $outp "$T[$tt],$pseudos{$T[$tt]},-1,#ff00ff,normal,1,0\n";
@@ -984,10 +1002,11 @@ sub findParentOfAll{
     my @inp= @_;
     #tree and leaf string is separated by =
     my @T = split '=', $inp[0];
-    my @L = split '=', $inp[1];
+    my @L = split '=', $inp[1]; #names of the species
     my @Ltmp = split '=', $inp[1];
     
     my @output = ();
+    my $rootid = -1;
     
     my @N = ();
     my @allleaves = ();
@@ -995,8 +1014,6 @@ sub findParentOfAll{
     my $maxbracket = 0;
     for(my $i = 0; $i < scalar @T; $i++)
     {
-	
-	
 	if($T[$i] eq ')' || $T[$i] eq '(' || $T[$i] eq ',' || $T[$i] eq ';'){
 	    
 	    push @N, -2;
@@ -1006,6 +1023,7 @@ sub findParentOfAll{
 	}
 	else{
 	    push @N, $brackets;
+	    if($brackets == 0){$rootid = $i;}
 	    if($i>0){
 		if($T[$i-1] eq ')'){
 		    ##this is an inner node
@@ -1016,6 +1034,8 @@ sub findParentOfAll{
 	    }	
 	}
     }
+
+    if($rootid == -1){return @output;}
     
     #print join(" ",@T);
     #print "\n";
@@ -1023,6 +1043,148 @@ sub findParentOfAll{
     #print "\n";
     #print join(" ",@allleaves);
     #print "\n";
+    my @Lids = (); #ids of the leaves in T and N
+    for(my $l=0;$l<scalar @L;$l++){
+	for(my $t=0;$t<scalar @T;$t++){
+	    if($L[$l] eq $T[$t]){
+		push @Lids, $t;
+	    }
+	}	
+    }
+
+    my @Ltmpids = @Lids;
+    my @L2tmp = ();
+    my @L2tmpids = ();
+    #start with the leaf which is deepest in the tree
+    #check if all its siblings are in the working array, too.
+    #if yes, push father in current working array.
+    #if not, push current node in output array
+    while(scalar @Ltmp > 0){
+	@L2tmp = ();
+	@L2tmpids = ();
+	my $maxdepth = 0;
+	my $maxdid = -1;
+	for(my $l=0;$l<scalar @Ltmp;$l++){
+	    if($N[$Ltmpids[$l]] > $maxdepth){
+		$maxdepth = $N[$Ltmpids[$l]];
+		$maxdid = $l;
+	    }
+	}
+	#get siblings to $L[$maxdid]
+	#take all nodes from the tree that have equal N until there is a lower N in between
+	my $goodup = 0; #set this to one if sibling are found to be in Ltmp or no siblings
+	my $gooddown = 0;
+	my $up= $Ltmpids[$maxdid] + 1;
+	my $down = $Ltmpids[$maxdid]-1;
+	my @goodsibs = (); #ids of sibs in T
+	while($up < scalar @T){
+	    if($N[$up]<0){$up++;next;}
+	    if($N[$up]<$maxdepth)
+	    {
+		$goodup=1;
+		last;
+	    }
+	    elsif($N[$up]>$maxdepth){$up++;next;}
+	    else{
+		my $found = 0;
+		#sibling, check if it is containe in Ltmp
+		for(my $lt = 0;$lt < scalar @Ltmp;$lt++){
+		    if($T[$up] eq $Ltmp[$lt]){
+			push @goodsibs, $up; 
+			$found = 1;
+			last;
+		    }
+		}
+		$up++;
+		if($found==0){last;}
+	    }
+	}
+	while($down >= 0){
+	    if($N[$down]<0){$down--;next;}
+	    if($N[$down]<$maxdepth)
+	    {
+		$gooddown=1;
+		last;
+	    }
+	    elsif($N[$down]>$maxdepth){$down--;next;}
+	    else{
+		my $found = 0;
+		#sibling, check if it is containe in Ltmp
+		for(my $lt = 0;$lt < scalar @Ltmp;$lt++){
+		    if($T[$down] eq $Ltmp[$lt]){
+			push @goodsibs, $down; 
+			$found = 1;
+			last;
+		    }
+		}
+		$down--;
+		if($found==0){last;}
+	    }
+	}
+	push @goodsibs, $Ltmpids[$maxdid];
+	#update Ltmp to L2tmp without elems in goodsibs
+	for(my $li = 0;$li < scalar @Ltmpids;$li++){
+	    my $lexists = 0;
+	    for(my $gs = 0; $gs < scalar @goodsibs;$gs++){
+		if($goodsibs[$gs] == $Ltmpids[$li]){$lexists=1;last;}
+	    }
+	    if($lexists == 0){
+		push @L2tmpids, $Ltmpids[$li];
+		push @L2tmp, $Ltmp[$li];
+	    }
+	}
+	
+	#if good in both directions, push father in L2tmp, delete goodsibs from Ltmp
+	if($goodup == 1 && $gooddown == 1){
+	    my @path1 = ();
+	    my @path2 = ();
+	    my $num1 = $N[$goodsibs[0]];
+	    my $num2 = $N[$goodsibs[1]];
+	    for(my $t4=$goodsibs[0];$t4<scalar @T;$t4++){
+		if($N[$t4] != $num1){next;}
+		$num1--;
+		if($num1 < 0){push @path1, $rootid;last;}
+		push @path1, $t4;	
+	    }
+	    for(my $t5=$goodsibs[1];$t5<scalar @T;$t5++){
+		if($N[$t5] != $num2){next;}
+		$num2--;
+		if($num2 < 0){push @path2, $rootid;last;}
+		push @path2, $t5;	
+	    }
+	    ##look for smallest node that overlaps and push it in L2tmp
+	    for(my $f1=0;$f1<scalar @path1;$f1++){
+		my $ff = 0;
+		for(my $f2=0;$f2<scalar @path2;$f2++){
+		    if($path1[$f1] == $path2[$f2]){
+			push @L2tmpids, $path2[$f2];
+			push @L2tmp, $T[$path2[$f2]];
+			$ff=1;
+			last;
+		    }
+		}
+		if($ff==1){last;}
+	    }
+	}
+	#else push goodsibs and curnode in output, delete from Ltmp
+	else{
+	    for(my $gg=0;$gg<scalar @goodsibs;$gg++){
+		push @output, $T[$goodsibs[$gg]];
+	    }
+	}
+	
+	#update Ltmp, empty L2tmp
+	@Ltmp = @L2tmp;
+	@Ltmpids = @L2tmpids;
+    }
+
+    return @output;
+    
+} 
+
+__END__
+  
+#####################old version
     
     
     while(scalar @Ltmp > 0){
