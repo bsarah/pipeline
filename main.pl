@@ -215,7 +215,11 @@ elsif((! $newicktree) && $createalns == 1){print "Please give a newick tree as i
 else{}
 my $idstr = "";
 if($ids && $createalns == 1){$idstr = "--id $ids ";}
-elsif((! $ids) && $createalns == 1){print "No file given to translate newick IDs into MAF IDs (option --id). Please make sure that IDs fit!\n";}
+elsif((! $ids) && $createalns == 1)
+{
+print "No file given to translate newick IDs into MAF IDs (option --id). Please make sure that IDs fit!\n";
+$ids="=";
+}
 else{}
 
 
@@ -348,7 +352,7 @@ my $summarypath = "$outpath\/summaries";
 
 ##extendtree
 my $formtree = "tree_formatted.newick";
-my $formcmd = "$perlpath\/perl $scripts_sarah\/extendTree.pl $newicktree $summarypath\/$formtree";
+my $formcmd = "$perlpath\/perl $scripts_sarah\/extendTree.pl $newicktree $ids $summarypath\/$formtree";
 my @formout = readpipe("$formcmd");
 $newicktree = "$summarypath\/$formtree";
 
