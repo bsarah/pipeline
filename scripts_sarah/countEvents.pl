@@ -840,7 +840,7 @@ my $header_sin =
 "DATASET_TEXT
 SEPARATOR COMMA
 DATASET_LABEL,Singletons
-COLOR,#0059ff\n";
+COLOR,#ffa500\n";
 
 my $header_del =
 "DATASET_TEXT
@@ -858,7 +858,7 @@ my $header_pse =
 "DATASET_TEXT
 SEPARATOR COMMA
 DATASET_LABEL,Pseudogenizations
-COLOR,#ff00ff\n";
+COLOR,#551a8b\n";
 
 my $header_non =
 "DATASET_TEXT
@@ -907,8 +907,8 @@ SIZE_FACTOR,1
 my $legend =
 "
 LEGEND_TITLE,Element Counts
-LEGEND_SHAPES,1,1,1,1,1,1
-LEGEND_COLORS,#000000,#00ff00,#0059ff,#ff0000,#0000ff,#ff00ff,#00ffff
+LEGEND_SHAPES,1,1,1,1,1,1,1
+LEGEND_COLORS,#000000,#00ff00,#ffa500,#ff0000,#0000ff,#551a8b,#00ffff
 LEGEND_LABELS,Total,Insertions,Singletons,Deletions,Duplications,Pseudogenizations,Excluded
 ";
 
@@ -959,10 +959,10 @@ for(my $tt=0;$tt < scalar @T;$tt++){
 	    print $outx "$T[$tt],$nline,-1,#000000,normal,1,0\n";
 	    my $sumi = $insertions{$T[$tt]} + $plusnodes{$T[$tt]};
 	    print $outi "$T[$tt],$sumi,-1,#00ff00,normal,1,0\n";
-	    print $outz "$T[$tt],$singletons{$T[$tt]},-1,#0059ff,normal,1,0\n";
+	    print $outz "$T[$tt],$singletons{$T[$tt]},-1,#ffa500,normal,1,0\n";
 	    print $outd "$T[$tt],$minusnodes{$T[$tt]},-1,#ff0000,normal,1,0\n";
 	    print $outu "$T[$tt],$duplications{$T[$tt]},-1,#0000ff,normal,1,0\n";
-	    print $outp "$T[$tt],$pseudos{$T[$tt]},-1,#ff00ff,normal,1,0\n";
+	    print $outp "$T[$tt],$pseudos{$T[$tt]},-1,#551a8b,normal,1,0\n";
 	    my $nonum=0; 
 	    if(exists $nonenums{$T[$tt]}){$nonum = $nonenums{$T[$tt]};}
 	    print $outo "$T[$tt],$nonum,-1,#00ffff,normal,1,0\n";		
@@ -975,7 +975,7 @@ for(my $tt=0;$tt < scalar @T;$tt++){
 	    print $outd "$T[$tt],$minusnodes{$T[$tt]},0.8,#ff0000,normal,1,0\n";
 	    #duplications do not occur at inner nodes
 	    #print $outu "$T[$tt],$duplications{$T[$tt]},0.8,#0000ff,normal,1,0\n";
-	    print $outp "$T[$tt],$pseudos{$T[$tt]},0.95,#ff00ff,normal,1,0\n";		
+	    print $outp "$T[$tt],$pseudos{$T[$tt]},0.95,#551a8b,normal,1,0\n";		
 	}
     }
 }
