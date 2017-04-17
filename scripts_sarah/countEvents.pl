@@ -675,7 +675,7 @@ for(my $ll=0;$ll<scalar @L;$ll++){
 	    if($curnum =~ /^l/){$elemsum -= substr($curnum,1);}#loss
 	    if($curnum =~ /^d/){$elemsum += substr($curnum,1);}#dupl
 	    if($curnum =~ /^s/){$elemsum += substr($curnum,1);}#single	    
-	    if($curnum =~ /^p/){$elemsum += substr($curnum,1);}#pseudo
+	    if($curnum =~ /^p/){$elemsum -= substr($curnum,1);}#pseudo
 	    if($curnum =~ /^n/){$elemsum += substr($curnum,1);}#none
 	}
     }

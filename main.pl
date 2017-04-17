@@ -98,10 +98,13 @@ my $skipa;
 
 my $pwdcmd = "pwd";
 my @outpwd = readpipe("$pwdcmd");
-my $dirname = $outpwd[0];
-chomp($dirname);
+#my $dirname = $outpwd[0];
+#chomp($dirname);
 #my $dirname = dirname(__FILE__);
 #my $dirname = File::Spec->rel2abs(__FILE__);
+
+#ATTENTION hardcoded dirname!
+my $dirname = "/homes/biertank/bsarah/Documents/projects/trnaevo/pipeline";
 print "dirname: $dirname \n";
 
 #define other information
