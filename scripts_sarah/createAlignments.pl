@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-## perl createAlignments.pl edlilist outpath pathtonw secsim strsim pseudoscore singletoncount mode numdifftypes outfolder match dupl ins pseudo summary
+## perl createAlignments.pl edlilist outpath pathtonw secsim strsim pseudoscore singletoncount mode numdifftypes outfolder match dupl ins pseudo summary remodlingsout inremoldingsout
 
 ##program will produce sequences of letters, where the same letter means similar sequences, depending on the threshold.
 ##thus one letter for each connected component.
@@ -35,7 +35,8 @@ my $duplout = shift;
 my $insout = shift;
 my $pseout = shift;
 my $summary = shift; #usual summary after running the script
-
+my $sumrems = shift;
+my $suminrems = shift;
 
 
 #create a hash with strings that show spec1_spec2,spec1,spec3,spec5 as key whereas
@@ -65,6 +66,10 @@ open(my $outd,">>",$duplout);
 open(my $outi,">>",$insout);
 open(my $outp,">>",$pseout);
 open(my $outs,">>", $summary);
+
+open(my $outsr,">>", $sumrems);
+open(my $outsi,">>", $suminrems);
+
 
 ##filter which is the biggest alignment created
 my $maxlen = 0;
@@ -706,18 +711,18 @@ stand for duplications, '-' for insertions or deletions in the alignment. \n";
 print $outs "\n";
 
 if(scalar @remoldings > 0){
-    print $outs "The following pairs of elements (separated with ':') are defined 
+    print $outsr "The following pairs of elements (separated with ':') are defined 
 as orthologs based on the similarity score but have distinct types according to the input:\n";
     for(my $i=0;$i< scalar @remoldings; $i++){
-	print $outs "$remoldings[$i] \n";
+	print $outsr "$remoldings[$i] \n";
     }
 }
 
 if(scalar @inremoldings > 0){
-    print $outs "The following pairs of elements (separated with ':') are defined 
+    print $outsi "The following pairs of elements (separated with ':') are defined 
 as orthologs as they have the same types but they sequence similarity is below the given threshold:\n";
     for(my $i=0;$i< scalar @inremoldings; $i++){
-	print $outs "$inremoldings[$i] \n";
+	print $outsi "$inremoldings[$i] \n";
     }
 }
 
