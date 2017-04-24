@@ -464,10 +464,18 @@ while(<FA>){
     ##get connected components
     my $vertices = join(',',@vertices);
     my $curvertnum = scalar @vertices;
-    if($lseq1sum != $curvertnum){print $outs "Sequence sum does not fit vertex num: seq: $lseq1sum, vertex: $curvertnum, vertices: $vertices, file: $curfile \n";}
+    if($lseq1sum != $curvertnum){print STDERR "Sequence sum does not fit vertex num: seq: $lseq1sum, vertex: $curvertnum, vertices: $vertices, file: $curfile \n";}
     my $arcs = join(',',@arcs);
  #   print "vertices: $vertices \n";
- #   print "arcs: $arcs \n";
+    #   print "arcs: $arcs \n";
+
+    ##check if all species appear in this cluster
+    ##if a species does not appear, check if
+    ##it is a singleton ok
+    ##the missing species have the anchoring blocks
+    ##if yes: write the combination of species as a deletion(like matches)
+    ##if no: ignore this element in the species (add to missing data list)
+    
     my @CCs = connectedComponents($vertices,$arcs);
     
     

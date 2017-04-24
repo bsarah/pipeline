@@ -181,181 +181,13 @@ while(<FA>){
 #    print "\n";
 #    print join(" ",@nums);
 #    print "\n";
-    my $pstr1="";
-    my $pstr2="";
 
-    ##try to find curlca by always looking at two species at the same time
-    ##then, get set of nodes from the pathes from the current leaves to the root and intersect them
-    ##if there are several nodes in the intersection, take the one with the highest N
-    my $curlca = $ids[0]; #start with species at $S[0]
-    for(my $k=1; $k < scalar @S; $k++){
-	my @path1 = ();
-	my @path2 = ();
-	push @path1, $curlca;
-	push @path2, $ids[$k];
-	my $num1 = $N[$curlca];
-	for(my $t4=$curlca;$t4<scalar @T;$t4++){
-	    if($N[$t4] != $num1){next;}
-	    $num1--;
-	    if($num1 < 0){push @path1, $rootid;last;}
-	    push @path1, $t4;
-	}
+    my $Treestr = join('=', @T);
+    my $speciestr = join('=',@S);
 
-	my $num2 = $N[$ids[$k]];
-	for(my $t5=$ids[$k];$t5<scalar @T;$t5++){
-	    if($N[$t5] != $num2){next;}
-	    $num2--;
-	    if($num2 < 0){push @path2, $rootid;last;}
-	    push @path2, $t5;
-	}
-
-	if(scalar @path1 == 0){
-	    print $outs "path1 zero: $F[0]\n";
-	}
-	else{$pstr1 = join("=",@path1);}
-
-	if(scalar @path2 == 0){
-	    print $outs "path2 zero: $F[0]\n";
-	}
-
-	if(scalar @path1 == 0 || scalar @path2 == 0){
-	    next;
-	}
-	else{$pstr2 = join("=",@path2);}
-
-	
-
-
-	#do the intersection of both
-	##as we go from leaves to root, we take the first element that we have in common
-	my @pdiff = ();
-	for(my $a1 = 0; $a1 < scalar @path1;$a1++){
-	    for(my $b1 = 0; $b1 < scalar @path2; $b1++){
-		if($path1[$a1] == $path2[$b1]){
-		    push @pdiff, $path2[$b1];
-#		    last; #this can be deleted later on in order to get all overlapping nodes
-		}
-	    }
-
-	}
-
-	if(scalar @pdiff == 0){
-	    print $outs "son mist pathes: $pstr1; $pstr2\n";
-	}
-	elsif(scalar @pdiff == 1){
-	    $curlca = $pdiff[0];
-	}
-	else{
-	    #choose the curlca with the highest N
-	    my $curplca = $N[$pdiff[0]];
-	    my $curpid = $rootid;
-	    for(my $pd=1;$pd<scalar @pdiff;$pd++){
-		if($N[$pdiff[$pd]] >= $curplca){
-		    $curplca = $N[$pdiff[$pd]];
-		    $curpid = $pdiff[$pd];
-		}
-	    }
-	    $curlca = $curpid;
-	}
-    }
-
-    if($N[$curlca] < 0){
-	print $outs "strange curlca $T[$curlca], species: $F[0], pathes: $pstr1; $pstr2\n";
-    }
-
-    
-=for comment    
-    ##find lca
-    my $curlca = $ids[0]; #start with species at $S[0]
-    for(my $k=1; $k < scalar @S; $k++){
-#	print "curlca: $curlca, nums: $N[$curlca] \n";
-	my $startidx;
-	my $startnum;
-	my $otheridx;
-	my $othernum;
-#	print "k: $k, id: $ids[$k], num: $N[$ids[$k]] ";
-	if($N[$curlca] >= $N[$ids[$k]]){
-	    $startidx = $curlca;
-	    $startnum = $N[$curlca];
-	    $otheridx = $ids[$k];
-	    $othernum = $N[$ids[$k]]
-	}
-	else{#if N[ids[k]] < N[curlca] then idsk is above curlca
-	    $curlca = $ids[$k];
-	    $startidx = $ids[$k];
-	    $startnum = $N[$ids[$k]];
-	    $otheridx = $curlca;
-	    $othernum = $N[$curlca]
-	}
-#	print "before in between startidx: $startidx, startnum: $startnum, otheridx: $otheridx, othernum: $othernum \n";
-	if($startnum == 0 && $othernum == 0)##both are the root
-	{
-	    $curlca = $startidx;
-	    last;
-	}	
-    
-
-        #try to find the common parent of both current nodes in order to get the curlca
-	my $pnum = $startnum;
-	my $pidx = $startidx;
-#	print "in between pidx: $pidx, otheridx: $otheridx, pnum: $pnum, othernum: $othernum \n";
-	while($pnum != $startnum-1){
-	    if($pnum == 0){last;}
-	    $pidx++;
-	    $pnum = $N[$pidx];
-#	    last;
-	}
-#	print "in between1a pidx: $pidx, pnum: $pnum, otheridx: $otheridx, othernum: $othernum, curlca: $curlca \n";
-    
-	if($pidx == $otheridx){$curlca = $pidx;}
-	else{
-	    my $go = 1;
-	    while($go){
-#		last;
-		my $minidx; ##smaller in the tree but higher number
-		my $minnum;
-		my $maxidx;
-		my $maxnum;
-		if($pnum >= $othernum){
-		    $minnum = $pnum;
-		    $minidx = $pidx;
-		    $maxnum = $othernum;
-		    $maxidx = $otheridx;
-		}
-		else{
-		    $maxnum = $pnum;
-		    $maxidx = $pidx;
-		    $minnum = $othernum;
-		    $minidx = $otheridx;
-		}
-#		print "min idx num: $minidx, $minnum; max idx num: $maxidx, $maxnum \n ";
-		if($minnum == 0 && $maxnum==0){
-		    $curlca = $minidx;
-		    $go = 0;
-		    next;
-		}
-		$pidx = $minidx;
-		$pnum = $N[$pidx];#==$minnum
-#		print "in between pidx: $pidx, pnum: $pnum \n";
-		while($pnum != $minnum-1 && $pidx < (scalar @N) -2){ 
-		    $pidx++;
-		    $pnum = $N[$pidx];
-#		    print "in between2 pidx: $pidx, pnum: $pnum \n";
-#		    last;
-		}
-		if($pidx == $maxidx){$curlca = $pidx; $go = 0;}
-		
-		if($pidx == (scalar @T) -2){$curlca = $pidx; $go=0;}##make sure that there is an end
-		$otheridx = $maxidx;
-		$othernum = $maxnum;
-	    }
-	}
-    }
-=cut
-
-    ##curlca of all species for this event found
-    ##add corresponding number to this event and do deletions for all species not involved but child of lca
-    $plusnodes{$T[$curlca]} += $num;
+    my $lca = findLCA($Treestr,$speciestr);
+    $plusnodes{$T[$lca]} += $num;
+    #find leafs to delete
     ##find all nodes under curlca and check if it is leaves
     my @leaves = (); #indices of leaves
     my @lili = (); #names of leaves
@@ -396,12 +228,17 @@ while(<FA>){
 	}
     }
 
+
+
+#####################only adding leaves#######################
     
+#    my @leafsToAdd = findParentOfAll($Treestr,$speciestr);
+#    for(my $i=0;$i<scalar @leafsToAdd; $i++){
+#	$plusnodes{$leafsToAdd[$i]} += $num;
+#    }
 
-#    print "leaves: \n";
-#    print join(" ", @leaves);
-#    print "\n";
-
+#####################only adding leaves#######################
+    
 
 
 =for comment
@@ -675,7 +512,7 @@ for(my $ll=0;$ll<scalar @L;$ll++){
 	    if($curnum =~ /^l/){$elemsum -= substr($curnum,1);}#loss
 	    if($curnum =~ /^d/){$elemsum += substr($curnum,1);}#dupl
 	    if($curnum =~ /^s/){$elemsum += substr($curnum,1);}#single	    
-	    if($curnum =~ /^p/){$elemsum -= substr($curnum,1);}#pseudo
+	    #if($curnum =~ /^p/){$elemsum += substr($curnum,1);}#pseudo
 	    if($curnum =~ /^n/){$elemsum += substr($curnum,1);}#none
 	}
     }
@@ -995,6 +832,161 @@ for(my $tt=0;$tt < scalar @T;$tt++){
 ##not found, go to the first case
 
 
+sub findLCA{
+    my @inp= @_;
+    #tree and leaf string is separated by =
+    my @T = split '=', $inp[0];
+    my @L = split '=', $inp[1]; #names of the species
+    my @Ltmp = split '=', $inp[1];
+    
+    my @output = ();
+    my $rootid = -1;
+    
+    my @N = ();
+    my @allleaves = ();
+    my $brackets = 0;
+    my $maxbracket = 0;
+    for(my $i = 0; $i < scalar @T; $i++)
+    {
+	if($T[$i] eq ')' || $T[$i] eq '(' || $T[$i] eq ',' || $T[$i] eq ';'){
+	    
+	    push @N, -2;
+	    if($T[$i] eq '('){$brackets++;}
+	    if($T[$i] eq ')'){$brackets--;}
+	    if($brackets > $maxbracket){$maxbracket = $brackets;}
+	}
+	else{
+	    push @N, $brackets;
+	    if($brackets == 0){$rootid = $i;}
+	    if($i>0){
+		if($T[$i-1] eq ')'){
+		    ##this is an inner node
+		}
+		else{
+		    push @allleaves, $T[$i];
+		}
+	    }	
+	}
+    }
+
+    if($rootid == -1){return @output;}
+    
+    #print join(" ",@T);
+    #print "\n";
+    #print join(" ",@N);
+    #print "\n";
+    #print join(" ",@allleaves);
+    #print "\n";
+    my @Lids = (); #ids of the leaves in T and N
+    for(my $l=0;$l<scalar @L;$l++){
+	for(my $t=0;$t<scalar @T;$t++){
+	    if($L[$l] eq $T[$t]){
+		push @Lids, $t;
+	    }
+	}	
+    }
+
+    my @Ltmpids = @Lids;
+    my @L2tmp = ();
+    my @L2tmpids = ();
+    
+    #######################################
+    my $pstr1="";
+    my $pstr2="";
+
+    ##try to find curlca by always looking at two species at the same time
+    ##then, get set of nodes from the pathes from the current leaves to the root and intersect them
+    ##if there are several nodes in the intersection, take the one with the highest N
+    my $curlca = $Lids[0]; #start with species at $S[0]
+    for(my $k=1; $k < scalar @L; $k++){
+	my @path1 = ();
+	my @path2 = ();
+	push @path1, $curlca;
+	push @path2, $Lids[$k];
+	my $num1 = $N[$curlca];
+	for(my $t4=$curlca;$t4<scalar @T;$t4++){
+	    #got up in the tree and check the bracketnums
+	    if($N[$t4] != $num1){next;}
+	    $num1--; #bracketnum
+	    if($num1 < 0){push @path1, $rootid;last;}
+	    push @path1, $t4;
+	}
+
+	my $num2 = $N[$Lids[$k]];
+	for(my $t5=$Lids[$k];$t5<scalar @T;$t5++){
+	    if($N[$t5] != $num2){next;}
+	    $num2--;
+	    if($num2 < 0){push @path2, $rootid;last;}
+	    push @path2, $t5;
+	}
+
+	if(scalar @path1 == 0){
+#	    print $outs "path1 zero: $F[0]\n";
+	}
+	else{$pstr1 = join("=",@path1);}
+
+	if(scalar @path2 == 0){
+#	    print $outs "path2 zero: $F[0]\n";
+	}
+
+	if(scalar @path1 == 0 || scalar @path2 == 0){
+	    next;
+	}
+	else{$pstr2 = join("=",@path2);}
+
+	
+
+
+	#do the intersection of both
+	##as we go from leaves to root, we take the first element that we have in common
+	my @pdiff = ();
+	for(my $a1 = 0; $a1 < scalar @path1;$a1++){
+	    for(my $b1 = 0; $b1 < scalar @path2; $b1++){
+		if($path1[$a1] == $path2[$b1]){
+		    push @pdiff, $path2[$b1];
+#		    last; #this can be deleted later on in order to get all overlapping nodes
+		}
+	    }
+
+	}
+
+	if(scalar @pdiff == 0){
+	    print STDERR "son mist pathes: $pstr1; $pstr2\n";
+	    #	    print $outs "son mist pathes: $pstr1; $pstr2\n";
+	}
+	elsif(scalar @pdiff == 1){
+	    $curlca = $pdiff[0];
+	}
+	else{
+	    #choose the curlca with the highest N
+	    my $curplca = $N[$pdiff[0]];
+	    my $curpid = $rootid;
+	    for(my $pd=1;$pd<scalar @pdiff;$pd++){
+		if($N[$pdiff[$pd]] >= $curplca){
+		    $curplca = $N[$pdiff[$pd]];
+		    $curpid = $pdiff[$pd];
+		}
+	    }
+	    $curlca = $curpid;
+	}
+    }
+
+    if($N[$curlca] < 0){
+	print STDERR "strange curlca $T[$curlca], species: $F[0], pathes: $pstr1; $pstr2\n";
+    }
+
+
+
+    return $curlca;
+
+    
+
+
+}
+
+
+
+
 ##given a list of leaves and a tree, find the lca of the leaves s.t. there is NO child of the parent that is NOT in the given leaf list
 ##This function will be used to determine the deletions and the pseudogenes
 ##the return value is again a list of nodes in the tree
@@ -1100,8 +1092,8 @@ sub findParentOfAll{
 	    }
 	}
 	while($down >= 0){
-	    if($N[$down]<0){$down--;next;}
-	    if($N[$down]<$maxdepth)
+	    if($N[$down]<0 && $down>0){$down--;next;}
+	    if($N[$down]<$maxdepth || $down==0)
 	    {
 		$gooddown=1;
 		last;
@@ -1135,7 +1127,7 @@ sub findParentOfAll{
 	}
 	
 	#if good in both directions, push father in L2tmp, delete goodsibs from Ltmp
-	if($goodup == 1 && $gooddown == 1){
+	if($goodup == 1 && $gooddown == 1 && scalar @Ltmp > 1){
 	    my @path1 = ();
 	    my @path2 = ();
 	    my $num1 = $N[$goodsibs[0]];

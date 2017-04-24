@@ -220,7 +220,7 @@ def parseTemp(tempFile, finalFile, geneFile, listOfGenes, overlapSet, threshold)
  #       print("lineCont[0]: {}".format(lineCont[0]))
         #if we are still on the same chromosome
         if lineCont[0] == chromo.name:
-
+        #                        start pos       length           strand       blockNum                  score
             chromo.add(Block(int(lineCont[2]),int(lineCont[3]),lineCont[4],int(species_blockNum[1]), int(lineCont[6])))
             if threshold > 0:
                 chromo.listOfScores.append(int(lineCont[6]))

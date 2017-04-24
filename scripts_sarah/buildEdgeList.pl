@@ -95,7 +95,7 @@ while(<FA>){
 		    $suffix = "P";
 		}
 	    }
-	    $nodename = "$chr\_$prespec\_$start\_$end\_$strand\_$suffix";
+	    $nodename = "$chr\_$prespec\_$leftblock\_$rightblock\_$strand\_$suffix";
 	}
 	else{
     	    my $chr = $F[0];
@@ -113,7 +113,7 @@ while(<FA>){
 	    my $type = $F[9]; 
 	    my $pseudogene = $F[10];
 	    my $comment = $F[11];
-	    $nodename = "$chr\_$prespec\_$start\_$end\_$strand\_$type\_$pseudogene";
+	    $nodename = "$chr\_$prespec\_$leftblock\_$rightblock\_$strand\_$type\_$pseudogene";
 	}
 
 
