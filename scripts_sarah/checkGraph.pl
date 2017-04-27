@@ -69,14 +69,14 @@ my $sumdensng = 0;
 
 my $maxncg = 0;
 my $maxecg = 0;
-my $minncg = 3000;
-my $minecg = 3000;
+my $minncg = 3000000;
+my $minecg = 3000000;
 
 
 my $maxnng = 0;
 my $maxeng = 0;
-my $minnng = 3000;
-my $mineng = 3000;
+my $minnng = 3000000;
+my $mineng = 3000000;
 
 open FA,"<$file" or die "can't open $file\n";
 while(<FA>){
@@ -100,6 +100,9 @@ while(<FA>){
     my @edges = ();
     my @nodes= ();
     my @uniqedges =();
+    my %species = ();
+    my %seqscore = ();
+    my %strscore= ();
 
     open CF,"<$curfile" or die "can't open $curfile\n";
     while(<CF>){
@@ -127,6 +130,8 @@ while(<FA>){
 		if(none {$_ eq $ed0} @uniqedges){
 		    push @uniqedges, $ed0;
 		}
+		if(exists($strscore{$ed0})){}
+		else{$strscore{$ed0}=$s2;}
 	    }
 	}
 	elsif($struclim == -1){
@@ -140,6 +145,8 @@ while(<FA>){
 		if(none {$_ eq $ed0} @uniqedges){
 		    push @uniqedges, $ed0;
 		}
+		if(exists($seqscore{$ed0})){}
+		else{$seqscore{$ed0}=$s1;}
 	    }
 	}
 	else{
@@ -153,11 +160,18 @@ while(<FA>){
 		if(none {$_ eq $ed0} @uniqedges){
 		    push @uniqedges, $ed0;
 		}
+		if(exists($seqscore{$ed0})){}
+		else{$seqscore{$ed0}=$s1;}
+		if(exists($strscore{$ed0})){}
+		else{$strscore{$ed0}=$s2;}
 	    }
 	}
 	
 	if(none {$_ eq $n1} @nodes){
 	    push @nodes,$n1;
+	    #count how many different species
+	    if(exists($species{$spec1})){$species{$spec1}++;}
+	    else{$species{$spec1}=1;}
 	}
 	
     }
@@ -175,8 +189,9 @@ while(<FA>){
     
     my $numn = scalar @nodes;
     my $nume = scalar @uniqedges;
-
-    if($numn == 0 || $nume == 0){
+    my $numsp = scalar (keys %species);
+    
+    if($numn == 0 || $nume == 0 || $numsp <= 1){
 	print $outo "$almostname \n";
 	next;
     }
@@ -184,25 +199,44 @@ while(<FA>){
 	print $oute "$almostname \n";
     }
 
-    #max possible density is 2!
-    my $density = 0;
-    if($nume > 0){
-	$density = $numn/$nume;
-    }
     
     #check if it is a clique first
+    #this only works if we only have one species
+    #for several species, check the cliquenum edgenum +
+    #edges for a complete graph between samespeciesedges
+    my $sumextraeds = 0;
+    foreach my $s (keys %species){
+	my $nodenum = $species{$s};
+	if($nodenum > 1){
+	    my $addnodes = ($nodenum * ($nodenum-1))/2;
+	    $sumextraeds += $addnodes;
+	}
+    }
+
+    my $numenew = $nume + $sumextraeds;
+
+    #calculate density with numenew
+    my $density = 0;
+#    if($nume > 0){
+	$density = $numn/$numenew;
+    #    }
+
+    #density in a clique: 2/(n-1)
+
+
+    
     my $cliquenum=(($numn-1)*$numn)/2;
-    if($nume == $cliquenum){
+    if($nume == $cliquenum || $numenew == $cliquenum){
 	$numcg++;
 	$numcliques++;
 	$sumnodescg = $sumnodescg + $numn;
-	$sumedgescg = $sumedgescg + $nume;
+	$sumedgescg = $sumedgescg + $numenew;
 	$sumdenscg = $sumdenscg + $density;
 	if($numn > $maxncg){$maxncg = $numn;}
 	if($numn < $minncg){$minncg = $numn;}
-	if($nume > $maxecg){$maxecg = $nume;}
-	if($nume < $minecg){$minecg = $nume;}
-	print $outcg "$almostname\t$numn\t$nume\t2.0\n";
+	if($numenew > $maxecg){$maxecg = $numenew;}
+	if($numenew < $minecg){$minecg = $numenew;}
+	print $outcg "$almostname\t$numn\t$nume\t$numenew\t$density\n";
 	next;
     }
     
@@ -210,44 +244,46 @@ while(<FA>){
     #print "nodenum: $numn, edgenum: $nume\n";
     #my $edtmp = join(",",@uniqedges);
     #print "edges: $edtmp \n";
-    if($density == 0 || $density == 2){
-	print $outcg "$almostname\t$numn\t$nume\t$density\n";
-	$numcg++;
+#    if($density == 0 || $density == 2){
+#	print $outcg "$almostname\t$numn\t$nume\t$density\n";
+#	$numcg++;
 	#$numcliques++;
-	$sumnodescg = $sumnodescg + $numn;
-	$sumedgescg = $sumedgescg + $nume;
-	$sumdenscg = $sumdenscg + $density;
-	if($numn > $maxncg){$maxncg = $numn;}
-	if($numn < $minncg){$minncg = $numn;}
-	if($nume > $maxecg){$maxecg = $nume;}
-	if($nume < $minecg){$minecg = $nume;}
-    }
-    else{
+#	$sumnodescg = $sumnodescg + $numn;
+#	$sumedgescg = $sumedgescg + $nume;
+#	$sumdenscg = $sumdenscg + $density;
+#	if($numn > $maxncg){$maxncg = $numn;}
+#	if($numn < $minncg){$minncg = $numn;}
+#	if($nume > $maxecg){$maxecg = $nume;}
+#	if($nume < $minecg){$minecg = $nume;}
+#    }
+#    else{
 	my $cg = IsCograph(join(' ',@nodes),@uniqedges);
 	if($cg ==1){
-	    print $outcg "$almostname\t$numn\t$nume\t$density\n";
+	    print $outcg "$almostname\t$numn\t$nume\t$numenew\t$density\n";
 	    $numcg++;
 	    $sumnodescg = $sumnodescg + $numn;
-	    $sumedgescg = $sumedgescg + $nume;
+	    $sumedgescg = $sumedgescg + $numenew;
 	    $sumdenscg = $sumdenscg + $density;
 	    if($numn > $maxncg){$maxncg = $numn;}
 	    if($numn < $minncg){$minncg = $numn;}
-	    if($nume > $maxecg){$maxecg = $nume;}
-	    if($nume < $minecg){$minecg = $nume;}
+	    if($numenew > $maxecg){$maxecg = $numenew;}
+	    if($numenew < $minecg){$minecg = $numenew;}
 	}
 	else{
-	    print $outn "$almostname\t$numn\t$nume\t$density\n";
+
 	    $numng++;
 	    $sumnodesng = $sumnodesng + $numn;
-	    $sumedgesng = $sumedgesng + $nume;
+	    $sumedgesng = $sumedgesng + $numenew;
 	    $sumdensng = $sumdensng + $density;
 	    if($numn > $maxnng){$maxnng = $numn;}
 	    if($numn < $minnng){$minnng = $numn;}
-	    if($nume > $maxeng){$maxeng = $nume;}
-	    if($nume < $mineng){$mineng = $nume;}
+	    if($numenew > $maxeng){$maxeng = $numenew;}
+	    if($numenew < $mineng){$mineng = $numenew;}
+	    my $ediff = $numn*($numn-1)/2 - $numenew;
+	    print $outn "$almostname\t$numn\t$nume\t$numenew\t$density\t$ediff\n";
 
 	}
-    }
+#    }
 }    
 
 my $avnumncg = 0;

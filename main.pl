@@ -105,7 +105,7 @@ my @outpwd = readpipe("$pwdcmd");
 
 #ATTENTION hardcoded dirname!
 my $dirname = "/homes/biertank/bsarah/Documents/projects/trnaevo/pipeline";
-print "dirname: $dirname \n";
+print STDERR "dirname: $dirname \n";
 
 #define other information
 my $toolname = "FindAFancyAbbrevation";
@@ -329,10 +329,13 @@ if($pathtocam){
 
 if($mode == -1 && ! $pathtocam){print "either enter a genelist or a cm file option! \n"; exit 1;}
 
+my $path2Temp = "$genefile\.\.\/temp";
+
+
 
 ##Program call
 my $optstr = "$outpathstr$cmoptstr$mafstr$genomesstr$refspeciesstr$newickstr$idstr$simstr$doitagainstr$filterstr$incloptstr$skipgstr$skipastr$pystr$pestr$rstr$infstr";
-print "program called with: $optstr \n";
+print STDERR "program called with: $optstr \n";
 
 
 ##DEBUG
@@ -397,14 +400,14 @@ print $outs "\n";
 my $genesfolder="";
 if(! $pathtocam){
     print "analysis of maf files started (this might take a while)..\n";
-    print "call to cam's prog:\n $pythonpath\/python3 $scripts_cam\/main.py $cmoption $inclopt $mafs $outpath $dirname $refspecies 2>>$err0 | \n";
+    print STDERR "call to cam's prog:\n $pythonpath\/python3 $scripts_cam\/main.py $cmoption $inclopt $mafs $outpath $dirname $refspecies 2>>$err0 | \n";
     if($perc eq ""){
 	open(PROG,"$pythonpath\/python3 $scripts_cam\/main.py $cmoption $inclopt $mafs $outpath $dirname $refspecies 2>>$err0 |") or die "Couldn't start program!";
-	while(<PROG>){print "$_";}
+#	while(<PROG>){print "$_";}
     }
     else{
 	open(PROG,"$pythonpath\/python3 $scripts_cam\/main.py $perc $cmoption $inclopt $mafs $outpath $dirname $refspecies 2>>$err0 |") or die "Couldn't start program!";
-	while(<PROG>){print "$_";}
+#	while(<PROG>){print "$_";}
     }
     print "Done!\n";
     $genesfolder = "$outpath\/genes";
@@ -445,12 +448,12 @@ my @out5 = readpipe("$cmd5");
 
 ##looks like: $numdifftypes!$species\-$num_elems\=$species\-..!$species\-$num_pseudo\=$species\-..
 my $elemsNpseudos = $out3[0];
-print "all: $elemsNpseudos\n";
+print STDERR "all: $elemsNpseudos\n";
 my @R = split '!', $elemsNpseudos;
 my $totelemnumstr = $R[1];
-print "$totelemnumstr\n";
+print STDERR "$totelemnumstr\n";
 my $numdifftypes = $R[0];
-print "Number of different types: $numdifftypes\n";
+print STDERR "Number of different types: $numdifftypes\n";
 #my $totpseudostr = "=";
 #if($pseudoscore >= 0){
 #    if(scalar @R > 1){
@@ -576,7 +579,7 @@ if($pseudoscore >= 0){
 }
 else{$totpseudostr = "=";}
 
-print "totpseudostr: $totpseudostr \n";
+print STDERR "totpseudostr: $totpseudostr \n";
 
 #create graphs
 my $sumbuildedges = "$summarypath\/Summary_buildedges.txt";
@@ -636,24 +639,31 @@ if($createalns == 1){
     my $cmd292 = "touch $outpath\/duplications.txt 2>>$err";
     my $cmd293 = "touch $outpath\/insertions.txt 2>>$err";
     my $cmd294 = "touch $outpath\/pseudogenes.txt 2>>$err";
-    my $cmd29a = "mkdir $outpath\/graphs/GainLoss 2>>$err";
+    my $cmd295 = "touch $outpath\/deletions.txt 2>>$err";
+    my $cmd296 = "touch $outpath\/missingData.txt 2>>$err";
+#    my $cmd29a = "mkdir $outpath\/graphs/GainLoss 2>>$err";
 #    my $cmd29b = "touch $outpath\/graphs/showGraphs/graphsToDraw 2>>$err";
 ##getDuplication not needed anymore as it was replaced by create alignments
 #    my $cmd30 = "$perlpath\/perl $scripts_sarah\/getDuplication.pl $outpath\/graphs/edlilist $outpath\/graphs/showGraphs $outpath\/graphs/alignments $altnwpath $outpath\/matches.txt $outpath\/duplications.txt $outpath\/insertions.txt $outpath\/pseudogenes.txt 2>>$err";
     my $cmd301 = "touch $outpath\/tree.out 2>>$err";
     my $cmd302 = "touch $outpath\/geneticEvents.txt 2>>$err";
     ##TODO set the pseqsim and pstruclim if we have a solution for pseudogenes
-    my $cmd30b = "$perlpath\/perl $scripts_sarah\/createAlignments.pl $outpath\/graphs/edlilist $outpath\/graphs/alignments $altnwpath $seqsim $strucsim $pseudoscore $singletoncount $mode $numdifftypes $outpath\/graphs/GainLoss $outpath\/matches.txt $outpath\/duplications.txt $outpath\/insertions.txt $outpath\/pseudogenes.txt $sumcreatealn $sumremoldings $suminremoldings 2>>$err";
-    my $cmd30a = "$perlpath\/perl $scripts_sarah\/countEvents.pl $newicktree $singletoncount $outpath\/matches.txt $outpath\/duplications.txt $outpath\/insertions.txt $outpath\/pseudogenes.txt $outpath\/tree.out $outpath\/geneticEvents.txt $totelemnumstr $nonestr $totpseudostr $outpath\/data_iTOL 2>>$err";
+    #path to epope out, not used at the moment:    $outpath\/graphs/GainLossA
+    #pseudoscore, not used at the moment:  $pseudoscore
+    my $cmd30b = "$perlpath\/perl $scripts_sarah\/createAlignments.pl $outpath\/graphs/edlilist $outpath\/graphs/alignments $altnwpath $seqsim $strucsim $singletoncount $mode $numdifftypes $outpath\/matches.txt $outpath\/duplications.txt $outpath\/insertions.txt $outpath\/pseudogenes.txt $outpath\/deletions.txt $outpath\/missingData.txt $newicktree $path2Temp $sumcreatealn $sumremoldings $suminremoldings 2>>$err";
+    my $cmd30a = "$perlpath\/perl $scripts_sarah\/countEvents.pl $newicktree $singletoncount $outpath\/matches.txt $outpath\/duplications.txt $outpath\/insertions.txt $outpath\/pseudogenes.txt $outpath\/deletions.txt $outpath\/missingData.txt $outpath\/tree.out $outpath\/geneticEvents.txt $totelemnumstr $nonestr $totpseudostr $outpath\/data_iTOL 2>>$err";
     
     print "create duplication alignments..";
+    print "createALNs cmd: $cmd30b \n";
     my @out28 = readpipe("$cmd28");
     my @out281 = readpipe("$cmd281");
     my @out291 = readpipe("$cmd291");
     my @out292 = readpipe("$cmd292");
     my @out293 = readpipe("$cmd293");
     my @out294 = readpipe("$cmd294");
-    my @out29a = readpipe("$cmd29a");
+    my @out295 = readpipe("$cmd295");
+    my @out296 = readpipe("$cmd296");
+#    my @out29a = readpipe("$cmd29a");
 #    my @out29b = readpipe("$cmd29b");
 #    my @out30 = readpipe("$cmd30");
     my @out301 = readpipe("$cmd301");

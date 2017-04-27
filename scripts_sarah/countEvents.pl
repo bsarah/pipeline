@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-##coutEvents.pl newickTree(with correct identifiers) singletoncount matches dupl insertions pseudo treeout summary totelelemstr nonestr totpseudostr iTOLfolder
+##coutEvents.pl newickTree(with correct identifiers) singletoncount matches dupl insertions pseudo deletions missing treeout summary totelelemstr nonestr totpseudostr iTOLfolder
 ##get temporary files containing the genetic events and the corresponding numbers
 ##species,species... number
 ##output: new geneticEvents file including deletions, new newick tree including numbers at nodes
@@ -23,6 +23,8 @@ my $matches = shift;
 my $dupl = shift;
 my $ins = shift;
 my $pseudo = shift;
+my $dels = shift;
+my $misses = shift;
 my $treeout = shift;
 my $summary = shift;
 my $totelemstr = shift; ##for later, printing iTOL files
@@ -40,6 +42,7 @@ my %duplications = ();
 my %insertions = ();
 my %pseudos = ();
 my %singletons = ();
+my %missing_data = ();
 
 open TF,"<$treefile" or die "can't open $treefile\n";
 
@@ -51,7 +54,7 @@ while(<TF>){
     last;
 }
     
-if($tree eq ""){print "tree format doesn't fit!\n"; exit 1;}
+if($tree eq ""){print STDERR "countEvents: tree format doesn't fit!\n"; exit 1;}
 
 #print $outs "tree: $tree \n";
 
@@ -97,15 +100,15 @@ for(my $nn = (scalar @N) -1;$nn>=0;$nn--){
 }
 
 if($rootid == -1){
-    print "no root in the tree!\n"; exit;
+    print STDERR "countEvents: no root in the tree!\n"; exit;
 }
 
-print join(" ",@T);
-print "\n";
-print join(" ",@N);
-print "\n";
-print join(" ",@L);
-print "\n";
+#print join(" ",@T);
+#print "\n";
+#print join(" ",@N);
+#print "\n";
+#print join(" ",@L);
+#print "\n";
 
 
 ##pseudogenes
@@ -116,7 +119,7 @@ while(<PS>){
     chomp;
     my $psline = $_;
     my @PS = split '\t', $psline;
-    if(scalar @PS < 2){print "misformatted input line, will be skipped! \n"; next;}
+    if(scalar @PS < 2){print STDERR "misformatted input line, will be skipped! \n"; next;}
     my @SS = split ',', $PS[0];
     my $psnum = $PS[1];
     if(scalar @SS == 1){
@@ -134,7 +137,7 @@ while(<PS>){
 }
 
 
-my %totcounts = ();
+my %totcounts = (); #only for debugging if numbers in input files (matches...) fit
 
 ##MATCHES
 ##analyse match nodes first as they include several species
@@ -146,7 +149,7 @@ while(<FA>){
     chomp;
     my $line = $_;
     my @F = split '\t', $line; ##should have at least 2! entries
-    if(scalar @F < 2){print "misformatted input line, will be skipped! \n"; next;}
+    if(scalar @F < 2){print STDERR "misformatted input line, will be skipped! \n"; next;}
     
     my @S = split ',', $F[0]; ##species
     my $num = $F[1];
@@ -185,57 +188,63 @@ while(<FA>){
     my $Treestr = join('=', @T);
     my $speciestr = join('=',@S);
 
-    my $lca = findLCA($Treestr,$speciestr);
-    $plusnodes{$T[$lca]} += $num;
-    #find leafs to delete
-    ##find all nodes under curlca and check if it is leaves
-    my @leaves = (); #indices of leaves
-    my @lili = (); #names of leaves
-    for(my $m = $curlca -1; $m >=0; $m--){
-	if($N[$m] == $N[$curlca]){last;}
-	if($N[$m] > $N[$curlca]){
-	    #check if the current element is in L and not in S
-	    for(my $l = 0; $l<scalar @L;$l++){
-		if($T[$m] eq $L[$l]){
-		    #it is a leaf
-		    my $isSpec = 0;
-		    for(my $s = 0; $s < scalar @S;$s++){
-			#check if it is in the current species, then not in leaves to delete
-			if($T[$m] eq $S[$s]){$isSpec=1;last;}
-		    }
-		    if($isSpec == 1){last;}
-		    else{push @leaves, $m; push @lili, $T[$m];}
-		}
-	    }
-	}
-    }
-
-    #lili and leaves are no the names and indices of leaves to delete
-    if(scalar @lili == 1){
-	$minusnodes{$lili[0]} += $num;
-    }
-    elsif(scalar @lili == 0){next;}
-    else{
-	my $Treestr = join('=', @T);
-	my $Leafstr = join('=',@lili);
-	my @leafsToDel = findParentOfAll($Treestr,$Leafstr);
-	if(scalar @leafsToDel == 0){
-	    next;
-	}
-	my $leafstodelstr = join("=",@leafsToDel);
-	for(my $ltd=0;$ltd < scalar @leafsToDel;$ltd++){
-	    $minusnodes{$leafsToDel[$ltd]} += $num;
-	}
-    }
-
-
 
 #####################only adding leaves#######################
     
-#    my @leafsToAdd = findParentOfAll($Treestr,$speciestr);
-#    for(my $i=0;$i<scalar @leafsToAdd; $i++){
-#	$plusnodes{$leafsToAdd[$i]} += $num;
+    my @leafsToAdd = findParentOfAll($Treestr,$speciestr);
+    for(my $i=0;$i<scalar @leafsToAdd; $i++){
+	$plusnodes{$leafsToAdd[$i]} += $num;
+    }
+    
+    
+
+###old way of counting#################################
+    
+#    my $lca = findLCA($Treestr,$speciestr);
+#    $plusnodes{$T[$lca]} += $num;
+    #find leafs to delete
+    ##find all nodes under curlca and check if it is leaves
+#    my @leaves = (); #indices of leaves
+#    my @lili = (); #names of leaves
+#    for(my $m = $curlca -1; $m >=0; $m--){
+#	if($N[$m] == $N[$curlca]){last;}
+#	if($N[$m] > $N[$curlca]){
+	    #check if the current element is in L and not in S
+#	    for(my $l = 0; $l<scalar @L;$l++){
+#		if($T[$m] eq $L[$l]){
+		    #it is a leaf
+#		    my $isSpec = 0;
+#		    for(my $s = 0; $s < scalar @S;$s++){
+			#check if it is in the current species, then not in leaves to delete
+#			if($T[$m] eq $S[$s]){$isSpec=1;last;}
+#		    }
+#		    if($isSpec == 1){last;}
+#		    else{push @leaves, $m; push @lili, $T[$m];}
+#		}
+#	    }
+#	}
 #    }
+
+    #lili and leaves are no the names and indices of leaves to delete
+#    if(scalar @lili == 1){
+#	$minusnodes{$lili[0]} += $num;
+#    }
+#    elsif(scalar @lili == 0){next;}
+#    else{
+#	my $Treestr = join('=', @T);
+#	my $Leafstr = join('=',@lili);
+#	my @leafsToDel = findParentOfAll($Treestr,$Leafstr);
+#	if(scalar @leafsToDel == 0){
+#	    next;
+#	}
+#	my $leafstodelstr = join("=",@leafsToDel);
+#	for(my $ltd=0;$ltd < scalar @leafsToDel;$ltd++){
+#	    $minusnodes{$leafsToDel[$ltd]} += $num;
+#	}
+#    }
+
+
+
 
 #####################only adding leaves#######################
     
@@ -369,6 +378,42 @@ while(<FA>){
 #might be changed later
 
 
+#deletions
+############only deleting leaves############################
+open FD,"<$dels" or die "can't open $dels\n";
+
+while(<FD>){
+    chomp;
+    my $line = $_;
+    my @F = split '\t', $line; ##should have at least 2! entries
+    if(scalar @F < 2){print STDERR "misformatted input line, will be skipped! \n"; next;}
+    my @S = split ',', $F[0]; ##species
+    my $num = $F[1];
+
+
+    if(scalar @S == 1){
+	$minusnodes{$S[0]} += $num;
+	next;
+    }
+    
+    my $Treestr = join('=', @T);
+    my $speciestr = join('=',@S);
+
+
+    my @leafsToDel = findParentOfAll($Treestr,$speciestr);
+    for(my $i=0;$i<scalar @leafsToDel; $i++){
+	$minusnodes{$leafsToDel[$i]} += $num;
+    }
+    
+
+}
+
+
+
+
+
+
+
 #singletoncount
 my @SC = split "=", $singletoncount;
 for(my $s = 0; $s < scalar @SC; $s++){
@@ -385,7 +430,7 @@ while(<FD>){
     chomp;
     my $dline = $_;
     my @D = split '\t', $dline; ##should have at least 2! entries
-    if(scalar @D < 2){print "misformatted input line in duplications, will be skipped! \n"; next;}
+    if(scalar @D < 2){print STDERR "misformatted input line in duplications, will be skipped! \n"; next;}
     $duplications{$D[0]} += $D[1];
     if(exists($totcounts{$D[0]})){$totcounts{$D[0]}+=$D[1];}
     else{$totcounts{$D[0]}=$D[1];}
@@ -399,10 +444,29 @@ while(<FI>){
     chomp;
     my $iline = $_;
     my @I = split '\t', $iline; ##should have at least 2! entries
-    if(scalar @I < 2){print "misformatted input line in insertions, will be skipped! \n"; next;}
+    if(scalar @I < 2){print STDERR "misformatted input line in insertions, will be skipped! \n"; next;}
     $insertions{$I[0]} += $I[1];
     if(exists($totcounts{$I[0]})){$totcounts{$I[0]}+=$I[1];}
     else{$totcounts{$I[0]}=$I[1];}
+}
+
+
+#midding data
+open FM,"<$misses" or die "can't open $misses\n";
+
+while(<FM>){
+    chomp;
+    my $mline = $_;
+    my @M = split '\t', $mline;
+    if(scalar @M < 2){print STDERR "misformatted input line in insertions, will be skipped! \n"; next;}
+    my @specs = split ',', $M[0];
+    my $num = $M[1];
+    for(my $s = 0;$s<scalar @specs;$s++){
+	if(exists($missing_data{$specs[$s]})){$missing_data{$specs[$s]}+=$num;}
+	else{$missing_data{$specs[$s]}=$num;}
+
+    }
+
 }
 
 
@@ -471,7 +535,8 @@ for(my $t=0; $t < scalar @N; $t++){
 	if(exists($singletons{$vert})){}else{$singletons{$vert}=0;}
 	if(exists($pseudos{$vert})){}else{$pseudos{$vert}=0;}
 	if(exists($nonenums{$vert})){}else{$nonenums{$vert}=0;}
-	my $newname = "$T[$t]\[t$totnumbers{$vert}|i$allplus\|l$minusnodes{$vert}\|d$duplications{$vert}\|s$singletons{$vert}\|p$pseudos{$vert}|n$nonenums{$vert}\]";
+	if(exists($missing_data{$vert})){}else{$missing_data{$vert}=0;}
+	my $newname = "$T[$t]\[t$totnumbers{$vert}|i$allplus\|l$minusnodes{$vert}\|d$duplications{$vert}\|s$singletons{$vert}\|p$pseudos{$vert}|n$nonenums{$vert}|m$missing_data{$vert}\]";
 	push @newT, $newname;
     }
     else{
@@ -509,11 +574,12 @@ for(my $ll=0;$ll<scalar @L;$ll++){
 	    my $curnum = $split2[$s2];
 	    if($curnum =~ /^t/){$allelems += substr($curnum,1);}#total
 	    if($curnum =~ /^i/){$elemsum += substr($curnum,1);}#ins
-	    if($curnum =~ /^l/){$elemsum -= substr($curnum,1);}#loss
+	    if($curnum =~ /^l/){$elemsum += substr($curnum,1);}#loss
 	    if($curnum =~ /^d/){$elemsum += substr($curnum,1);}#dupl
 	    if($curnum =~ /^s/){$elemsum += substr($curnum,1);}#single	    
 	    #if($curnum =~ /^p/){$elemsum += substr($curnum,1);}#pseudo
 	    if($curnum =~ /^n/){$elemsum += substr($curnum,1);}#none
+	    if($curnum =~ /^m/){$elemsum += substr($curnum,1);}#missing data
 	}
     }
     my $diff = $allelems-$elemsum;
@@ -528,7 +594,7 @@ my $tstr = join ("", @newT);
 
 print $outt "Newick tree with numbers specifying event counts at its nodes.
 Each node name contains the following numbers in event specification:
-[ta|ib|lc|dx|se|py|nz] where:
+[ta|ib|lc|dx|se|py|nz|mf] where:
 a are total number of elements,
 b are insertions,
 c are deletions, thus losses, 
@@ -536,6 +602,7 @@ x are duplications,
 e are singletons, 
 y pseudogenes and
 z are the elements that were excluded from the analysis.\n
+f is the number of elements that were excluded from the analysis because of missing anchors
 
 Tree:\n";
 print $outt "$tstr\n";
@@ -615,9 +682,15 @@ foreach my $si (sort keys %singletons) {
 print $outs "\n\n";
 
 
-print $outs "EVENT: No Anchors\n";
+print $outs "EVENT: No Anchors Beginning\n";
 foreach my $ni (sort keys %nonenums) {
     print $outs "$ni\t$nonenums{$ni}\n";
+}
+print $outs "\n\n";
+
+print $outs "EVENT: No Anchors Inbetween\n";
+foreach my $md (sort keys %missing_data) {
+    print $outs "$md\t$missing_data{$md}\n";
 }
 print $outs "\n\n";
 
@@ -632,15 +705,16 @@ print $outs "\n\n";
 ##TODO add extra files for singletons and numdiffs?
 
 ####print output files for iTOL input
-my $treeout2 = "$iTOLout\/F1tree.txt";
-my $namesout = "$iTOLout\/F2tree_labels.txt";
-my $totout = "$iTOLout\/F3tree_labels_tot.txt";
-my $insout = "$iTOLout\/F4tree_labels_ins.txt";
-my $sinout = "$iTOLout\/F5tree_labels_sin.txt";
-my $delout = "$iTOLout\/F6tree_labels_del.txt";
-my $dupout = "$iTOLout\/F7tree_labels_dup.txt";
-my $pseout=  "$iTOLout\/F8tree_labels_pse.txt";
-my $nonout=  "$iTOLout\/F9tree_labels_non.txt";
+my $treeout2 = "$iTOLout\/F0tree.txt";
+my $namesout = "$iTOLout\/F1tree_labels.txt";
+my $totout = "$iTOLout\/F2tree_labels_tot.txt";
+my $insout = "$iTOLout\/F3tree_labels_ins.txt";
+my $sinout = "$iTOLout\/F4tree_labels_sin.txt";
+my $delout = "$iTOLout\/F5tree_labels_del.txt";
+my $dupout = "$iTOLout\/F6tree_labels_dup.txt";
+my $pseout=  "$iTOLout\/F7tree_labels_pse.txt";
+my $nonout=  "$iTOLout\/F8tree_labels_non.txt";
+my $misout=  "$iTOLout\/F9tree_labels_missing.txt";
 
 open(my $outt2,">>",$treeout2);
 open(my $outn,">>",$namesout);
@@ -651,6 +725,7 @@ open(my $outd,">>",$delout);
 open(my $outu,">>",$dupout);
 open(my $outp,">>",$pseout);
 open(my $outo,">>",$nonout);
+open(my $outm,">>",$misout);
 
 
 print $outt2 $tree;
@@ -703,6 +778,14 @@ SEPARATOR COMMA
 DATASET_LABEL,Excluded
 COLOR,#00ffff\n";
 
+
+my $header_mis =
+"DATASET_TEXT
+SEPARATOR COMMA
+DATASET_LABEL,Excluded
+COLOR,#A9A9A9\n";
+
+
 my $inbetweentext =
 "#=================================================================#
 #                    OPTIONAL SETTINGS                            #
@@ -745,8 +828,8 @@ my $legend =
 "
 LEGEND_TITLE,Element Counts
 LEGEND_SHAPES,1,1,1,1,1,1,1
-LEGEND_COLORS,#000000,#00ff00,#ffa500,#ff0000,#0000ff,#551a8b,#00ffff
-LEGEND_LABELS,Total,Insertions,Singletons,Deletions,Duplications,Pseudogenizations,Excluded
+LEGEND_COLORS,#000000,#00ff00,#ffa500,#ff0000,#0000ff,#551a8b,#00ffff,#A9A9A9
+LEGEND_LABELS,Total,Insertions,Singletons,Deletions,Duplications,Pseudogenizations,Excluded,Missing_Data
 ";
 
 
@@ -778,6 +861,9 @@ print $outp "\n\nDATA\n";
 print $outo "$header_non$inbetweentext";
 print $outo "\n\nDATA\n";
 
+print $outm "$header_mis$inbetweentext";
+print $outm "\n\nDATA\n";
+
 
 
 for(my $tt=0;$tt < scalar @T;$tt++){
@@ -802,7 +888,8 @@ for(my $tt=0;$tt < scalar @T;$tt++){
 	    print $outp "$T[$tt],$pseudos{$T[$tt]},-1,#551a8b,normal,1,0\n";
 	    my $nonum=0; 
 	    if(exists $nonenums{$T[$tt]}){$nonum = $nonenums{$T[$tt]};}
-	    print $outo "$T[$tt],$nonum,-1,#00ffff,normal,1,0\n";		
+	    print $outo "$T[$tt],$nonum,-1,#00ffff,normal,1,0\n";
+	    print $outm "$T[$tt],$missing_data{$T[$tt]},-1,#A9A9A9,normal,1,0\n";		
 	}
 	else{
 	    ##inner nodes, different line printing
@@ -960,7 +1047,7 @@ sub findLCA{
 	else{
 	    #choose the curlca with the highest N
 	    my $curplca = $N[$pdiff[0]];
-	    my $curpid = $rootid;
+	    my $curpid = $pdiff[0];
 	    for(my $pd=1;$pd<scalar @pdiff;$pd++){
 		if($N[$pdiff[$pd]] >= $curplca){
 		    $curplca = $N[$pdiff[$pd]];
@@ -972,7 +1059,7 @@ sub findLCA{
     }
 
     if($N[$curlca] < 0){
-	print STDERR "strange curlca $T[$curlca], species: $F[0], pathes: $pstr1; $pstr2\n";
+	print STDERR "strange curlca\n";
     }
 
 

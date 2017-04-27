@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-## perl createAlignments.pl edlilist outpath pathtonw secsim strsim pseudoscore singletoncount mode numdifftypes outfolder match dupl ins pseudo summary remodlingsout inremoldingsout
+## perl createAlignments.pl edlilist outpath pathtonw secsim strsim pseudoscore singletoncount mode numdifftypes outfolder match dupl ins pseudo dels missing newicktree pathoTemp summary remodlingsout inremoldingsout
 
 ##program will produce sequences of letters, where the same letter means similar sequences, depending on the threshold.
 ##thus one letter for each connected component.
@@ -25,19 +25,24 @@ my $outpath=shift;
 my $pathtonw = shift;
 my $seqlim = shift;
 my $strlim = shift;
-my $pseudosc = shift;
+#my $pseudosc = shift; #not used at the moment!
 my $singletoncount = shift;
 my $mode = shift;
 my $numdifftypes = shift;
-my $outfolder = shift; ##write files for ePoPE
+#my $outfolder = shift; ##write files for ePoPE #not used at the moment!
 my $matchout = shift;
 my $duplout = shift;
 my $insout = shift;
 my $pseout = shift;
+my $delout = shift;
+my $misout = shift;
+my $nwtree = shift;
+my $path2Temp = shift; #temp folder which contains gipped lists about anchors for each species
 my $summary = shift; #usual summary after running the script
 my $sumrems = shift;
 my $suminrems = shift;
 
+print STDERR "createALN input tree: $nwtree\n";
 
 #create a hash with strings that show spec1_spec2,spec1,spec3,spec5 as key whereas
 #spec1 is the current species and the others are in the same cluster.
@@ -48,7 +53,8 @@ my %dupevents =();
 my %matevents =();
 my %insevents =();
 ##are mismatches needed? use pseudogenes INSTEAD of mistmatches
-#my %misevents =();
+my %misevents =(); #missing data=no anchors
+my %delevents = ();#deletions
 my %psevents = ();
 my @remoldings = ();
 # The pairs of elements (separated with ':') are defined 
@@ -61,14 +67,13 @@ my @inremoldings = ();
 my %elemcount = (); #count how many elements of which species occur during the creation of alignments
 
 
-open(my $outm,">>",$matchout);
-open(my $outd,">>",$duplout);
-open(my $outi,">>",$insout);
-open(my $outp,">>",$pseout);
-open(my $outs,">>", $summary);
+
 
 open(my $outsr,">>", $sumrems);
 open(my $outsi,">>", $suminrems);
+
+open(my $outs,">>", $summary);
+
 
 
 ##filter which is the biggest alignment created
@@ -111,6 +116,11 @@ while(<FA>){
     my $newname="$almostname\.aln";
     my $path = "$outpath\/$newname";
     open(my $outgr,">>",$path);
+
+    my @AN = split '-', $almostname;
+    
+    my $leftanchor = $AN[1];
+    my $rightanchor = $AN[2];
 
     print $outgr ">$almostname\n";
     $alncount++;
@@ -469,15 +479,8 @@ while(<FA>){
  #   print "vertices: $vertices \n";
     #   print "arcs: $arcs \n";
 
-    ##check if all species appear in this cluster
-    ##if a species does not appear, check if
-    ##it is a singleton ok
-    ##the missing species have the anchoring blocks
-    ##if yes: write the combination of species as a deletion(like matches)
-    ##if no: ignore this element in the species (add to missing data list)
-    
+
     my @CCs = connectedComponents($vertices,$arcs);
-    
     
     ##count events for each CC, build ePoPE input for each CC
     my $perccnum = scalar @CCs; #add all nodes of each cc for this graph to see if it fits the curvertnum
@@ -490,23 +493,23 @@ while(<FA>){
 	my %pse2count = ();
 	my @verts = split ' ', $CCs[$ii];
 	$ccnodecount += scalar @verts;
-	my $outpo;
-	if(scalar @verts >= 2){
-	    my $outname = "$newname\_$cccount\.ali";
-	    my $path2 = "$outfolder\/$outname";
-	    open($outpo,">>",$path2);
-	    if($cccount == 0){$totALNnum++;}
-	    $cccount++;
-	    $totCCnum++;
-	    if($cccount > $maxCCnum){
-		$maxCCnum = $cccount;
-		$maxCCnumaln = $newname;
-	    }
-	    if(scalar @verts > $maxCC){
-		$maxCC = scalar @verts;
-		$maxCCaln = $outname;
-	    }
-	}	
+#	my $outpo;
+#	if(scalar @verts >= 2){
+#	    my $outname = "$newname\_$cccount\.ali";
+#	    my $path2 = "$outfolder\/$outname";
+#	    open($outpo,">>",$path2);
+#	    if($cccount == 0){$totALNnum++;}
+#	    $cccount++;
+#	    $totCCnum++;
+#	    if($cccount > $maxCCnum){
+#		$maxCCnum = $cccount;
+#		$maxCCnumaln = $newname;
+#	    }
+#	    if(scalar @verts > $maxCC){
+#		$maxCC = scalar @verts;
+#		$maxCCaln = $outname;
+#	    }
+#	}	
 	##what about singleton clusters?
 	##In order to make the program faster, 
 	##only multigene clusters should be used with ePoPE, 
@@ -518,11 +521,11 @@ while(<FA>){
 	    my @SP = split '_', $verts[$jj];
 	    my $spe = $SP[1];
 	    my $pseudi = $SP[2];
-	    if(scalar @verts >= 2){	
-		my $word = "sequence";
-		my $outst = "$spe $word\n";
-		print $outpo $outst;
-	    }
+#	    if(scalar @verts >= 2){	
+#		my $word = "sequence";
+#		my $outst = "$spe $word\n";
+#		print $outpo $outst;
+#	    }
 	    if(exists $spe2count{$spe}){
 		$spe2count{$spe}++;
 	    }
@@ -548,17 +551,17 @@ while(<FA>){
 #	    print $outp Dumper(\%pse2count);
 #	    print $outp "\n";
 #	}
-	
-
 #	print "count now!\n";
 	
 	##counting: only matches and dup (and pseudogenes?), losses later when adding to the tree
 	##add elements from the singleton clusters that were sorted
 	##and specify the number of elements per species for the None cluster
 	my $spstr = join(',',sort (keys %spe2count));
+	my $spnum = scalar (keys %spe2count);	
 #	print "spstr: $spstr \n";
 	my @vals = values %spe2count;
 	my $vnum = scalar @vals;
+	my $mini = min @vals;
 #	print "hash spe2count \n";
 #	print Dumper(\%spe2count);
 #	print "\n";
@@ -574,7 +577,7 @@ while(<FA>){
 	    else{$matevents{$spstr} = $vals[0];}
 	}
 	else{##count duplications
-	    my $mini = min @vals;
+
 #	    print "min vals $mini\n";
 	    if(exists $matevents{$spstr}){$matevents{$spstr} += $mini;}
 	    else{$matevents{$spstr} = $mini;}
@@ -616,7 +619,64 @@ while(<FA>){
 	    
 
 	    }
-	}	
+	}
+	#do check for missing data or deletions here
+	
+	##if cluster >= 2 nodes && num_species >= 2
+	##check if all species below the LCA appear in this cluster
+	##if a species does not appear, check if
+	##the missing species have the anchoring blocks
+	##if yes: write the combination of species as a deletion(like matches)
+	##if no: ignore this element in the species (add to missing data list)
+	
+	#do this for every CC as we are looking at genetic events of homologs
+	#steps:
+	#collect set of species
+	#missing species = find LCA and missing species below (sub)
+	#check if anchors exist
+	#thus here: counting of deletion events and missing data
+	if($spnum > 1){
+	    #species: comma-separated in $spstr
+	    my @missingspecs = getMissingSpecs($spstr,$nwtree);
+	    if(scalar @missingspecs > 0){
+		my @missingtmp = ();
+		my @missingdel = ();
+		for(my $mi = 0; $mi < scalar @missingspecs;$mi++){
+		    my $specii = $missingspecs[$mi];
+		    my $grepcmdleft = "zcat $path2Temp\/$specii\_temp\_sorted\.bed\.gz \| grep \"$specii\_$leftanchor\" ";
+		    my $grepcmdright = "zcat $path2Temp\/$specii\_temp\_sorted\.bed\.gz \| grep \"$specii\_$rightanchor\" ";
+		    print STDERR "$grepcmdleft ; $grepcmdright\n";
+		    my @outleft = readpipe("$grepcmdleft");
+		    if(scalar @outleft == 0){
+			push @missingtmp, $specii;
+			next;
+		    }
+		    my @outright = readpipe("$grepcmdright");
+		    #check if both out[0] are nonempty
+		    if(scalar @outright == 0){
+			push @missingtmp, $specii;
+			next;
+		    }
+		    push @missingdel, $specii;
+		}
+
+		if(scalar @missingtmp > 0){
+		    my $misstr = join(',', @missingtmp);
+		    if(exists $misevents{$misstr}){$misevents{$misstr} += $mini;}
+		    else{$misevents{$misstr} = $mini;}
+		}
+		if(scalar @missingdel > 0){
+		    my $delstr = join(',',@missingdel);
+		    if(exists $delevents{$delstr}){$delevents{$delstr} += $mini;}
+		    else{$delevents{$delstr} = $mini;}
+		}
+	    }
+	}
+
+
+	
+
+	
     }#done check for every CC
     #check if ccnodecount == curvertnum
     if($ccnodecount != $curvertnum){
@@ -646,36 +706,61 @@ while(<FA>){
 
 ##sort the entries in each entry for the hashes alphabetically
 
+
+open(my $outd,">>",$duplout);
+
 foreach my $du (sort keys %dupevents) {
     my @devs = split ',', $du;
     @devs = sort @devs;
     my $dustr = join(',',@devs);
     print $outd "$dustr\t$dupevents{$du}\n";
 }
+close $outd;
 
-
+open(my $outm,">>",$matchout);
 foreach my $ma (sort keys %matevents) {
     my @mevs = split ',', $ma;
     @mevs = sort @mevs;
     my $mastr = join(',',@mevs);
     print $outm "$mastr\t$matevents{$ma}\n";
 }
+close $outm;
 
+open(my $outi,">>",$insout);
 foreach my $in (sort keys %insevents) {
     my @ievs = split ',', $in;
     @ievs = sort @ievs;
     my $instr = join(',',@ievs);
     print $outi "$instr\t$insevents{$in}\n";
 }
+close $outi;
 
-
+open(my $outp,">>",$pseout);
 foreach my $mi (sort keys %psevents) {
     my @mevs = split ',', $mi;
     @mevs = sort @mevs;
     my $mistr = join(',',@mevs);
     print $outp "$mistr\t$psevents{$mi}\n";
 }
+close $outp;
 
+open(my $oute,">>",$delout);
+foreach my $dl (sort keys %delevents) {
+    my @dls = split ',', $dl;
+    @dls = sort @dls;
+    my $dlstr = join(',',@dls);
+    print $oute "$dlstr\t$delevents{$dl}\n";
+}
+close $oute;
+
+open(my $outn,">>",$misout);
+foreach my $ms (sort keys %misevents) {
+    my @miss = split ',', $ms;
+    @miss = sort @miss;
+    my $msstr = join(',',@miss);
+    print $outn "$msstr\t$misevents{$ms}\n";
+}
+close $outn;
 
 
 
@@ -695,14 +780,14 @@ print $outs "Duplication alignments and genetic events information: \n";
 print $outs "Number of clusters: $alncount. \n";
 print $outs "The longest alignment has length $maxlen and is in file $maxlenname . \n";
 print $outs "\n";
-print $outs "For the Gain/Loss analysis, $totALNnum alignments are used that
-are subdivided in total in $totCCnum connected components.
-The alignment with the maximal number of connected components contains $maxCCnum connected
-components and is called $maxCCnumaln. 
-The connected component with most nodes contains $maxCC nodes and can be found in $maxCCaln. \n";
-print $outs "The Gain/Loss analysis for multi gene cluster is done based on the files
-that can be found in $outfolder \n";
-print $outs "\n";
+#print $outs "For the Gain/Loss analysis, $totALNnum alignments are used that
+#are subdivided in total in $totCCnum connected components.
+#The alignment with the maximal number of connected components contains $maxCCnum connected
+#components and is called $maxCCnumaln. 
+#The connected component with most nodes contains $maxCC nodes and can be found in $maxCCaln. \n";
+#print $outs "The Gain/Loss analysis for multi gene cluster is done based on the files
+#that can be found in $outfolder \n";
+#print $outs "\n";
 print $outs "The summary file contains information about how many genetic events were 
 counted in a certain combination of species. This can be used to draw a 
 phylogenetic tree with genetic events at its nodes. \n";
@@ -786,4 +871,270 @@ sub connectedComponents{
     }
     
     return @permnodes1;
+}
+
+
+#find LCA
+#get diffset of leafs_under_LCA - spstr
+sub getMissingSpecs{
+    my @inp = @_;
+    my $spstr = $inp[0];
+    my $treefile = $inp[1];
+
+    open TF,"<$treefile" or die "can't open $treefile\n";
+    
+    my $tree="";
+    
+    while(<TF>){
+	chomp;
+	$tree = $_;
+	last;
+    }
+
+
+    
+    my @output = ();
+    my @species = split ',', $spstr;
+    if(scalar @species <= 1){return @output;}
+
+
+    if($tree eq ""){print STDERR "createAlignments: tree format doesn't fit!\n"; exit 1;}
+    
+    #print $outs "tree: $tree \n";
+    
+    ##split the tree into an array of its elements
+    my @T = (); ##tree with its components
+    my @N = (); ##at each position there is a number showing opening brackets - closing brackets before this position, except for ( ) , ; then -2
+    my @L = (); #leaves
+    my @Lids = ();
+    my @tr = split '', $tree;
+    my $brackets = 0;
+    my $tmp = "";
+    for(my $i = 0; $i < scalar @tr; $i++)
+    {
+	if($tr[$i] eq ')' || $tr[$i] eq '(' || $tr[$i] eq ',' || $tr[$i] eq ';'){
+	    if($tmp ne ""){
+		push @T, $tmp; 
+		push @N, $brackets;
+		#	    print "leaves? $T[(scalar @T) -2] \n";
+		if($T[(scalar @T) -2] ne ")"){ #leaves
+		    push @L, $tmp;
+		    push @Lids, (scalar @T) -1;
+		}
+		$tmp="";
+	    }
+	    push @T, $tr[$i];
+	    push @N, -2;
+	    if($tr[$i] eq '('){$brackets++;}
+	    if($tr[$i] eq ')'){$brackets--;}
+	}
+	else{
+	    $tmp = "$tmp$tr[$i]";
+	}
+    }
+
+    my @leafbutnospec = (); #insert ids of leaves in T: Lids
+    for(my $l=0;$l< scalar @L;$l++){
+	my $isnotspec = 1;
+	for(my $s = 0;$s < scalar @species;$s++){
+	    if($species[$s] eq $L[$l]){
+		$isnotspec = 0;
+		last;
+	    }
+	}
+	if($isnotspec == 1){
+	    push @leafbutnospec, $Lids[$l];
+	}
+    }
+    
+    my $treestr = join('=',@T);
+    my $leafbuitnotspecstr = join('=',@leafbutnospec);
+    print STDERR "createALN findLCA leafbutnotspec: $leafbuitnotspecstr \n";
+    print STDERR "createALN findLCA: $spstr \n";
+    
+    print STDERR "createALN findLCA: $treestr \n";
+    my $lca = findLCA($treestr,$spstr);
+    print STDERR "createALNs lca: $lca \n";
+    #lca is the id in T
+    #check for all elements in leafbutnospec if lca is on their path to the root
+    #if yes, put in output
+    for(my $z=0;$z<scalar @leafbutnospec;$z++){
+	my $num = $N[$leafbutnospec[$z]];
+	for(my $t=$leafbutnospec[$z];$t<scalar @T;$t++){
+	    if($N[$t] != $num){next;}
+	    if($T[$lca] eq $T[$t]){
+		push @output, $T[$leafbutnospec[$z]];
+		last;
+	    }
+	    $num--;
+	    if($num < 0){last;}
+	}
+    }
+
+    my $outputstr = join('=',@output);
+    print STDERR "createAlns missingspecs $outputstr\n";
+    return @output;
+
+}
+
+
+
+
+
+sub findLCA{
+    my @inp= @_;
+    #tree and leaf string is separated by =
+    my @T = split '=', $inp[0];
+    my @L = split ',', $inp[1]; #names of the species
+    my @Ltmp = split ',', $inp[1];
+    
+    my @output = ();
+    my $rootid = -1;
+    
+    my @N = ();
+    my @allleaves = ();
+    my $brackets = 0;
+    my $maxbracket = 0;
+    for(my $i = 0; $i < scalar @T; $i++)
+    {
+	if($T[$i] eq ')' || $T[$i] eq '(' || $T[$i] eq ',' || $T[$i] eq ';'){
+	    
+	    push @N, -2;
+	    if($T[$i] eq '('){$brackets++;}
+	    if($T[$i] eq ')'){$brackets--;}
+	    if($brackets > $maxbracket){$maxbracket = $brackets;}
+	}
+	else{
+	    push @N, $brackets;
+	    if($brackets == 0){$rootid = $i;}
+	    if($i>0){
+		if($T[$i-1] eq ')'){
+		    ##this is an inner node
+		}
+		else{
+		    push @allleaves, $T[$i];
+		}
+	    }	
+	}
+    }
+
+    if($rootid == -1){return @output;}
+    
+    #print join(" ",@T);
+    #print "\n";
+    #print join(" ",@N);
+    #print "\n";
+    #print join(" ",@allleaves);
+    #print "\n";
+    my @Lids = (); #ids of the leaves in T and N
+    for(my $l=0;$l<scalar @L;$l++){
+	for(my $t=0;$t<scalar @T;$t++){
+	    if($L[$l] eq $T[$t]){
+		push @Lids, $t;
+	    }
+	}	
+    }
+
+    my @Ltmpids = @Lids;
+    my @L2tmp = ();
+    my @L2tmpids = ();
+    
+    #######################################
+    my $pstr1="";
+    my $pstr2="";
+
+    ##try to find curlca by always looking at two species at the same time
+    ##then, get set of nodes from the pathes from the current leaves to the root and intersect them
+    ##if there are several nodes in the intersection, take the one with the highest N
+    my $curlca = $Lids[0]; #start with species at $S[0]
+    for(my $k=1; $k < scalar @L; $k++){
+	my @path1 = ();
+	my @path2 = ();
+	push @path1, $curlca;
+	push @path2, $Lids[$k];
+	my $num1 = $N[$curlca];
+	for(my $t4=$curlca;$t4<scalar @T;$t4++){
+	    #got up in the tree and check the bracketnums
+	    if($N[$t4] != $num1){next;}
+	    $num1--; #bracketnum
+	    if($num1 < 0){push @path1, $rootid;last;}
+	    push @path1, $t4;
+	}
+
+	my $num2 = $N[$Lids[$k]];
+	for(my $t5=$Lids[$k];$t5<scalar @T;$t5++){
+	    if($N[$t5] != $num2){next;}
+	    $num2--;
+	    if($num2 < 0){push @path2, $rootid;last;}
+	    push @path2, $t5;
+	}
+
+	if(scalar @path1 == 0){
+#	    print $outs "path1 zero: $F[0]\n";
+	}
+	else{$pstr1 = join("=",@path1);}
+
+	if(scalar @path2 == 0){
+#	    print $outs "path2 zero: $F[0]\n";
+	}
+
+	if(scalar @path1 == 0 || scalar @path2 == 0){
+	    next;
+	}
+	else{$pstr2 = join("=",@path2);}
+
+	
+
+
+	#do the intersection of both
+	##as we go from leaves to root, we take the first element that we have in common
+	my @pdiff = ();
+	for(my $a1 = 0; $a1 < scalar @path1;$a1++){
+	    for(my $b1 = 0; $b1 < scalar @path2; $b1++){
+		if($path1[$a1] == $path2[$b1]){
+		    push @pdiff, $path2[$b1];
+#		    last; #this can be deleted later on in order to get all overlapping nodes
+		}
+	    }
+
+	}
+
+	my $pdiffstr = join('=',@pdiff);
+
+	print STDERR "createALNs path1: $pstr1\n";	
+	print STDERR "createALNs path2: $pstr2\n";
+	print STDERR "createALNs pdiff: $pdiffstr\n";
+
+	if(scalar @pdiff == 0){
+	    print STDERR "son mist pathes: $pstr1; $pstr2\n";
+	    #	    print $outs "son mist pathes: $pstr1; $pstr2\n";
+	}
+	elsif(scalar @pdiff == 1){
+	    $curlca = $pdiff[0];
+	}
+	else{
+	    #choose the curlca with the highest N
+	    my $curplca = $N[$pdiff[0]];
+	    my $curpid = $pdiff[0];
+	    for(my $pd=1;$pd<scalar @pdiff;$pd++){
+		if($N[$pdiff[$pd]] >= $curplca){
+		    $curplca = $N[$pdiff[$pd]];
+		    $curpid = $pdiff[$pd];
+		}
+	    }
+	    $curlca = $curpid;
+	}
+    }
+
+    if($N[$curlca] < 0){
+	print STDERR "createAlignments: strange curlca\n";
+    }
+
+
+
+    return $curlca;
+
+    
+
+
 }
