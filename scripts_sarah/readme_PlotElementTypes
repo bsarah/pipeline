@@ -1,0 +1,15 @@
+Steps to create a plot about the element types that are given as a list in summary.txt
+
+1) copy only the element types list from summary.txt to a single file
+2) run: perl table4Types.pl typelist typetable.tab
+3) start R:
+
+> x = read.table("element_types.tab",sep="\t",header=T)
+> tmp_rows = x[,1]
+> x = x[,2:ncol(x)]
+> rownames(x) = tmp_rows
+> x3 = apply(x,2,as.numeric)
+> rownames(x3) = tmp_rows
+> pdf("barplot_elementTypesPerSpecies.pdf")
+> barplot(x3, main = "Number of Elements per Species", col = c("blue","red","orange","green","black","cyan"), legend = rownames(x3),las=2, xlab = "Element Types", ylab = "Number of Elements")
+> dev.off()

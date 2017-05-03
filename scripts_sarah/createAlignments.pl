@@ -42,7 +42,7 @@ my $summary = shift; #usual summary after running the script
 my $sumrems = shift;
 my $suminrems = shift;
 
-print STDERR "createALN input tree: $nwtree\n";
+#print STDERR "createALN input tree: $nwtree\n";
 
 #create a hash with strings that show spec1_spec2,spec1,spec3,spec5 as key whereas
 #spec1 is the current species and the others are in the same cluster.
@@ -170,6 +170,8 @@ while(<FA>){
 	}
 	else{
 	    #nodes look like: chr_spec_id_start_end_strand_type_pseudo
+	    #	    chr2A_gorGor3_276_9333523_9333524_-_Undet_TRUE
+#	    chr6_GL000252v2_alt_hg38_1276_10814083_10814084_-_Ala_FALSA
 	    my $spec = $G[(scalar @G) - 7];
 	    $species{$spec} = "";
 	    my $spec2 = $G2[(scalar @G2) - 7];
@@ -645,7 +647,7 @@ while(<FA>){
 		    my $specii = $missingspecs[$mi];
 		    my $grepcmdleft = "zcat $path2Temp\/$specii\_temp\_sorted\.bed\.gz \| grep \"$specii\_$leftanchor\" ";
 		    my $grepcmdright = "zcat $path2Temp\/$specii\_temp\_sorted\.bed\.gz \| grep \"$specii\_$rightanchor\" ";
-		    print STDERR "$grepcmdleft ; $grepcmdright\n";
+		    #print STDERR "$grepcmdleft ; $grepcmdright\n";
 		    my @outleft = readpipe("$grepcmdleft");
 		    if(scalar @outleft == 0){
 			push @missingtmp, $specii;
@@ -874,6 +876,7 @@ sub connectedComponents{
 }
 
 
+
 #find LCA
 #get diffset of leafs_under_LCA - spstr
 sub getMissingSpecs{
@@ -949,12 +952,12 @@ sub getMissingSpecs{
     
     my $treestr = join('=',@T);
     my $leafbuitnotspecstr = join('=',@leafbutnospec);
-    print STDERR "createALN findLCA leafbutnotspec: $leafbuitnotspecstr \n";
-    print STDERR "createALN findLCA: $spstr \n";
+    #print STDERR "createALN findLCA leafbutnotspec: $leafbuitnotspecstr \n";
+    #print STDERR "createALN findLCA: $spstr \n";
     
-    print STDERR "createALN findLCA: $treestr \n";
+    #print STDERR "createALN findLCA: $treestr \n";
     my $lca = findLCA($treestr,$spstr);
-    print STDERR "createALNs lca: $lca \n";
+    #print STDERR "createALNs lca: $lca \n";
     #lca is the id in T
     #check for all elements in leafbutnospec if lca is on their path to the root
     #if yes, put in output
@@ -972,7 +975,7 @@ sub getMissingSpecs{
     }
 
     my $outputstr = join('=',@output);
-    print STDERR "createAlns missingspecs $outputstr\n";
+    #print STDERR "createAlns missingspecs $outputstr\n";
     return @output;
 
 }
@@ -1101,9 +1104,9 @@ sub findLCA{
 
 	my $pdiffstr = join('=',@pdiff);
 
-	print STDERR "createALNs path1: $pstr1\n";	
-	print STDERR "createALNs path2: $pstr2\n";
-	print STDERR "createALNs pdiff: $pdiffstr\n";
+	#print STDERR "createALNs path1: $pstr1\n";	
+	#print STDERR "createALNs path2: $pstr2\n";
+	#print STDERR "createALNs pdiff: $pdiffstr\n";
 
 	if(scalar @pdiff == 0){
 	    print STDERR "son mist pathes: $pstr1; $pstr2\n";

@@ -574,12 +574,12 @@ for(my $ll=0;$ll<scalar @L;$ll++){
 	    my $curnum = $split2[$s2];
 	    if($curnum =~ /^t/){$allelems += substr($curnum,1);}#total
 	    if($curnum =~ /^i/){$elemsum += substr($curnum,1);}#ins
-	    if($curnum =~ /^l/){$elemsum += substr($curnum,1);}#loss
+	    #if($curnum =~ /^l/){$elemsum += substr($curnum,1);}#loss
 	    if($curnum =~ /^d/){$elemsum += substr($curnum,1);}#dupl
 	    if($curnum =~ /^s/){$elemsum += substr($curnum,1);}#single	    
 	    #if($curnum =~ /^p/){$elemsum += substr($curnum,1);}#pseudo
 	    if($curnum =~ /^n/){$elemsum += substr($curnum,1);}#none
-	    if($curnum =~ /^m/){$elemsum += substr($curnum,1);}#missing data
+	    #if($curnum =~ /^m/){$elemsum += substr($curnum,1);}#missing data
 	}
     }
     my $diff = $allelems-$elemsum;
@@ -827,7 +827,7 @@ SIZE_FACTOR,1
 my $legend =
 "
 LEGEND_TITLE,Element Counts
-LEGEND_SHAPES,1,1,1,1,1,1,1
+LEGEND_SHAPES,1,1,1,1,1,1,1,1
 LEGEND_COLORS,#000000,#00ff00,#ffa500,#ff0000,#0000ff,#551a8b,#00ffff,#A9A9A9
 LEGEND_LABELS,Total,Insertions,Singletons,Deletions,Duplications,Pseudogenizations,Excluded,Missing_Data
 ";

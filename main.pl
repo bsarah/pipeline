@@ -613,7 +613,7 @@ if($checkgraphs == 1){
     my $cmd25 = "touch $outpath\/graphs/noncographs 2>>$err";
     my $cmd26 = "mkdir $outpath\/graphs/showGraphs 2>>$err";
     ##TODO set the pseqsim and pstruclim if we have a solution for pseudogenes
-    my $cmd27 = "$perlpath\/perl $scripts_sarah\/checkGraph.pl $outpath\/graphs/edlilist $outpath\/graphs $outpath\/graphs/showGraphs $seqsim $strucsim -1 -1 $outpath\/graphs/cographs $outpath\/graphs/noncographs $outpath\/graphs/list-noEdgeGraphs.txt $outpath\/graphs/list-EdgeGraphs.txt $sumcheckgraph >>$db 2>>$err";
+    my $cmd27 = "$perlpath\/perl $scripts_sarah\/checkGraph.pl $outpath\/graphs/edlilist $outpath\/graphs $outpath\/graphs/showGraphs $seqsim $strucsim $mode $outpath\/graphs/cographs $outpath\/graphs/noncographs $outpath\/graphs/list-noEdgeGraphs.txt $outpath\/graphs/list-EdgeGraphs.txt $sumcheckgraph >>$db 2>>$err";
     print "analyse graphs..";
     my @out23 = readpipe("$cmd23");
     my @out23a = readpipe("$cmd23a");
