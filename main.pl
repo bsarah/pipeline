@@ -403,11 +403,11 @@ if(! $pathtocam){
     print STDERR "call to cam's prog:\n $pythonpath\/python3 $scripts_cam\/main.py $cmoption $inclopt $mafs $outpath $dirname $refspecies 2>>$err0 | \n";
     if($perc eq ""){
 	open(PROG,"$pythonpath\/python3 $scripts_cam\/main.py $cmoption $inclopt $mafs $outpath $dirname $refspecies 2>>$err0 |") or die "Couldn't start program!";
-#	while(<PROG>){print "$_";}
+	while(<PROG>){print "$_";}
     }
     else{
 	open(PROG,"$pythonpath\/python3 $scripts_cam\/main.py $perc $cmoption $inclopt $mafs $outpath $dirname $refspecies 2>>$err0 |") or die "Couldn't start program!";
-#	while(<PROG>){print "$_";}
+	while(<PROG>){print "$_";}
     }
     print "Done!\n";
     $genesfolder = "$outpath\/genes";
@@ -422,6 +422,7 @@ else{
 
 ###check with specieslist if the species names appear in the tree, if not, stop!
 my $cmd2 = "ls $genesfolder\/*.bed \> $genesfolder\/specieslist 2>>$err";
+print "specieslist command: $cmd2\n";
 my $checkcmd = "$perlpath\/perl $scripts_sarah\/checkTree.pl $newicktree $genesfolder\/specieslist";
 my @out2 = readpipe("$cmd2");
 my @checkout = readpipe("$checkcmd");
