@@ -324,7 +324,7 @@ my $doitagainstr = "";
 if($pathtocam){
     $doitagainstr="--again $pathtocam ";
     $genefile=$pathtocam;
-    $path2Temp = "$pathtocam\.\.\/temp";
+    $path2Temp = "$pathtocam\/\.\.\/temp";
     if(-e $pathtocam){}
     else{print "Option -a given but argument folder $pathtocam doesn't exist! \n"; exit 1;}
 }
