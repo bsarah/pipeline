@@ -1,0 +1,10 @@
+How to get data for distances between elements and blocks
+
+1) run script: analyseBlocks.pl
+perl scripts_sarah/analyseBlocks.pl /scr/gin/bsarah/projects/trnaevo/tRNAs/19MultiZwith10pseudo_gin_again/bed/panTro4.bed.gz /scr/gin/bsarah/projects/trnaevo/tRNAs/19MultiZwith10pseudo_gin_again/genes/panTro4.bed /scr/gin/bsarah/projects/trnaevo/tRNAs/test_newcounts5/analysis/panTro4.tab &
+2) plot data
+
+#distance to left and right anchor
+> hist(x$Dist2Left*(-0.000001),breaks=1000,ylim = c(0,80),xlim=c(-150,150),xlab="",ylab="",main="")
+> par(new=TRUE)
+> hist(x$Dist2Right*0.000001,breaks=1000,ylim = c(0,80),xlim=c(-150,150),ylab="Frequency",xlab="Distance to element (at 0) * 1e-06",main="Distance to upstream/downstream anchors in gorGor3; 85 elements")
