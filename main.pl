@@ -318,18 +318,23 @@ if($genefile){
 
 
 
+my $path2Temp;
 ###Repetition mode
 my $doitagainstr = "";
 if($pathtocam){
     $doitagainstr="--again $pathtocam ";
     $genefile=$pathtocam;
+    $path2Temp = "$pathtocam\.\.\/temp";
     if(-e $pathtocam){}
     else{print "Option -a given but argument folder $pathtocam doesn't exist! \n"; exit 1;}
+}
+else{
+    $path2Temp = "$outpath\/temp";
 }
 
 if($mode == -1 && ! $pathtocam){print "either enter a genelist or a cm file option! \n"; exit 1;}
 
-my $path2Temp = "$genefile\.\.\/temp";
+
 
 
 
