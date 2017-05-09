@@ -2,7 +2,9 @@ How to get data for distances between elements and blocks
 
 1) run script: analyseBlocks.pl
 perl scripts_sarah/analyseBlocks.pl /scr/gin/bsarah/projects/trnaevo/tRNAs/19MultiZwith10pseudo_gin_again/bed/panTro4.bed.gz /scr/gin/bsarah/projects/trnaevo/tRNAs/19MultiZwith10pseudo_gin_again/genes/panTro4.bed /scr/gin/bsarah/projects/trnaevo/tRNAs/test_newcounts5/analysis/panTro4.tab &
-2) plot data
+2)
+a) transform your *.tab files using cat hg38.tab | awk '{for (f=1;f<=NF;f++) col[f] = col[f]":"$f} END {for (f=1;f<=NF;f++) print col[f]}'| tr ':' ';' | cut -c 2- > hg38.csv
+b) to plot data run: Box_Scatterplot.R
 
 #distance to left and right anchor
 > hist(x$Dist2Left*(-0.000001),breaks=1000,ylim = c(0,80),xlim=c(-150,150),xlab="",ylab="",main="")
