@@ -1,6 +1,7 @@
 library(data.table)
 library(ggplot2)
-
+library(grid)
+library(gridExtra)
 # transform your *.tab files using cat hg38.tab | awk '{for (f=1;f<=NF;f++) col[f] = col[f]":"$f} END {for (f=1;f<=NF;f++) print col[f]}'| tr ':' ';' | cut -c 2- > hg38.csv
 
 
