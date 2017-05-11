@@ -29,8 +29,16 @@ while(<FA>){
     my @F = split '\t', $line;
     my @G = split '_', $F[1];
     my $spec = $G[0];
-    my $elstart = $F[2];
-    my $elend = $F[3];
+    my $elstart;
+    my $elend;
+    if($F[2] < $F[3]){
+	my $elstart = $F[2];
+	my $elend = $F[3];
+    }
+    else{
+	my $elstart = $F[3];
+	my $elend = $F[2];
+    }
     my $lnum = $F[5];
     my $rnum = $F[6];
     my $dist2left;
@@ -45,7 +53,7 @@ while(<FA>){
     if($rnum eq "None"){
 	next;
     }
-   
+
     my $grpr = "zcat $bedfile \| grep $spec\_$rnum";
     my $grpl = "zcat $bedfile \| grep $spec\_$lnum";
     my @outl = readpipe("$grpl");
@@ -55,12 +63,32 @@ while(<FA>){
     my @L = split '\t', $outl[0];
     my @R = split '\t', $outr[0];
 
-    $dist2left = abs($L[3]-$elstart);
-    $dist2right = abs($elend-$R[2]);
-    $distL2R = abs($L[3]-$R[2]);
+    my $lstart;
+    my $lend;
+    my $rstart;
+    my $rend;
+    if($L[2] < $L[3]){
+	$lstart = $L[2];
+	$lend = $L[3];
+    }
+    else{
+	$lstart = $L[3];
+	$lend = $L[2];
+    }
+    if($R[2] < $R[3]){
+	$rstart = $R[2];
+	$rend = $R[3];
+    }
+    else{
+	$rstart = $R[3];
+	$rend = $R[2];
+    }
+    $dist2left = abs($lend-$elstart);
+    $dist2right = abs($elend-$rstart);
+    $distL2R = abs($lend-$rstart);
     $ellen = abs($elstart - $elend);
-    $llen = abs($L[3]-$L[2]);
-    $rlen = abs($R[3]-$R[2]);
+    $llen = abs($lend-$lstart);
+    $rlen = abs($rend-$rstart);
     my $outstr = "$dist2left\t$dist2right\t$distL2R\t$ellen\t$llen\t$rlen\n";
     print $outf $outstr;
 

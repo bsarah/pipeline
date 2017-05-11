@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-## perl createAlignments.pl edlilist outpath pathtonw secsim strsim pseudoscore singletoncount mode numdifftypes outfolder match dupl ins pseudo dels missing newicktree pathoTemp summary remodlingsout inremoldingsout
+## perl createAlignments.pl edlilist outpath pathtonw secsim strsim pseudocount singletoncount mode numdifftypes outfolder match dupl ins pseudo dels missing newicktree pathoTemp summary remodlingsout inremoldingsout
 
 ##program will produce sequences of letters, where the same letter means similar sequences, depending on the threshold.
 ##thus one letter for each connected component.
@@ -25,7 +25,7 @@ my $outpath=shift;
 my $pathtonw = shift;
 my $seqlim = shift;
 my $strlim = shift;
-#my $pseudosc = shift; #not used at the moment!
+my $pseudocount = shift;
 my $singletoncount = shift;
 my $mode = shift;
 my $numdifftypes = shift;
@@ -704,6 +704,13 @@ while(<FA>){
 #    else{$insevents{$stmp[0]} = $stmp[1];}
 #}
 
+my @PC = split "=", $pseudocount;
+for(my $pc = 0;$pc < scalar @PC; $pc++){
+    if($PC[$pc] eq ""){next;}
+    my @ptmp = split "-", $PC[$pc];
+    if(exists($psevents{$ptmp[0]})){$psevents{$ptmp[0]}++;}
+    else{$psevents{$ptmp[0]}=1;}
+}
 
 
 ##sort the entries in each entry for the hashes alphabetically

@@ -521,7 +521,7 @@ my $cmd9a = "$perlpath\/perl $scripts_sarah\/writeBED\.pl $outpath\/clusters\/cl
 #sort out singletons
 ##sortCluster should output a summaryfile for singletons...
 my $cmd15 = "mkdir $outpath\/clusters/singletons 2>>$err";
-my $cmd16 = "$perlpath\/perl $scripts_sarah\/sortCluster.pl $outpath\/clusters/cluslist_joined $outpath\/clusters/singletons 2>>$err";
+my $cmd16 = "$perlpath\/perl $scripts_sarah\/sortCluster.pl $outpath\/clusters/cluslist_joined $mode $pseudoscore $outpath\/clusters/singletons 2>>$err";
 my $cmd17 = "ls $outpath\/clusters/*.clus > $outpath\/clusters/cluslist_nosingles 2>>$err";
 
 print "join clusters..";
@@ -541,8 +541,13 @@ print "Done!\n";
 ##give this to create alignments in order to add the singleton count to the genetic events list (as insertions)
 
 my $singletoncount;
-if($out16[0] eq ""){$singletoncount = "=";}
-else{$singletoncount = "$out16[0]";}
+my $pseudocount;
+my @O16 = split '!', $out16[0];
+if($O16[0] eq ""){$singletoncount = "=";}
+else{$singletoncount = "$O16[0]";}
+if($O16[1] eq ""){$pseudocount = "=";}
+else{$pseudocount = "$O16[1]";}
+
 #print "singletoncount: $singletoncount \n";
 
 ##add another summary file that includes the singleton and none cluster count
@@ -656,7 +661,7 @@ if($createalns == 1){
     ##TODO set the pseqsim and pstruclim if we have a solution for pseudogenes
     #path to epope out, not used at the moment:    $outpath\/graphs/GainLossA
     #pseudoscore, not used at the moment:  $pseudoscore
-    my $cmd30b = "$perlpath\/perl $scripts_sarah\/createAlignments.pl $outpath\/graphs/edlilist $outpath\/graphs/alignments $altnwpath $seqsim $strucsim $singletoncount $mode $numdifftypes $outpath\/matches.txt $outpath\/duplications.txt $outpath\/insertions.txt $outpath\/pseudogenes.txt $outpath\/deletions.txt $outpath\/missingData.txt $newicktree $path2Temp $sumcreatealn $sumremoldings $suminremoldings 2>>$err";
+    my $cmd30b = "$perlpath\/perl $scripts_sarah\/createAlignments.pl $outpath\/graphs/edlilist $outpath\/graphs/alignments $altnwpath $seqsim $strucsim $pseudocount $singletoncount $mode $numdifftypes $outpath\/matches.txt $outpath\/duplications.txt $outpath\/insertions.txt $outpath\/pseudogenes.txt $outpath\/deletions.txt $outpath\/missingData.txt $newicktree $path2Temp $sumcreatealn $sumremoldings $suminremoldings 2>>$err";
     my $cmd30a = "$perlpath\/perl $scripts_sarah\/countEvents.pl $newicktree $singletoncount $outpath\/matches.txt $outpath\/duplications.txt $outpath\/insertions.txt $outpath\/pseudogenes.txt $outpath\/deletions.txt $outpath\/missingData.txt $outpath\/tree.out $outpath\/geneticEvents.txt $totelemnumstr $nonestr $totpseudostr $outpath\/data_iTOL 2>>$err";
     
     print "create duplication alignments..";
