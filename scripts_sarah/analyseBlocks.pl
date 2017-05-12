@@ -83,10 +83,10 @@ while(<FA>){
 	$rstart = $R[3];
 	$rend = $R[2];
     }
-    $dist2left = abs($lend-$elstart);
-    $dist2right = abs($elend-$rstart);
+    $dist2left = abs($lend-$lstart);
+    $dist2right = abs($lend-$rstart);
     $distL2R = abs($lend-$rstart);
-    $ellen = abs($elstart - $elend);
+    $ellen = abs($lstart - $lend);
     $llen = abs($lend-$lstart);
     $rlen = abs($rend-$rstart);
     my $outstr = "$dist2left\t$dist2right\t$distL2R\t$ellen\t$llen\t$rlen\n";
