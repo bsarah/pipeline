@@ -545,7 +545,7 @@ my $pseudocount;
 my @O16 = split '!', $out16[0];
 if($O16[0] eq ""){$singletoncount = "=";}
 else{$singletoncount = "$O16[0]";}
-if($O16[1] eq ""){$pseudocount = "=";}
+if(scalar @O16 == 1 || $O16[1] eq ""){$pseudocount = "=";}
 else{$pseudocount = "$O16[1]";}
 
 #print "singletoncount: $singletoncount \n";
