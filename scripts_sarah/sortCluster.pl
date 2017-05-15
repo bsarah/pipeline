@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-## call: sortCluster clusList mode pseudoscore outfolder
+## call: sortCluster clusList mode pseudoscore outfolder tmpfile
 ## clusList contains the list of cluster files that need to be checked
 ## outfolder specifies the folder where singleton elements have to be moved to
 
@@ -12,6 +12,9 @@ my $filename = shift;
 my $mode = shift;
 my $pseudoscore = shift;
 my $outfolder= shift;
+my $tmpfile = shift; #write in tmpfile the outstr as it doesn't seem to work properly
+
+open(my $outf, ">>", $tmpfile);
 
 open FA,"<$filename" or die "can't open $filename\n";
 my $count = 0;
@@ -70,4 +73,4 @@ foreach my $p (sort keys %pseudos) {
     $outstr = "$outstr$p\-$pseudos{$p}\=";
 }
 
-print $outstr;
+print $outf $outstr;

@@ -317,6 +317,7 @@ if($genefile){
 ##not all the information has to be given, if there is none, put NA
 
 
+##TODO IMPORTANT: change mode parameter for the again case, thus find out which mode it is...
 
 my $path2Temp;
 ###Repetition mode
@@ -325,6 +326,7 @@ if($pathtocam){
     $doitagainstr="--again $pathtocam ";
     $genefile=$pathtocam;
     $path2Temp = "$pathtocam\/\.\.\/temp";
+    $mode = 1; 
     if(-e $pathtocam){}
     else{print "Option -a given but argument folder $pathtocam doesn't exist! \n"; exit 1;}
 }
@@ -521,7 +523,8 @@ my $cmd9a = "$perlpath\/perl $scripts_sarah\/writeBED\.pl $outpath\/clusters\/cl
 #sort out singletons
 ##sortCluster should output a summaryfile for singletons...
 my $cmd15 = "mkdir $outpath\/clusters/singletons 2>>$err";
-my $cmd16 = "$perlpath\/perl $scripts_sarah\/sortCluster.pl $outpath\/clusters/cluslist_joined $mode $pseudoscore $outpath\/clusters/singletons 2>>$err";
+my $tmpfile = "$outpath\/clusters/singletons/tmp";
+my $cmd16 = "$perlpath\/perl $scripts_sarah\/sortCluster.pl $outpath\/clusters/cluslist_joined $mode $pseudoscore $outpath\/clusters/singletons $tmpfile 2>>$err";
 my $cmd17 = "ls $outpath\/clusters/*.clus > $outpath\/clusters/cluslist_nosingles 2>>$err";
 
 print "join clusters..";
@@ -537,17 +540,26 @@ my @out17 = readpipe("$cmd17");
 append2file($outs,$sumallclustersjoined);
 print "Done!\n";
 
+print "sortCluster cnmd: $cmd16 \n";
+
 ##this string contains $species\-$num_singletons\=$species\-...has to be separated like this in order to be able to hand it over as a parameter
 ##give this to create alignments in order to add the singleton count to the genetic events list (as insertions)
-
 my $singletoncount;
 my $pseudocount;
-my @O16 = split '!', $out16[0];
-if($O16[0] eq ""){$singletoncount = "=";}
-else{$singletoncount = "$O16[0]";}
-if(scalar @O16 == 1 || $O16[1] eq ""){$pseudocount = "=";}
-else{$pseudocount = "$O16[1]";}
 
+
+open TF,"<$tmpfile" or die "can't open $tmpfile\n";
+while(<TF>){
+    my $line = $_;
+    print "singles and pseudos: $line \n";
+    my @O16 = split '!', $line;
+    if($O16[0] eq ""){$singletoncount = "=";}
+    else{$singletoncount = "$O16[0]";}
+    if((scalar @O16) <= 1 || $O16[1] eq ""){$pseudocount = "=";}
+    else{$pseudocount = "$O16[1]";}
+    last;
+}
+    
 print "singletoncount: $singletoncount \n";
 print "pseudocount: $pseudocount \n";
 
