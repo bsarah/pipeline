@@ -548,7 +548,9 @@ else{$singletoncount = "$O16[0]";}
 if(scalar @O16 == 1 || $O16[1] eq ""){$pseudocount = "=";}
 else{$pseudocount = "$O16[1]";}
 
-#print "singletoncount: $singletoncount \n";
+print "singletoncount: $singletoncount \n";
+print "pseudocount: $pseudocount \n";
+
 
 ##add another summary file that includes the singleton and none cluster count
 my $singlecounts = "$summarypath\/Singleton_Counts.txt";

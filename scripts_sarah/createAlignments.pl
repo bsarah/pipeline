@@ -145,8 +145,8 @@ while(<FA>){
 	my $line = $_;
 #	print "line: $line \n";
 	my @F = split ' ', $line;
-	my $n1 = $F[0];
-	my $n2 = $F[1];
+	my $n1 = $F[0]; #node 1
+	my $n2 = $F[1]; #node 2
 	my $seqsim = $F[2];
 	my $strsim = $F[3];
 
@@ -159,11 +159,14 @@ while(<FA>){
 	    $species{$spec} = "";
 	    $species{$spec2} = "";
 	    $spec2pseudo{$spec} = "";
+	    $spec2pseudo{$spec2} = "";
 	    my $startvec = $G[(scalar @G) - 4] + (0.0001 * $G[(scalar @G) - 5]);
+	    my $startvec2 = $G2[(scalar @G2) - 4] + (0.0001 * $G2[(scalar @G2) - 5]);
 	    if(exists $start2node{$startvec}){}
 	    else{$start2node{$startvec} = $n1;}
+	    if(exists $start2node{$startvec2}){}
+	    else{$start2node{$startvec2} = $n2;}
 	    my $p1 = $G[(scalar @G) - 1];
-	    
 	    my $p2 = $G2[(scalar @G2) - 1];
 	    if($p1 eq "P"){push @pgenes, $n1;}
 	    if($p2 eq "P"){push @pgenes, $n2;}
@@ -177,9 +180,13 @@ while(<FA>){
 	    my $spec2 = $G2[(scalar @G2) - 7];
 	    $species{$spec2} = "";
 	    $spec2pseudo{$spec} = "";
+	    $spec2pseudo{$spec2} = "";
 	    my $startvec = $G[(scalar @G) - 5] + (0.0001 * $G[(scalar @G) - 6]);
 	    if(exists $start2node{$startvec}){}
 	    else{$start2node{$startvec} = $n1;}
+	    my $startvec2 = $G2[(scalar @G2) - 5] + (0.0001 * $G2[(scalar @G2) - 6]);
+	    if(exists $start2node{$startvec2}){}
+	    else{$start2node{$startvec2} = $n2;}
 	    my $p1 = $G[(scalar @G) - 1];
 	    my $p2 = $G2[(scalar @G2) - 1];
 	    if($p1 eq "T" || $p1 eq "t" || $p1 eq "True" || $p1 eq "true"
@@ -708,8 +715,8 @@ my @PC = split "=", $pseudocount;
 for(my $pc = 0;$pc < scalar @PC; $pc++){
     if($PC[$pc] eq ""){next;}
     my @ptmp = split "-", $PC[$pc];
-    if(exists($psevents{$ptmp[0]})){$psevents{$ptmp[0]}++;}
-    else{$psevents{$ptmp[0]}=1;}
+    if(exists($psevents{$ptmp[0]})){$psevents{$ptmp[0]}+=$ptmp[1];}
+    else{$psevents{$ptmp[0]}=$ptmp[1];}
 }
 
 
