@@ -27,17 +27,18 @@ while(<FA>){
     if($line =~ /^#/){next;}
     if($line eq ""){next;}
     my @F = split '\t', $line;
+#    if(scalar @F < 10){next;}
     my @G = split '_', $F[1];
     my $spec = $G[0];
     my $elstart;
     my $elend;
     if($F[2] < $F[3]){
-	my $elstart = $F[2];
-	my $elend = $F[3];
+	$elstart = $F[2];
+	$elend = $F[3];
     }
     else{
-	my $elstart = $F[3];
-	my $elend = $F[2];
+	$elstart = $F[3];
+	$elend = $F[2];
     }
     my $lnum = $F[5];
     my $rnum = $F[6];
@@ -83,10 +84,10 @@ while(<FA>){
 	$rstart = $R[3];
 	$rend = $R[2];
     }
-    $dist2left = abs($lend-$lstart);
-    $dist2right = abs($lend-$rstart);
+    $dist2left = abs($lend-$elstart);
+    $dist2right = abs($elend-$rstart);
     $distL2R = abs($lend-$rstart);
-    $ellen = abs($lstart - $lend);
+    $ellen = abs($elstart - $elend);
     $llen = abs($lend-$lstart);
     $rlen = abs($rend-$rstart);
     my $outstr = "$dist2left\t$dist2right\t$distL2R\t$ellen\t$llen\t$rlen\n";

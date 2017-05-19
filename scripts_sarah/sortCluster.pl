@@ -34,6 +34,7 @@ while(<FA>){
 	##for which species are contained in the singleton clusters
 	open CF,"<$curfile" or die "can't open $curfile\n";
 	while(<CF>){
+	    chomp;
 	    my $line = $_;
 	    my @G = split "\t", $line;
 	    my $prespec = $G[1];
@@ -65,8 +66,14 @@ while(<FA>){
 
 my $outstr =  "";
 
+##substract number of pseudogenes from number of singletons as we want to omit
+##pseudogenes in the analysis
+
 foreach my $k (sort keys %species) {
-    $outstr = "$outstr$k\-$species{$k}\=";
+    my $newval;
+    if(exists($pseudos{$k})){$newval = $species{$k}-$pseudos{$k};}
+    else{$newval = $species{$k};}
+    $outstr = "$outstr$k\-$newval\=";
 }
 $outstr = "$outstr\!";
 foreach my $p (sort keys %pseudos) {

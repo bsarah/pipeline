@@ -481,7 +481,7 @@ my $cmd6 = "mkdir $outpath\/clusters\/NoneCluster 2>>$err";
 my $cmd7 = "mv $outpath\/clusters\/cluster-None\* $outpath\/clusters\/NoneCluster 2>>$err";
 my $cmd7a = "touch $outpath\/clusters\/NoneCluster/nonecluslist 2>>$err";;
 my $cmd7b = "ls $outpath\/clusters\/NoneCluster/*.clus > $outpath\/clusters\/NoneCluster/nonecluslist 2>>$err";
-my $cmd7c = "$perlpath\/perl $scripts_sarah\/countNones.pl $outpath\/clusters\/NoneCluster/nonecluslist";
+my $cmd7c = "$perlpath\/perl $scripts_sarah\/countNones.pl $outpath\/clusters\/NoneCluster/nonecluslist $mode $pseudoscore 2>>$err";
 ##report the number of elements for each species that are contained in none clusters
 
 print "sort clusters..";
@@ -492,7 +492,7 @@ my @out7b = readpipe("$cmd7b");
 my @out7c = readpipe("$cmd7c");
 print "Done!\n";
 
-my $nonestr = $out7c[0];
+my $allnonestr = $out7c[0];
 
 #create bedfile about clusters (without none clusters)
 my $sumallclusters = "$summarypath\/Summary_allClusters.txt";
@@ -521,6 +521,8 @@ my $outname2 = "allClusters_joined.bed";
 my $cmd9a = "$perlpath\/perl $scripts_sarah\/writeBED\.pl $outpath\/clusters\/cluslist_joined $outpath $outname2 $sumallclustersjoined 2>>$err";
 
 #sort out singletons
+##change this later!
+if($mode == -1){$mode = 1;}
 ##sortCluster should output a summaryfile for singletons...
 my $cmd15 = "mkdir $outpath\/clusters/singletons 2>>$err";
 my $tmpfile = "$outpath\/clusters/singletons/tmp";
@@ -545,7 +547,7 @@ print "sortCluster cnmd: $cmd16 \n";
 ##this string contains $species\-$num_singletons\=$species\-...has to be separated like this in order to be able to hand it over as a parameter
 ##give this to create alignments in order to add the singleton count to the genetic events list (as insertions)
 my $singletoncount;
-my $pseudocount;
+my $tmppseudocount;
 
 
 open TF,"<$tmpfile" or die "can't open $tmpfile\n";
@@ -555,56 +557,46 @@ while(<TF>){
     my @O16 = split '!', $line;
     if($O16[0] eq ""){$singletoncount = "=";}
     else{$singletoncount = "$O16[0]";}
-    if((scalar @O16) <= 1 || $O16[1] eq ""){$pseudocount = "=";}
-    else{$pseudocount = "$O16[1]";}
+    if((scalar @O16) <= 1 || $O16[1] eq ""){$tmppseudocount = "=";}
+    else{$tmppseudocount = "$O16[1]";}
     last;
 }
     
-print "singletoncount: $singletoncount \n";
-print "pseudocount: $pseudocount \n";
 
-
-##add another summary file that includes the singleton and none cluster count
-my $singlecounts = "$summarypath\/Singleton_Counts.txt";
-my $cmdallsingles = "ls $outpath\/clusters/singletons\/*.clus > $outpath\/clusters/singletons\/singletonlist";
-my $cmdsingles = "$perlpath\/perl $scripts_sarah\/countElems.pl $outpath\/clusters/singletons/singletonlist $pseudoscore $summarypath\/Singleton_Counts.txt 2>>$err";
-my $nonecounts = "$summarypath\/None_Counts.txt";
-my $cmdnones = "$perlpath\/perl $scripts_sarah\/countElems.pl $outpath\/clusters\/NoneCluster/nonecluslist $pseudoscore $summarypath\/None_Counts.txt 2>>$err";
-
-readpipe("$cmdallsingles");
-my @outsingles = readpipe("$cmdsingles");
-my @outnones = readpipe("$cmdnones");
-append2file($outs,$singlecounts);
-append2file($outs,$nonecounts);
-
-my $totpseudostr = "";
-if($pseudoscore >= 0){
-    ##this is taking care for the pseudogenes that are in the singles or none cluster
-    my @SinglesPseus = split '=', $outsingles[0];
-    my @NonePseus = split '=', $outnones[0];
-    
-    my %tmppseu = ();
-    for(my $sp=0;$sp < scalar @SinglesPseus;$sp++){
-	my @TMP = split '-', $SinglesPseus[$sp];
-	if(exists $tmppseu{$TMP[0]}){$tmppseu{$TMP[0]}+=$TMP[1];}
-	else{$tmppseu{$TMP[0]}=$TMP[1];}
-	
+my @N1 = split '!',$allnonestr;
+my $nonestr;
+if($N1[0] eq ""){$nonestr="=";}
+else{$nonestr = $N1[0];}
+my $nonpseustr;
+my $pseudocount="";
+if(scalar @N1 <= 1 || $N1[1] eq ""){}
+else{
+    my %tmppseudo = ();
+    my @NP = split '=', $N1[1];
+    my @SP = split '=', $tmppseudocount;
+    for(my $np = 0;$np < scalar @NP;$np++){
+	my @Q = split '-', $NP[$np];
+	if(exists($tmppseudo{$Q[0]})){$tmppseudo{$Q[0]}+=$Q[1];}
+	else{$tmppseudo{$Q[0]}=$Q[1];}
     }
-    for(my $np=0;$np < scalar @NonePseus;$np++){
-	my @NTMP = split '-', $NonePseus[$np];
-	if(exists $tmppseu{$NTMP[0]}){$tmppseu{$NTMP[0]}+=$NTMP[1];}
-	else{$tmppseu{$NTMP[0]}=$NTMP[1];}
-	
+    for(my $sp = 0;$sp < scalar @SP; $sp++){
+	my @R = split '-', $SP[$sp];
+	if(exists($tmppseudo{$R[0]})){$tmppseudo{$R[0]}+=$R[1];}
+	else{$tmppseudo{$R[0]}=$R[1];}
     }
-    
-    foreach my $tk (keys %tmppseu){
-	$totpseudostr = "$totpseudostr$tk\-$tmppseu{$tk}\=";
+    foreach my $p (sort keys %tmppseudo){
+	$pseudocount = "$pseudocount$p\-$tmppseudo{$p}=";
     }
-    if($totpseudostr eq ""){$totpseudostr = "=";}
 }
-else{$totpseudostr = "=";}
+if($pseudocount eq ""){$pseudocount = "=";}
 
-print STDERR "totpseudostr: $totpseudostr \n";
+print "singletoncount: $singletoncount \n";
+print "tmppseudocount: $tmppseudocount \n";
+print "Nones: $allnonestr\n";
+print "nonestr: $nonestr\n";
+print "pseudocount $pseudocount\n";
+
+my $totpseudostr = "=";
 
 #create graphs
 my $sumbuildedges = "$summarypath\/Summary_buildedges.txt";

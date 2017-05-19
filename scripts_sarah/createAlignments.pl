@@ -132,7 +132,7 @@ while(<FA>){
     my %node2letter = ();
     my %species = ();
     my %start2node = ();
-    my @pgenes = (); ##pseudogenes
+    my %pgenes = (); ##pseudogenes
     my %spec2pseudo = ();   
     my @vertices = ();
     my @arcs = ();
@@ -152,6 +152,9 @@ while(<FA>){
 
 	my @G = split '_', $n1;
 	my @G2 = split '_', $n2;
+	my $isp1 = 0; #check if genes are pseudo or not
+	my $isp2 = 0;
+
 	if($mode == 0){
 	    #nodes look like: chr_spec_id_start_end_strand_pseudo
 	    my $spec = $G[(scalar @G) - 6];
@@ -160,16 +163,21 @@ while(<FA>){
 	    $species{$spec2} = "";
 	    $spec2pseudo{$spec} = "";
 	    $spec2pseudo{$spec2} = "";
-	    my $startvec = $G[(scalar @G) - 4] + (0.0001 * $G[(scalar @G) - 5]);
-	    my $startvec2 = $G2[(scalar @G2) - 4] + (0.0001 * $G2[(scalar @G2) - 5]);
-	    if(exists $start2node{$startvec}){}
-	    else{$start2node{$startvec} = $n1;}
-	    if(exists $start2node{$startvec2}){}
-	    else{$start2node{$startvec2} = $n2;}
-	    my $p1 = $G[(scalar @G) - 1];
+	    ##if we find a pseudogenes, add it to the pseudogene vector and remove it from the analysis
+	    my $p1 = $G[(scalar @G) - 1];	    
+	    if($p1 eq "P"){if(exists($pgenes{$n1})){}else{$pgenes{$n1}=1;} $isp1 = 1;}
+	    else{
+		my $startvec = $G[(scalar @G) - 4] + (0.0001 * $G[(scalar @G) - 5]);
+		if(exists $start2node{$startvec}){}
+		else{$start2node{$startvec} = $n1;}
+	    }
 	    my $p2 = $G2[(scalar @G2) - 1];
-	    if($p1 eq "P"){push @pgenes, $n1;}
-	    if($p2 eq "P"){push @pgenes, $n2;}
+	    if($p2 eq "P"){if(exists($pgenes{$n2})){}else{$pgenes{$n2}=1;}$isp2 = 1;}
+	    else{	
+		my $startvec2 = $G2[(scalar @G2) - 4] + (0.0001 * $G2[(scalar @G2) - 5]);
+		if(exists $start2node{$startvec2}){}
+		else{$start2node{$startvec2} = $n2;}
+	    }
 	}
 	else{
 	    #nodes look like: chr_spec_id_start_end_strand_type_pseudo
@@ -181,24 +189,28 @@ while(<FA>){
 	    $species{$spec2} = "";
 	    $spec2pseudo{$spec} = "";
 	    $spec2pseudo{$spec2} = "";
-	    my $startvec = $G[(scalar @G) - 5] + (0.0001 * $G[(scalar @G) - 6]);
-	    if(exists $start2node{$startvec}){}
-	    else{$start2node{$startvec} = $n1;}
-	    my $startvec2 = $G2[(scalar @G2) - 5] + (0.0001 * $G2[(scalar @G2) - 6]);
-	    if(exists $start2node{$startvec2}){}
-	    else{$start2node{$startvec2} = $n2;}
+	    ##if we find a pseudogenes, add it to the pseudogene vector and remove it from the analysis
 	    my $p1 = $G[(scalar @G) - 1];
 	    my $p2 = $G2[(scalar @G2) - 1];
 	    if($p1 eq "T" || $p1 eq "t" || $p1 eq "True" || $p1 eq "true"
-	       || $p1 eq "1" || $p1 eq "TRUE"){push @pgenes, $n1;}
+	       || $p1 eq "1" || $p1 eq "TRUE"){if(exists($pgenes{$n1})){}else{$pgenes{$n1}=1;}$isp1 = 1;}
+	    else{
+		my $startvec = $G[(scalar @G) - 5] + (0.0001 * $G[(scalar @G) - 6]);
+		if(exists $start2node{$startvec}){}
+		else{$start2node{$startvec} = $n1;}
+	    }
 	    if($p2 eq "T" || $p2 eq "t" || $p2 eq "True" || $p2 eq "true"
-	       || $p2 eq "1" || $p2 eq "TRUE"){push @pgenes, $n2;}
-
+	       || $p2 eq "1" || $p2 eq "TRUE"){if(exists($pgenes{$n2})){}else{$pgenes{$n2}=1;} $isp2 = 1;}
+	    else{	    
+		my $startvec2 = $G2[(scalar @G2) - 5] + (0.0001 * $G2[(scalar @G2) - 6]);
+		if(exists $start2node{$startvec2}){}
+		else{$start2node{$startvec2} = $n2;}
+	    }
 	    ##check types:
 	    my $t1 = $G[(scalar @G) - 2];
 	    my $t2 = $G2[(scalar @G2) - 2];
 	    if($numdifftypes > 0){
-		if($numdifftypes > 1 && $seqsim >= $seqlim && $strsim >= $strlim && $t1 ne $t2){
+		if($numdifftypes > 1 && $seqsim >= $seqlim && $strsim >= $strlim && $t1 ne $t2 && $isp1 == 0 && $isp2 == 0){
 		    ##sequence similarity is high but types seem to be different
 		    my $remstr = "";
 		    if($n1 le $n2){$remstr = "$n1\:$n2";}
@@ -206,7 +218,7 @@ while(<FA>){
 		    if(grep( /^$remstr$/, @remoldings)){}
 		    else{push @remoldings, $remstr;}
 		}
-		if($numdifftypes > 1 && $t1 eq $t2 && $seqsim < $seqlim){
+		if($numdifftypes > 1 && $t1 eq $t2 && $seqsim < $seqlim && $isp1 == 0 && $isp2 == 0){
 		    ##equal types but low sequence similarity
 		    my $inremstr = "";
 		    if($n1 le $n2){$inremstr = "$n1\:$n2";}
@@ -217,7 +229,27 @@ while(<FA>){
 		}
 	    }
 	}
-	    
+
+	if($isp1 == 1 && $isp2 == 1){next;}
+	elsif($isp1 == 1 && $isp2 == 0){
+	    if(exists $node2letter{$n2}){}
+	    else{
+		$node2letter{$n2} = $letters[$letcount];
+		$letcount++;
+	    }
+	    next;
+	}
+	elsif($isp1 == 0 && $isp2 == 1){
+	    if (exists $node2letter{$n1}) {}
+	    else{
+		$node2letter{$n1} = $letters[$letcount];
+		$letcount++;
+	    }
+	    next;
+	}
+	else{}
+	##the following is the else case, as we do 'next' above, this is ok
+	##both genes are not pseudo
 	
 	if($seqsim >= $seqlim && $strsim >= $strlim){
 	    ##similarity fits, nodes get the same letter
@@ -384,7 +416,7 @@ while(<FA>){
 	    if($lseq2len != $ocount){print $outs "lengths don't fit! sequence:$lseq2len, alnseq: $ocount, file: $curfile \n";}
 
 #	    print "spec2pseudo k,k2: $spec2pseudo{$k},$spec2pseudo{$k2} \n";
-	    my @sp12pseudo = split '', $spec2pseudo{$k};
+	    my @sp12pseudo = split '', $spec2pseudo{$k};  ##this is the sequence for species k
 	    my @sp22pseudo = split '', $spec2pseudo{$k2};	    
 	    my $tild = "~";
 	    my $mins = "-";
@@ -691,8 +723,20 @@ while(<FA>){
     if($ccnodecount != $curvertnum){
 	print $outs "numbers don't fit! previous nodenum: $curvertnum, now: $ccnodecount\n";
     }
-    
-    ##how to get those events into the tree?
+
+    ##pseudogenes here!
+    foreach my $k (keys %pgenes){
+	my @Ktmp = split '_', $k;
+	my $kspec;
+	if($mode == 0){
+	    $kspec = $Ktmp[-6];
+	}
+	else{
+	    $kspec=$Ktmp[-7];
+	}
+	if(exists($psevents{$kspec})){$psevents{$kspec}++;}
+	else{$psevents{$kspec}=1;}
+    }
     
 }
 
