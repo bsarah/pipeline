@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-## perl createAlignments.pl edlilist outpath pathtonw secsim strsim pseudocount singletoncount mode numdifftypes outfolder match dupl ins pseudo dels missing newicktree pathoTemp summary remodlingsout inremoldingsout
+## perl createAlignments.pl edlilist outpath pathtonw secsim strsim mode numdifftypes outfolder match dupl ins pseudo pseumis pseudels pseuins dels missing newicktree pathoTemp summary remodlingsout inremoldingsout
 
 ##program will produce sequences of letters, where the same letter means similar sequences, depending on the threshold.
 ##thus one letter for each connected component.
@@ -25,8 +25,9 @@ my $outpath=shift;
 my $pathtonw = shift;
 my $seqlim = shift;
 my $strlim = shift;
-my $pseudocount = shift;
-my $singletoncount = shift;
+#my $nonecount = shift; #I don't need those counts here
+#my $pseudocount = shift;
+#my $singletoncount = shift;
 my $mode = shift;
 my $numdifftypes = shift;
 #my $outfolder = shift; ##write files for ePoPE #not used at the moment!
@@ -34,6 +35,9 @@ my $matchout = shift;
 my $duplout = shift;
 my $insout = shift;
 my $pseout = shift;
+my $psemisout = shift;
+my $psedelout = shift;
+my $pseinsout = shift;
 my $delout = shift;
 my $misout = shift;
 my $nwtree = shift;
@@ -52,10 +56,14 @@ my $suminrems = shift;
 my %dupevents =();
 my %matevents =();
 my %insevents =();
-##are mismatches needed? use pseudogenes INSTEAD of mistmatches
 my %misevents =(); #missing data=no anchors
 my %delevents = ();#deletions
-my %psevents = ();
+my %psevents = (); #insertions of pseudogenes
+my %psedels = ();
+my %psemis = ();
+my %pseins = ();
+
+
 my @remoldings = ();
 # The pairs of elements (separated with ':') are defined 
 #as orthologs based on the similarity score but have distinct types according to the input";
@@ -125,8 +133,8 @@ while(<FA>){
     print $outgr ">$almostname\n";
     $alncount++;
     ##one letter codes needed
-    ##are all the chars ok?
-    my @letters = ('A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','0','1','2','3','4','5','6','7','8','9','!','@','#','$','%','^','&','*','(',')','=','+','-','~'); 
+    ##are all the chars ok? ##no - or ~ as they appear in the alignment
+    my @letters = ('A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','0','1','2','3','4','5','6','7','8','9','!','@','#','$','%','^','&','*','(',')','=','+','"','?','>','<','[',']','|'); 
     my $letcount = 0;
    
     my %node2letter = ();
@@ -166,18 +174,18 @@ while(<FA>){
 	    ##if we find a pseudogenes, add it to the pseudogene vector and remove it from the analysis
 	    my $p1 = $G[(scalar @G) - 1];	    
 	    if($p1 eq "P"){if(exists($pgenes{$n1})){}else{$pgenes{$n1}=1;} $isp1 = 1;}
-	    else{
+#	    else{
 		my $startvec = $G[(scalar @G) - 4] + (0.0001 * $G[(scalar @G) - 5]);
 		if(exists $start2node{$startvec}){}
 		else{$start2node{$startvec} = $n1;}
-	    }
+#	    }
 	    my $p2 = $G2[(scalar @G2) - 1];
 	    if($p2 eq "P"){if(exists($pgenes{$n2})){}else{$pgenes{$n2}=1;}$isp2 = 1;}
-	    else{	
+#	    else{	
 		my $startvec2 = $G2[(scalar @G2) - 4] + (0.0001 * $G2[(scalar @G2) - 5]);
 		if(exists $start2node{$startvec2}){}
 		else{$start2node{$startvec2} = $n2;}
-	    }
+#	    }
 	}
 	else{
 	    #nodes look like: chr_spec_id_start_end_strand_type_pseudo
@@ -194,18 +202,18 @@ while(<FA>){
 	    my $p2 = $G2[(scalar @G2) - 1];
 	    if($p1 eq "T" || $p1 eq "t" || $p1 eq "True" || $p1 eq "true"
 	       || $p1 eq "1" || $p1 eq "TRUE"){if(exists($pgenes{$n1})){}else{$pgenes{$n1}=1;}$isp1 = 1;}
-	    else{
+#	    else{
 		my $startvec = $G[(scalar @G) - 5] + (0.0001 * $G[(scalar @G) - 6]);
 		if(exists $start2node{$startvec}){}
 		else{$start2node{$startvec} = $n1;}
-	    }
+#	    }
 	    if($p2 eq "T" || $p2 eq "t" || $p2 eq "True" || $p2 eq "true"
 	       || $p2 eq "1" || $p2 eq "TRUE"){if(exists($pgenes{$n2})){}else{$pgenes{$n2}=1;} $isp2 = 1;}
-	    else{	    
+#	    else{	    
 		my $startvec2 = $G2[(scalar @G2) - 5] + (0.0001 * $G2[(scalar @G2) - 6]);
 		if(exists $start2node{$startvec2}){}
 		else{$start2node{$startvec2} = $n2;}
-	    }
+#	    }
 	    ##check types:
 	    my $t1 = $G[(scalar @G) - 2];
 	    my $t2 = $G2[(scalar @G2) - 2];
@@ -230,26 +238,26 @@ while(<FA>){
 	    }
 	}
 
-	if($isp1 == 1 && $isp2 == 1){next;}
-	elsif($isp1 == 1 && $isp2 == 0){
-	    if(exists $node2letter{$n2}){}
-	    else{
-		$node2letter{$n2} = $letters[$letcount];
-		$letcount++;
-	    }
-	    next;
-	}
-	elsif($isp1 == 0 && $isp2 == 1){
-	    if (exists $node2letter{$n1}) {}
-	    else{
-		$node2letter{$n1} = $letters[$letcount];
-		$letcount++;
-	    }
-	    next;
-	}
-	else{}
-	##the following is the else case, as we do 'next' above, this is ok
-	##both genes are not pseudo
+#	if($isp1 == 1 && $isp2 == 1){next;}
+#	elsif($isp1 == 1 && $isp2 == 0){
+#	    if(exists $node2letter{$n2}){}
+#	    else{
+#		$node2letter{$n2} = $letters[$letcount];
+#		$letcount++;
+#	    }
+#	    next;
+#	}
+#	elsif($isp1 == 0 && $isp2 == 1){
+#	    if (exists $node2letter{$n1}) {}
+#	    else{
+#		$node2letter{$n1} = $letters[$letcount];
+#		$letcount++;
+#	    }
+#	    next;
+#	}
+#	else{}
+#	##the following is the else case, as we do 'next' above, this is ok
+#	##both genes are not pseudo
 	
 	if($seqsim >= $seqlim && $strsim >= $strlim){
 	    ##similarity fits, nodes get the same letter
@@ -364,8 +372,13 @@ while(<FA>){
 	##problem, if the cluster consists of only nodes of the same species!
 	##thus, add those elements directly to the insertions
 	if(scalar (keys %species) == 1){
-	    if(exists $insevents{$k}){$insevents{$k} += $lseq1len;}
-	    else{$insevents{$k} = $lseq1len;}
+	    my $psseq = $spec2pseudo{$k};
+	    my $zcount = $psseq =~ tr/0/0/; #normal genes
+	    my $ecount = $psseq =~ tr/1/1/; #pseudogenes
+	    if(exists $insevents{$k}){$insevents{$k} += $zcount;}
+	    else{$insevents{$k} = $zcount;}
+	    if(exists($psevents{$k})){$psevents{$k}+=$ecount;}
+	    else{$psevents{$k}=$ecount;}
 	    $jump=1;
 	    last;
 	}
@@ -416,7 +429,7 @@ while(<FA>){
 	    if($lseq2len != $ocount){print $outs "lengths don't fit! sequence:$lseq2len, alnseq: $ocount, file: $curfile \n";}
 
 #	    print "spec2pseudo k,k2: $spec2pseudo{$k},$spec2pseudo{$k2} \n";
-	    my @sp12pseudo = split '', $spec2pseudo{$k};  ##this is the sequence for species k
+	    my @sp12pseudo = split '', $spec2pseudo{$k};  ##this is the sequence for species k for pseudogene or not
 	    my @sp22pseudo = split '', $spec2pseudo{$k2};	    
 	    my $tild = "~";
 	    my $mins = "-";
@@ -566,14 +579,9 @@ while(<FA>){
 #		my $word = "sequence";
 #		my $outst = "$spe $word\n";
 #		print $outpo $outst;
-#	    }
-	    if(exists $spe2count{$spe}){
-		$spe2count{$spe}++;
-	    }
-	    else{
-		$spe2count{$spe}=1;
-	    }
-#	    if($pseudi eq "0"){print "0\n";}
+	    #	    }
+
+
 	    if($pseudi eq "1"){
 		if(exists $pse2count{$spe}){
 		    $pse2count{$spe}++;
@@ -582,6 +590,15 @@ while(<FA>){
 		    $pse2count{$spe}=1;
 		}
 	    }
+	    else{
+		if(exists $spe2count{$spe}){
+		    $spe2count{$spe}++;
+		}
+		else{
+		    $spe2count{$spe}=1;
+		}
+	    }
+	    
 	}
 
 #	my @kp = keys %pse2count;
@@ -634,12 +651,15 @@ while(<FA>){
 	    }
 	}
 	my @pseuvals = values %pse2count;
+	my $psnum = scalar @pseuvals;
+	my $psestr = "";
+	my $pmin = 0;
 	if(scalar @pseuvals > 0){
-	    my $psestr = join(',',sort (keys %pse2count));
+	    $psestr = join(',',sort (keys %pse2count));
 	    ##do the same distinguishing for the pseudogenes as for matching
 	    if(scalar @pseuvals == 1){#singleton
-		if(exists $psevents{$psestr}){$psevents{$psestr} += $pseuvals[0];}
-		else{$psevents{$psestr} = $pseuvals[0];}
+		if(exists $pseins{$psestr}){$pseins{$psestr} += $pseuvals[0];}
+		else{$pseins{$psestr} = $pseuvals[0];}
 	    }
 	    elsif(none {$_ != $pseuvals[0]} @pseuvals)
 	    {
@@ -647,7 +667,7 @@ while(<FA>){
 		else{$psevents{$psestr} = $pseuvals[0];}
 	    }
 	    else{#add the minimum common value for the complete psestr and the remainings as singletons, as the duplications have been counted already
-		my $pmin = min @pseuvals;
+		$pmin = min @pseuvals;
 		if(exists $psevents{$psestr}){$psevents{$psestr} += $pmin;}
 		else{$psevents{$psestr} = $pmin;}
 		foreach my $ppp (keys %pse2count){
@@ -714,7 +734,47 @@ while(<FA>){
 	    }
 	}
 
+	#do the same for pseudogenes in order to detect missing data and deletions for pseudogenes
+	#extra files for pseudo: -singletons, ins, del, ex, mis
 
+
+	if($psnum > 0){
+	    	    #species: comma-separated in $psestr
+	    my @pmissingspecs = getMissingSpecs($psestr,$nwtree);
+	    if(scalar @pmissingspecs > 0){
+		my @pmissingtmp = ();
+		my @pmissingdel = ();
+		for(my $mi = 0; $mi < scalar @pmissingspecs;$mi++){
+		    my $pspecii = $pmissingspecs[$mi];
+		    my $pgrepcmdleft = "zcat $path2Temp\/$pspecii\_temp\_sorted\.bed\.gz \| grep \"$pspecii\_$leftanchor\" ";
+		    my $pgrepcmdright = "zcat $path2Temp\/$pspecii\_temp\_sorted\.bed\.gz \| grep \"$pspecii\_$rightanchor\" ";
+		    #print STDERR "$grepcmdleft ; $grepcmdright\n";
+		    my @poutleft = readpipe("$pgrepcmdleft");
+		    if(scalar @poutleft == 0){
+			push @pmissingtmp, $pspecii;
+			next;
+		    }
+		    my @poutright = readpipe("$pgrepcmdright");
+		    #check if both out[0] are nonempty
+		    if(scalar @poutright == 0){
+			push @pmissingtmp, $pspecii;
+			next;
+		    }
+		    push @pmissingdel, $pspecii;
+		}
+
+		if(scalar @pmissingtmp > 0){
+		    my $pmisstr = join(',', @pmissingtmp);
+		    if(exists $psemis{$pmisstr}){$psemis{$pmisstr} += $pmin;}
+		    else{$psemis{$pmisstr} = $pmin;}
+		}
+		if(scalar @pmissingdel > 0){
+		    my $pdelstr = join(',',@pmissingdel);
+		    if(exists $psedels{$pdelstr}){$psedels{$pdelstr} += $pmin;}
+		    else{$psedels{$pdelstr} = $pmin;}
+		}
+	    }
+	}
 	
 
 	
@@ -725,18 +785,18 @@ while(<FA>){
     }
 
     ##pseudogenes here!
-    foreach my $k (keys %pgenes){
-	my @Ktmp = split '_', $k;
-	my $kspec;
-	if($mode == 0){
-	    $kspec = $Ktmp[-6];
-	}
-	else{
-	    $kspec=$Ktmp[-7];
-	}
-	if(exists($psevents{$kspec})){$psevents{$kspec}++;}
-	else{$psevents{$kspec}=1;}
-    }
+#    foreach my $k (keys %pgenes){
+#	my @Ktmp = split '_', $k;
+#	my $kspec;
+#	if($mode == 0){
+#	    $kspec = $Ktmp[-6];
+#	}
+#	else{
+#	    $kspec=$Ktmp[-7];
+#	}
+#	if(exists($psevents{$kspec})){$psevents{$kspec}++;}
+#	else{$psevents{$kspec}=1;}
+ #   }
     
 }
 
@@ -755,13 +815,16 @@ while(<FA>){
 #    else{$insevents{$stmp[0]} = $stmp[1];}
 #}
 
-my @PC = split "=", $pseudocount;
-for(my $pc = 0;$pc < scalar @PC; $pc++){
-    if($PC[$pc] eq ""){next;}
-    my @ptmp = split "-", $PC[$pc];
-    if(exists($psevents{$ptmp[0]})){$psevents{$ptmp[0]}+=$ptmp[1];}
-    else{$psevents{$ptmp[0]}=$ptmp[1];}
-}
+
+
+#my @PC = split "=", $pseudocount;
+#for(my $pc = 0;$pc < scalar @PC; $pc++){
+#    if($PC[$pc] eq ""){next;}
+#    my @ptmp = split "-", $PC[$pc];
+#    if(exists($psevents{$ptmp[0]})){$psevents{$ptmp[0]}+=$ptmp[1];}
+#    else{$psevents{$ptmp[0]}=$ptmp[1];}
+#}
+
 
 
 ##sort the entries in each entry for the hashes alphabetically
@@ -795,6 +858,17 @@ foreach my $in (sort keys %insevents) {
 }
 close $outi;
 
+
+open(my $outpi,">>",$pseinsout);
+foreach my $pin (sort keys %pseins) {
+    my @pievs = split ',', $pin;
+    @pievs = sort @pievs;
+    my $pinstr = join(',',@pievs);
+    print $outpi "$pinstr\t$pseins{$pin}\n";
+}
+close $outpi;
+
+
 open(my $outp,">>",$pseout);
 foreach my $mi (sort keys %psevents) {
     my @mevs = split ',', $mi;
@@ -822,7 +896,23 @@ foreach my $ms (sort keys %misevents) {
 }
 close $outn;
 
+open(my $outpm,">>",$psemisout);
+foreach my $pm (sort keys %psemis) {
+    my @pmiss = split ',', $pm;
+    @pmiss = sort @pmiss;
+    my $pmsstr = join(',',@pmiss);
+    print $outpm "$pmsstr\t$psemis{$pm}\n";
+}
+close $outpm;
 
+open(my $outpd,">>",$psedelout);
+foreach my $pd (sort keys %psedels) {
+    my @pdls = split ',', $pd;
+    @pdls = sort @pdls;
+    my $pdlstr = join(',',@pdls);
+    print $outpd "$pdlstr\t$psedels{$pd}\n";
+}
+close $outpd;
 
 
 #my $totALNnum = 0; ##num of alignments that are checked for ePoPE

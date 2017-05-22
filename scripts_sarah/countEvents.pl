@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-##coutEvents.pl newickTree(with correct identifiers) singletoncount matches dupl insertions pseudo deletions missing treeout summary totelelemstr nonestr totpseudostr iTOLfolder
+##coutEvents.pl newickTree(with correct identifiers) singletoncount matches dupl insertions pseudo pseumis pseudels pseuins deletions missing treeout summary totelelemstr nonestr iTOLfolder
 ##get temporary files containing the genetic events and the corresponding numbers
 ##species,species... number
 ##output: new geneticEvents file including deletions, new newick tree including numbers at nodes
@@ -22,14 +22,18 @@ my $singletoncount = shift;
 my $matches = shift;
 my $dupl = shift;
 my $ins = shift;
-my $pseudo = shift;
+my $pseudo = shift; #matches
+my $pseumis = shift;
+my $pseudels = shift;
+my $pseuins = shift;
 my $dels = shift;
 my $misses = shift;
 my $treeout = shift;
 my $summary = shift;
-my $totelemstr = shift; ##for later, printing iTOL files
-my $nonestr = shift; ##for later, printing iTOL files
-my $totpseudostr = shift; ##for later, printing iTOL files, if = then nothing, this is the string for singleton pseudogenes, the others are listed in the input file pseudo.txt
+my $totelemstr = shift; ##for later, printing iTOL files, includes the total number of pseudogenes
+my $nonestr = shift; ##for later, printing iTOL filesincludes the total number of pseudogenes
+#pseudogenes are now included in the categories
+#my $totpseudostr = shift; ##for later, printing iTOL files, if = then nothing, this is the string for singleton pseudogenes, the others are listed in the input file pseudo.txt
 my $iTOLout = shift; ##for later, printing iTOL files
 
 open(my $outt,">>",$treeout);
@@ -40,7 +44,8 @@ my %minusnodes = (); ##nodes of the tree with numbers (-)
 
 my %duplications = ();
 my %insertions = ();
-my %pseudos = ();
+my %pseudos = (); #matches
+
 my %singletons = ();
 my %missing_data = ();
 
@@ -120,7 +125,7 @@ while(<PS>){
     my $psline = $_;
     my @PS = split '\t', $psline;
     if(scalar @PS < 2){print STDERR "misformatted input line, will be skipped! \n"; next;}
-    my @SS = split ',', $PS[0];
+   my @SS = split ',', $PS[0];
     my $psnum = $PS[1];
     if(scalar @SS == 1){
 	$pseudos{$SS[0]} += $psnum;
@@ -129,9 +134,11 @@ while(<PS>){
 	my $Tstr = join('=', @T);
 	my $Sstr = join('=',@SS);
 #	print $outs "findParentOfAll($Tstr,$Sstr)\n";
-	my @pslcas = findParentOfAll($Tstr,$Sstr);
+#	my @pslcas = findParentOfAll($Tstr,$Sstr);
+	my @pslcas = findLCA($Tstr,$Sstr);
 	for(my $i=0;$i<scalar @pslcas;$i++){
-	    $pseudos{$pslcas[$i]} += $psnum;
+	    if(exists($pseudos{$pslcas[$i]})){$pseudos{$pslcas[$i]} += $psnum;}
+	    else{$pseudos{$pslcas[$i]} = $psnum;}
 	}
     }
 }
@@ -189,11 +196,13 @@ while(<FA>){
     my $speciestr = join('=',@S);
 
 
-#####################only adding leaves#######################
-    
-    my @leafsToAdd = findParentOfAll($Treestr,$speciestr);
+#####################only adding nodes#######################
+# unse findLCA instead of findParentofAll as findParent includes the deletions, but we want to have them explicitly    
+#    my @leafsToAdd = findParentOfAll($Treestr,$speciestr);
+    my @leafsToAdd = findLCA($Treestr,$speciestr);
     for(my $i=0;$i<scalar @leafsToAdd; $i++){
-	$plusnodes{$leafsToAdd[$i]} += $num;
+	if(exists($plusnodes{$leafsToAdd[$i]})){$plusnodes{$leafsToAdd[$i]} += $num;}
+	else{$plusnodes{$leafsToAdd[$i]} = $num;}
     }
     
     
@@ -392,7 +401,8 @@ while(<FD>){
 
 
     if(scalar @S == 1){
-	$minusnodes{$S[0]} += $num;
+	if(exists($minusnodes{$S[0]})){$minusnodes{$S[0]} += $num;}
+	else{$minusnodes{$S[0]} = $num;}
 	next;
     }
     
@@ -402,24 +412,58 @@ while(<FD>){
 
     my @leafsToDel = findParentOfAll($Treestr,$speciestr);
     for(my $i=0;$i<scalar @leafsToDel; $i++){
-	$minusnodes{$leafsToDel[$i]} += $num;
+	if(exists($minusnodes{$leafsToDel[$i]})){$minusnodes{$leafsToDel[$i]} += $num;}
+	else{$minusnodes{$leafsToDel[$i]} = $num;}
     }
-    
-
 }
 
 
+##pseudogenes
+my %psdels = ();
+
+open FDP,"<$pseudels" or die "can't open $pseudels\n";
+
+while(<FDP>){
+    chomp;
+    my $pline = $_;
+    my @FP = split '\t', $pline; ##should have at least 2! entries
+    if(scalar @FP < 2){print STDERR "misformatted input line, will be skipped! \n"; next;}
+    my @PS = split ',', $FP[0]; ##species
+    my $pnum = $FP[1];
 
 
+    if(scalar @PS == 1){
+	if(exists($psdels{$PS[0]})){$psdels{$PS[0]} += $pnum;}
+	else{$psdels{$PS[0]} = $pnum;}
+	next;
+    }
+    my $Treestr2 = join('=', @T);
+    my $speciestr2 = join('=',@PS);
 
 
+    my @pseuleafsToDel = findParentOfAll($Treestr2,$speciestr2);
+    for(my $i=0;$i<scalar @pseuleafsToDel; $i++){
+	if(exists($psdels{$pseuleafsToDel[$i]})){$psdels{$pseuleafsToDel[$i]} += $pnum;}
+	else{$psdels{$pseuleafsToDel[$i]} = $pnum;}
+    }
+}
+
+my %pseusingles = ();
 
 #singletoncount
-my @SC = split "=", $singletoncount;
+my @allS = split '!', $singletoncount;
+my @SC = split "=", $allS[0];
 for(my $s = 0; $s < scalar @SC; $s++){
     if($SC[$s] eq ""){next;}
     my @stmp = split "-", $SC[$s];
     $singletons{$stmp[0]} = $stmp[1];
+}
+
+my @SP = split "=", $allS[1];
+for(my $sp = 0; $sp < scalar @SP; $sp++){
+    if($SP[$sp] eq ""){next;}
+    my @sptmp = split "-", $SP[$sp];
+    $pseusingles{$sptmp[0]} = $sptmp[1];
 }
 
 
@@ -431,7 +475,8 @@ while(<FD>){
     my $dline = $_;
     my @D = split '\t', $dline; ##should have at least 2! entries
     if(scalar @D < 2){print STDERR "misformatted input line in duplications, will be skipped! \n"; next;}
-    $duplications{$D[0]} += $D[1];
+    if(exists($duplications{$D[0]})){$duplications{$D[0]} += $D[1];}
+    else{$duplications{$D[0]} = $D[1];}
     if(exists($totcounts{$D[0]})){$totcounts{$D[0]}+=$D[1];}
     else{$totcounts{$D[0]}=$D[1];}
 }
@@ -445,13 +490,29 @@ while(<FI>){
     my $iline = $_;
     my @I = split '\t', $iline; ##should have at least 2! entries
     if(scalar @I < 2){print STDERR "misformatted input line in insertions, will be skipped! \n"; next;}
-    $insertions{$I[0]} += $I[1];
+    if(exists($insertions{$I[0]})){ $insertions{$I[0]}+= $I[1];}
+    else{ $insertions{$I[0]} = $I[1];}
     if(exists($totcounts{$I[0]})){$totcounts{$I[0]}+=$I[1];}
     else{$totcounts{$I[0]}=$I[1];}
 }
 
+##pseuins
+my %psein = ();
 
-#midding data
+open FPI,"<$pseuins" or die "can't open $pseuins\n";
+
+while(<FPI>){
+    chomp;
+    my $piline = $_;
+    my @PI = split '\t', $piline; ##should have at least 2! entries
+    if(scalar @PI < 2){print STDERR "misformatted input line in insertions, will be skipped! \n"; next;}
+    if(exists($psein{$PI[0]})){$psein{$PI[0]} += $PI[1];}
+    else{$psein{$PI[0]} = $PI[1];}
+    if(exists($totcounts{$PI[0]})){$totcounts{$PI[0]}+=$PI[1];}
+    else{$totcounts{$PI[0]}=$PI[1];}
+}
+
+#missing data
 open FM,"<$misses" or die "can't open $misses\n";
 
 while(<FM>){
@@ -470,17 +531,23 @@ while(<FM>){
 }
 
 
-##not needed anymore, see above
-##PSEUDOGENES
-#open FP,"<$pseudo" or die "can't open $pseudo\n";
-#
-#while(<FP>){
-#    chomp;
-#    my $pline = $_;
-#    my @P = split '\t', $pline; ##should have at least 2! entries
-#    if(scalar @P < 2){print "misformatted input line in pseudogenes, will be skipped! \n"; next;}
-#    $pseudos{$P[0]} += $P[1];
-#}
+
+##pseumis
+my %psemis = ();
+
+open FPM,"<$pseumis" or die "can't open $pseumis\n";
+
+while(<FPM>){
+    chomp;
+    my $pmline = $_;
+    my @PM = split '\t', $pmline; ##should have at least 2! entries
+    if(scalar @PM < 2){print "misformatted input line in pseudogenes, will be skipped! \n"; next;}
+    my @pmspecs = split ',', $PM[0];
+    for(my $pm = 0; $pm < scalar @pmspecs;$pm++){
+	if(exists($psemis{$pmspecs[$pm]})){$psemis{$pmspecs[$pm]} += $PM[1];}
+	else{$psemis{$pmspecs[$pm]} = $PM[1];}
+    }
+}
 
 
 
@@ -493,26 +560,41 @@ while(<FM>){
 
 
 my %totnumbers = ();
-my @GT = split '=', $totelemstr;
+my %totpseudos = ();
+
+my @allT = split '!', $totelemstr;
+my @GT = split '=', $allT[0];
 for(my $gt=0;$gt < scalar @GT; $gt++){
     if($GT[$gt] eq ""){next;}
     my @HT = split '-', $GT[$gt];
     $totnumbers{$HT[0]} = $HT[1];
 }
 
+my @GTP = split '=', $allT[1];
+for(my $gtp=0;$gtp < scalar @GTP; $gtp++){
+    if($GTP[$gtp] eq ""){next;}
+    my @HTP = split '-', $GTP[$gtp];
+    $totpseudos{$HTP[0]} = $HTP[1];
+}
+
+
+
+
 my %nonenums = ();
-my @GG = split '=', $nonestr;
+my %pseunons = ();
+my @allG = split '!', $nonestr;
+my @GG = split '=', $allG[0];
 for(my $gg=0;$gg<scalar @GG;$gg++){
     if($GG[$gg] eq ""){next;}
     my @HG = split '-', $GG[$gg];
     $nonenums{$HG[0]} = $HG[1];
 }
 
-my @GP = split '=', $totpseudostr;
+my @GP = split '=', $allG[1];
 for(my $gp=0;$gp<scalar @GP;$gp++){
     if($GP[$gp] eq ""){next;}
     my @HP = split '-', $GP[$gp];
-    $pseudos{$HP[0]} += $HP[1];
+    $pseunons{$HP[0]} += $HP[1];
 }
 
 
@@ -536,7 +618,14 @@ for(my $t=0; $t < scalar @N; $t++){
 	if(exists($pseudos{$vert})){}else{$pseudos{$vert}=0;}
 	if(exists($nonenums{$vert})){}else{$nonenums{$vert}=0;}
 	if(exists($missing_data{$vert})){}else{$missing_data{$vert}=0;}
-	my $newname = "$T[$t]\[t$totnumbers{$vert}|i$allplus\|l$minusnodes{$vert}\|d$duplications{$vert}\|s$singletons{$vert}\|p$pseudos{$vert}|n$nonenums{$vert}|m$missing_data{$vert}\]";
+	if(exists($pseusingles{$vert})){}else{$pseusingles{$vert}=0;}
+	if(exists($psdels{$vert})){}else{$psdels{$vert}=0;}
+	if(exists($psein{$vert})){}else{$psein{$vert}=0;}
+	my $pseuplus = $pseudos{$vert} + $psein{$vert};
+	if(exists($psemis{$vert})){}else{$psemis{$vert}=0;}
+	if(exists($totpseudos{$vert})){}else{$totpseudos{$vert}=0;}
+	if(exists($pseunons{$vert})){}else{$pseunons{$vert}=0;}
+	my $newname = "$T[$t]\[t$totnumbers{$vert}\($totpseudos{$vert}\)|i$allplus\($pseuplus\)\|l$minusnodes{$vert}\($psdels{$vert}\)\|d$duplications{$vert}\|s$singletons{$vert}\($pseusingles{$vert}\)\|n$nonenums{$vert}\($pseunons{$vert}\)|m$missing_data{$vert}\($psemis{$vert}\)\]";
 	push @newT, $newname;
     }
     else{
@@ -545,6 +634,7 @@ for(my $t=0; $t < scalar @N; $t++){
 }
 
 my %numdiffs = ();
+my %pnumdiffs = ();
 
 ###############Test numbers, thus sum up all the numbers for each species and check the difference to the total number of elems
 for(my $ll=0;$ll<scalar @L;$ll++){
@@ -559,7 +649,9 @@ for(my $ll=0;$ll<scalar @L;$ll++){
 	}
     }
     my $allelems = 0;
+    my $allpseudos = 0;
     my $elemsum = 0;
+    my $pseudosum = 0;
     my $curval = $N[$curid];
     #go through Tnew and N and add up all the numbers
     for(my $t1 = $curid;$t1<scalar @newT;$t1++){
@@ -571,19 +663,42 @@ for(my $ll=0;$ll<scalar @L;$ll++){
 	my @split2 = split '\|', $split1b[0];
 	for(my $s2 = 0;$s2 < scalar @split2; $s2++){
 	    #letters are: t,i,-l,d,n,s
-	    my $curnum = $split2[$s2];
-	    if($curnum =~ /^t/){$allelems += substr($curnum,1);}#total
-	    if($curnum =~ /^i/){$elemsum += substr($curnum,1);}#ins
-	    #if($curnum =~ /^l/){$elemsum += substr($curnum,1);}#loss
+	    my @CUR = split '\(', $split2[$s2];
+	    my $curnum = $CUR[0];
+	    my $psnum = 0;
+	    if(scalar @CUR == 2){$psnum = substr($CUR[1],0,length($CUR[1])-1);}
+	    if($curnum =~ /^t/){
+		$allelems += substr($curnum,1);
+		$allpseudos += $psnum;
+	    }#total
+	    if($curnum =~ /^i/){
+		$elemsum += substr($curnum,1);
+		$pseudosum += $psnum;
+	    }#ins
+	    if($curnum =~ /^l/){
+		$elemsum -= substr($curnum,1);
+		$pseudosum -= $psnum;
+	    }#loss
 	    if($curnum =~ /^d/){$elemsum += substr($curnum,1);}#dupl
-	    if($curnum =~ /^s/){$elemsum += substr($curnum,1);}#single	    
-	    if($curnum =~ /^p/){$elemsum += substr($curnum,1);}#pseudo
-	    if($curnum =~ /^n/){$elemsum += substr($curnum,1);}#none
-	    #if($curnum =~ /^m/){$elemsum += substr($curnum,1);}#missing data
+	    if($curnum =~ /^s/){
+		$elemsum += substr($curnum,1);
+		$pseudosum += $psnum;
+	    }#single	    
+#	    if($curnum =~ /^p/){$elemsum += substr($curnum,1);}#pseudo
+	    if($curnum =~ /^n/){
+		$elemsum += substr($curnum,1);
+		$pseudosum += $psnum;
+	    }#none
+	    if($curnum =~ /^m/){
+		$elemsum -= substr($curnum,1);
+		$pseudosum -= $psnum;
+	    }#missing data
 	}
     }
     my $diff = $allelems-$elemsum;
+    my $pdiff = $allpseudos-$pseudosum;
     $numdiffs{$L[$ll]} = $diff;
+    $pnumdiffs{$L[$ll]} = $pdiff;
 }
 
 #add the diff numbers to the tree?
@@ -594,13 +709,13 @@ my $tstr = join ("", @newT);
 
 print $outt "Newick tree with numbers specifying event counts at its nodes.
 Each node name contains the following numbers in event specification:
-[ta|ib|lc|dx|se|py|nz|mf] where:
+[ta(p)|ib(p)|lc(p)|dx|se(p)|nz(p)|mf(p)] where:
 a are total number of elements,
 b are insertions,
 c are deletions, thus losses, 
 x are duplications,
 e are singletons, 
-y pseudogenes and
+p are the pseudogenes from this category
 z are the elements that were excluded from the analysis.\n
 f is the number of elements that were excluded from the analysis because of missing anchors
 
@@ -608,8 +723,14 @@ Tree:\n";
 print $outt "$tstr\n";
 
 #print diff numbers first here:
+print $outt "functional genes:\n";
 foreach my $dif (keys %numdiffs){
     print $outt "$dif $numdiffs{$dif}\n";
+}
+
+print $outt "pseudogenes:\n";
+foreach my $pdif (keys %pnumdiffs){
+    print $outt "$pdif $pnumdiffs{$pdif}\n";
 }
 
 
@@ -639,6 +760,16 @@ foreach my $in2 (sort keys %plusnodes) {
     else{$allins{$in2} = $plusnodes{$in2};}
 }
 
+my %allpseins = ();
+foreach my $in1 (sort keys %psein) {
+    if(exists($allpseins{$in1})){$allpseins{$in1} += $psein{$in1};}
+    else{$allpseins{$in1} = $psein{$in1};}
+}
+foreach my $in2 (sort keys %pseudos) {
+    if(exists($allpseins{$in2})){$allpseins{$in2} += $pseudos{$in2};}
+    else{$allpseins{$in2} = $pseudos{$in2};}
+}
+
 #print $outs "Check: filecounts (match, dupl, insertions)\n";
 #foreach my $tc (sort keys %totcounts) {
 #    print $outs "$tc\t$totcounts{$tc}\n";
@@ -649,14 +780,22 @@ foreach my $in2 (sort keys %plusnodes) {
 
 print $outs "EVENT: Insertion\n";
 foreach my $in (sort keys %allins) {
-    print $outs "$in\t$allins{$in}\n";
+    my $tmp="\(0\)";
+    if(exists($allpseins{$in})){
+	$tmp = "\($allpseins{$in}\)";
+    }
+    print $outs "$in\t$allins{$in}$tmp\n";
 }
 print $outs "\n\n";
 
 
 print $outs "EVENT: Deletion\n";
 foreach my $de (sort keys %minusnodes) {
-    print $outs "$de\t$minusnodes{$de}\n";
+    my $tmp="\(0\)";
+    if(exists($psdels{$de})){
+	$tmp = "\($psdels{$de}\)";
+    }
+    print $outs "$de\t$minusnodes{$de}$tmp\n";
 }
 print $outs "\n\n";
 
@@ -668,36 +807,49 @@ foreach my $du (sort keys %duplications) {
 print $outs "\n\n";
 
 
-print $outs "EVENT: Pseudogenization\n";
-foreach my $mi (sort keys %pseudos) {
-    print $outs "$mi\t$pseudos{$mi}\n";
-}
-print $outs "\n\n";
-
-
 print $outs "EVENT: Singletons\n";
 foreach my $si (sort keys %singletons) {
-    print $outs "$si\t$singletons{$si}\n";
+    my $tmp="\(0\)";
+    if(exists($pseusingles{$si})){
+	$tmp = "\($pseusingles{$si}\)";
+    }
+
+    print $outs "$si\t$singletons{$si}$tmp\n";
 }
 print $outs "\n\n";
 
 
 print $outs "EVENT: No Anchors Beginning\n";
 foreach my $ni (sort keys %nonenums) {
-    print $outs "$ni\t$nonenums{$ni}\n";
+    my $tmp="\(0\)";
+    if(exists($pseunons{$ni})){
+	$tmp = "\($pseunons{$ni}\)";
+    }
+
+    print $outs "$ni\t$nonenums{$ni}$tmp\n";
 }
 print $outs "\n\n";
 
 print $outs "EVENT: No Anchors Inbetween\n";
 foreach my $md (sort keys %missing_data) {
-    print $outs "$md\t$missing_data{$md}\n";
+    my $tmp="\(0\)";
+    if(exists($psemis{$md})){
+	$tmp = "\($psemis{$md}\)";
+    }
+
+    print $outs "$md\t$missing_data{$md}$tmp\n";
 }
 print $outs "\n\n";
 
 
 print $outs "EVENT: Others\n";
 foreach my $oi (sort keys %numdiffs) {
-    print $outs "$oi\t$numdiffs{$oi}\n";
+    my $tmp="\(0\)";
+    if(exists($pnumdiffs{$oi})){
+	$tmp = "\($pnumdiffs{$oi}\)";
+    }
+
+    print $outs "$oi\t$numdiffs{$oi}$tmp\n";
 }
 print $outs "\n\n";
 
@@ -712,9 +864,9 @@ my $insout = "$iTOLout\/F3tree_labels_ins.txt";
 my $sinout = "$iTOLout\/F4tree_labels_sin.txt";
 my $delout = "$iTOLout\/F5tree_labels_del.txt";
 my $dupout = "$iTOLout\/F6tree_labels_dup.txt";
-my $pseout=  "$iTOLout\/F7tree_labels_pse.txt";
-my $nonout=  "$iTOLout\/F8tree_labels_non.txt";
-my $misout=  "$iTOLout\/F9tree_labels_missing.txt";
+#my $pseout=  "$iTOLout\/F7tree_labels_pse.txt";
+my $nonout=  "$iTOLout\/F7tree_labels_non.txt";
+my $misout=  "$iTOLout\/F8tree_labels_missing.txt";
 
 open(my $outt2,">>",$treeout2);
 open(my $outn,">>",$namesout);
@@ -723,7 +875,7 @@ open(my $outi,">>",$insout);
 open(my $outz,">>",$sinout);
 open(my $outd,">>",$delout);
 open(my $outu,">>",$dupout);
-open(my $outp,">>",$pseout);
+#open(my $outp,">>",$pseout);
 open(my $outo,">>",$nonout);
 open(my $outm,">>",$misout);
 
@@ -766,17 +918,19 @@ SEPARATOR COMMA
 DATASET_LABEL,Duplications
 COLOR,#0000ff\n";
 
-my $header_pse =
-"DATASET_TEXT
-SEPARATOR COMMA
-DATASET_LABEL,Pseudogenizations
-COLOR,#551a8b\n";
+#my $header_pse =
+#"DATASET_TEXT
+#SEPARATOR COMMA
+#DATASET_LABEL,Pseudogenizations
+#COLOR,#551a8b\n";
 
 my $header_non =
 "DATASET_TEXT
 SEPARATOR COMMA
 DATASET_LABEL,Excluded
-COLOR,#00ffff\n";
+COLOR,#551a8b\n";
+
+#COLOR,#00ffff\n";
 
 
 my $header_mis =
@@ -827,9 +981,9 @@ SIZE_FACTOR,1
 my $legend =
 "
 LEGEND_TITLE,Element Counts
-LEGEND_SHAPES,1,1,1,1,1,1,1,1
-LEGEND_COLORS,#000000,#00ff00,#ffa500,#ff0000,#0000ff,#551a8b,#00ffff,#A9A9A9
-LEGEND_LABELS,Total,Insertions,Singletons,Deletions,Duplications,Pseudogenizations,Excluded,Missing_Data
+LEGEND_SHAPES,1,1,1,1,1,1,1
+LEGEND_COLORS,#000000,#00ff00,#ffa500,#ff0000,#0000ff,#551a8b,#A9A9A9
+LEGEND_LABELS,Total,Insertions,Singletons,Deletions,Duplications,Excluded,Missing_Data
 ";
 
 
@@ -855,8 +1009,8 @@ print $outd "\n\nDATA\n";
 print $outu "$header_dup$inbetweentext";
 print $outu "\n\nDATA\n";
 
-print $outp "$header_pse$inbetweentext";
-print $outp "\n\nDATA\n";
+#print $outp "$header_pse$inbetweentext";
+#print $outp "\n\nDATA\n";
 
 print $outo "$header_non$inbetweentext";
 print $outo "\n\nDATA\n";
@@ -878,28 +1032,28 @@ for(my $tt=0;$tt < scalar @T;$tt++){
 	}
 	if($isleaf){
 	    ##leaf node, different line printing
-	    my $nline = "$totnumbers{$T[$tt]}";
+	    my $nline = "$totnumbers{$T[$tt]}\($totpseudos{$T[$tt]}";
 	    print $outx "$T[$tt],$nline,-1,#000000,normal,1,0\n";
 	    my $sumi = $insertions{$T[$tt]} + $plusnodes{$T[$tt]};
-	    print $outi "$T[$tt],$sumi,-1,#00ff00,normal,1,0\n";
-	    print $outz "$T[$tt],$singletons{$T[$tt]},-1,#ffa500,normal,1,0\n";
-	    print $outd "$T[$tt],$minusnodes{$T[$tt]},-1,#ff0000,normal,1,0\n";
+	    my $psumi = $pseudos{$T[$tt]} + $psein{$T[$tt]};
+	    print $outi "$T[$tt],$sumi\($psumi\),-1,#00ff00,normal,1,0\n";
+	    print $outz "$T[$tt],$singletons{$T[$tt]}\($pseusingles{$T[$tt]}\),-1,#ffa500,normal,1,0\n";
+	    print $outd "$T[$tt],$minusnodes{$T[$tt]}\($psdels{$T[$tt]}\),-1,#ff0000,normal,1,0\n";
 	    print $outu "$T[$tt],$duplications{$T[$tt]},-1,#0000ff,normal,1,0\n";
-	    print $outp "$T[$tt],$pseudos{$T[$tt]},-1,#551a8b,normal,1,0\n";
-	    my $nonum=0; 
-	    if(exists $nonenums{$T[$tt]}){$nonum = $nonenums{$T[$tt]};}
-	    print $outo "$T[$tt],$nonum,-1,#00ffff,normal,1,0\n";
-	    print $outm "$T[$tt],$missing_data{$T[$tt]},-1,#A9A9A9,normal,1,0\n";		
+#	    print $outp "$T[$tt],$pseudos{$T[$tt]},-1,#551a8b,normal,1,0\n";
+	    print $outo "$T[$tt],$nonenums{$T[$tt]}\($pseunons{$T[$tt]}\),-1,#00ffff,normal,1,0\n";
+	    print $outm "$T[$tt],$missing_data{$T[$tt]}\($psemis{$T[$tt]}\),-1,#A9A9A9,normal,1,0\n";		
 	}
 	else{
 	    ##inner nodes, different line printing
 	    print $outn "$T[$tt],$T[$tt],0,#000000,normal,1,0\n";
 	    my $sumi2 = $insertions{$T[$tt]} + $plusnodes{$T[$tt]};
-	    print $outi "$T[$tt],$sumi2,0.6,#00ff00,normal,1,0\n";
-	    print $outd "$T[$tt],$minusnodes{$T[$tt]},0.8,#ff0000,normal,1,0\n";
+	    my $psumi2 = $pseudos{$T[$tt]} + $psein{$T[$tt]};
+	    print $outi "$T[$tt],$sumi2\($psumi2\),0.6,#00ff00,normal,1,0\n";
+	    print $outd "$T[$tt],$minusnodes{$T[$tt]}\($psdels{$T[$tt]}\),0.8,#ff0000,normal,1,0\n";
 	    #duplications do not occur at inner nodes
 	    #print $outu "$T[$tt],$duplications{$T[$tt]},0.8,#0000ff,normal,1,0\n";
-	    print $outp "$T[$tt],$pseudos{$T[$tt]},0.95,#551a8b,normal,1,0\n";		
+#	    print $outp "$T[$tt],$pseudos{$T[$tt]},0.95,#551a8b,normal,1,0\n";		
 	}
     }
 }

@@ -458,18 +458,11 @@ my @out5 = readpipe("$cmd5");
 my $elemsNpseudos = $out3[0];
 print STDERR "all: $elemsNpseudos\n";
 my @R = split '!', $elemsNpseudos;
-my $totelemnumstr = $R[1];
-print STDERR "$totelemnumstr\n";
 my $numdifftypes = $R[0];
 print STDERR "Number of different types: $numdifftypes\n";
-#my $totpseudostr = "=";
-#if($pseudoscore >= 0){
-#    if(scalar @R > 1){
-#	$totpseudostr = $R[1];
-#    }
-#    print "$totpseudostr\n";
-#}
-
+#totelemnumstr is to be handed over to countEvents later on
+my $totelemnumstr = "$R[1]\!$R[2]";
+print STDERR "$totelemnumstr\n";
 
 append2file($outs,$sumcollectcluster);
 append2file($outs,$sumgetnumbers);
@@ -492,6 +485,7 @@ my @out7b = readpipe("$cmd7b");
 my @out7c = readpipe("$cmd7c");
 print "Done!\n";
 
+#allnonestr will be handed over to countEvents later
 my $allnonestr = $out7c[0];
 
 #create bedfile about clusters (without none clusters)
@@ -550,9 +544,12 @@ my $singletoncount;
 my $tmppseudocount;
 
 
+my $allsinglestr="=!=";
+
 open TF,"<$tmpfile" or die "can't open $tmpfile\n";
 while(<TF>){
     my $line = $_;
+    $allsinglestr = $line;
     print "singles and pseudos: $line \n";
     my @O16 = split '!', $line;
     if($O16[0] eq ""){$singletoncount = "=";}
@@ -655,7 +652,10 @@ if($createalns == 1){
     my $cmd291 = "touch $outpath\/matches.txt 2>>$err";
     my $cmd292 = "touch $outpath\/duplications.txt 2>>$err";
     my $cmd293 = "touch $outpath\/insertions.txt 2>>$err";
-    my $cmd294 = "touch $outpath\/pseudogenes.txt 2>>$err";
+    my $cmd294 = "touch $outpath\/pseudogenes.txt 2>>$err"; #this is the matching pseudogenes
+    my $cmd294a = "touch $outpath\/pseudogenes_missingAnchor.txt 2>>$err";
+    my $cmd294b = "touch $outpath\/pseudogenes_dels.txt 2>>$err";
+    my $cmd294c = "touch $outpath\/pseudogenes_ins.txt 2>>$err"; 
     my $cmd295 = "touch $outpath\/deletions.txt 2>>$err";
     my $cmd296 = "touch $outpath\/missingData.txt 2>>$err";
 #    my $cmd29a = "mkdir $outpath\/graphs/GainLoss 2>>$err";
@@ -667,8 +667,8 @@ if($createalns == 1){
     ##TODO set the pseqsim and pstruclim if we have a solution for pseudogenes
     #path to epope out, not used at the moment:    $outpath\/graphs/GainLossA
     #pseudoscore, not used at the moment:  $pseudoscore
-    my $cmd30b = "$perlpath\/perl $scripts_sarah\/createAlignments.pl $outpath\/graphs/edlilist $outpath\/graphs/alignments $altnwpath $seqsim $strucsim $pseudocount $singletoncount $mode $numdifftypes $outpath\/matches.txt $outpath\/duplications.txt $outpath\/insertions.txt $outpath\/pseudogenes.txt $outpath\/deletions.txt $outpath\/missingData.txt $newicktree $path2Temp $sumcreatealn $sumremoldings $suminremoldings 2>>$err";
-    my $cmd30a = "$perlpath\/perl $scripts_sarah\/countEvents.pl $newicktree $singletoncount $outpath\/matches.txt $outpath\/duplications.txt $outpath\/insertions.txt $outpath\/pseudogenes.txt $outpath\/deletions.txt $outpath\/missingData.txt $outpath\/tree.out $outpath\/geneticEvents.txt $totelemnumstr $nonestr $totpseudostr $outpath\/data_iTOL 2>>$err";
+    my $cmd30b = "$perlpath\/perl $scripts_sarah\/createAlignments.pl $outpath\/graphs/edlilist $outpath\/graphs/alignments $altnwpath $seqsim $strucsim $mode $numdifftypes $outpath\/matches.txt $outpath\/duplications.txt $outpath\/insertions.txt $outpath\/pseudogenes.txt $outpath\/pseudogenes_missingAnchor.txt $outpath\/pseudogenes_dels.txt $outpath\/pseudogenes_ins.txt $outpath\/deletions.txt $outpath\/missingData.txt $newicktree $path2Temp $sumcreatealn $sumremoldings $suminremoldings 2>>$err";
+    my $cmd30a = "$perlpath\/perl $scripts_sarah\/countEvents.pl $newicktree $allsinglestr $outpath\/matches.txt $outpath\/duplications.txt $outpath\/insertions.txt $outpath\/pseudogenes.txt $outpath\/pseudogenes_missingAnchor.txt $outpath\/pseudogenes_dels.txt $outpath\/pseudogenes_ins.txt $outpath\/deletions.txt $outpath\/missingData.txt $outpath\/tree.out $outpath\/geneticEvents.txt $totelemnumstr $allnonestr $outpath\/data_iTOL 2>>$err";
     
     print "create duplication alignments..";
     print "createALNs cmd: $cmd30b \n";
@@ -678,6 +678,8 @@ if($createalns == 1){
     my @out292 = readpipe("$cmd292");
     my @out293 = readpipe("$cmd293");
     my @out294 = readpipe("$cmd294");
+    my @out294a = readpipe("$cmd294a");
+    my @out294b = readpipe("$cmd294b");
     my @out295 = readpipe("$cmd295");
     my @out296 = readpipe("$cmd296");
 #    my @out29a = readpipe("$cmd29a");
