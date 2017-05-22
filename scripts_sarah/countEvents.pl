@@ -125,9 +125,10 @@ while(<PS>){
     my $psline = $_;
     my @PS = split '\t', $psline;
     if(scalar @PS < 2){print STDERR "misformatted input line, will be skipped! \n"; next;}
-   my @SS = split ',', $PS[0];
+    my @SS = split ',', $PS[0];
     my $psnum = $PS[1];
-    if(scalar @SS == 1){
+    if(scalar @SS == 0){next;}
+    elsif(scalar @SS == 1){
 	$pseudos{$SS[0]} += $psnum;
     }
     else{
@@ -137,8 +138,8 @@ while(<PS>){
 #	my @pslcas = findParentOfAll($Tstr,$Sstr);
 	my @pslcas = findLCA($Tstr,$Sstr);
 	for(my $i=0;$i<scalar @pslcas;$i++){
-	    if(exists($pseudos{$pslcas[$i]})){$pseudos{$pslcas[$i]} += $psnum;}
-	    else{$pseudos{$pslcas[$i]} = $psnum;}
+	    if(exists($pseudos{$T[$pslcas[$i]]})){$pseudos{$T[$pslcas[$i]]} += $psnum;}
+	    else{$pseudos{$T[$pslcas[$i]]} = $psnum;}
 	}
     }
 }
@@ -201,8 +202,8 @@ while(<FA>){
 #    my @leafsToAdd = findParentOfAll($Treestr,$speciestr);
     my @leafsToAdd = findLCA($Treestr,$speciestr);
     for(my $i=0;$i<scalar @leafsToAdd; $i++){
-	if(exists($plusnodes{$leafsToAdd[$i]})){$plusnodes{$leafsToAdd[$i]} += $num;}
-	else{$plusnodes{$leafsToAdd[$i]} = $num;}
+	if(exists($plusnodes{$T[$leafsToAdd[$i]]})){$plusnodes{$T[$leafsToAdd[$i]]} += $num;}
+	else{$plusnodes{$T[$leafsToAdd[$i]]} = $num;}
     }
     
     
@@ -936,7 +937,7 @@ COLOR,#551a8b\n";
 my $header_mis =
 "DATASET_TEXT
 SEPARATOR COMMA
-DATASET_LABEL,Excluded
+DATASET_LABEL,Missing
 COLOR,#A9A9A9\n";
 
 
@@ -1032,7 +1033,7 @@ for(my $tt=0;$tt < scalar @T;$tt++){
 	}
 	if($isleaf){
 	    ##leaf node, different line printing
-	    my $nline = "$totnumbers{$T[$tt]}\($totpseudos{$T[$tt]}";
+	    my $nline = "$totnumbers{$T[$tt]}\($totpseudos{$T[$tt]}\)";
 	    print $outx "$T[$tt],$nline,-1,#000000,normal,1,0\n";
 	    my $sumi = $insertions{$T[$tt]} + $plusnodes{$T[$tt]};
 	    my $psumi = $pseudos{$T[$tt]} + $psein{$T[$tt]};
@@ -1041,7 +1042,7 @@ for(my $tt=0;$tt < scalar @T;$tt++){
 	    print $outd "$T[$tt],$minusnodes{$T[$tt]}\($psdels{$T[$tt]}\),-1,#ff0000,normal,1,0\n";
 	    print $outu "$T[$tt],$duplications{$T[$tt]},-1,#0000ff,normal,1,0\n";
 #	    print $outp "$T[$tt],$pseudos{$T[$tt]},-1,#551a8b,normal,1,0\n";
-	    print $outo "$T[$tt],$nonenums{$T[$tt]}\($pseunons{$T[$tt]}\),-1,#00ffff,normal,1,0\n";
+	    print $outo "$T[$tt],$nonenums{$T[$tt]}\($pseunons{$T[$tt]}\),-1,#551a8b,normal,1,0\n";
 	    print $outm "$T[$tt],$missing_data{$T[$tt]}\($psemis{$T[$tt]}\),-1,#A9A9A9,normal,1,0\n";		
 	}
 	else{
@@ -1049,7 +1050,7 @@ for(my $tt=0;$tt < scalar @T;$tt++){
 	    print $outn "$T[$tt],$T[$tt],0,#000000,normal,1,0\n";
 	    my $sumi2 = $insertions{$T[$tt]} + $plusnodes{$T[$tt]};
 	    my $psumi2 = $pseudos{$T[$tt]} + $psein{$T[$tt]};
-	    print $outi "$T[$tt],$sumi2\($psumi2\),0.6,#00ff00,normal,1,0\n";
+	    print $outi "$T[$tt],$sumi2\($psumi2\),0.3,#00ff00,normal,1,0\n";
 	    print $outd "$T[$tt],$minusnodes{$T[$tt]}\($psdels{$T[$tt]}\),0.8,#ff0000,normal,1,0\n";
 	    #duplications do not occur at inner nodes
 	    #print $outu "$T[$tt],$duplications{$T[$tt]},0.8,#0000ff,normal,1,0\n";

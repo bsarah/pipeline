@@ -624,8 +624,9 @@ while(<FA>){
 #	print Dumper(\%spe2count);
 #	print "\n";
 	#	print "num vals: $vnum\n";
-#	my @smallvals = splice(@vals,1);
-	if(scalar @vals == 1){##singleton/insertion
+	#	my @smallvals = splice(@vals,1);
+	if(scalar @vals == 0){}
+	elsif(scalar @vals == 1){##singleton/insertion
 	    if(exists $insevents{$spstr}){$insevents{$spstr} += $vals[0];}
 	    else{$insevents{$spstr} = $vals[0];}
 	}
@@ -653,7 +654,7 @@ while(<FA>){
 	my @pseuvals = values %pse2count;
 	my $psnum = scalar @pseuvals;
 	my $psestr = "";
-	my $pmin = 0;
+	my $pmin = min @pseuvals;
 	if(scalar @pseuvals > 0){
 	    $psestr = join(',',sort (keys %pse2count));
 	    ##do the same distinguishing for the pseudogenes as for matching

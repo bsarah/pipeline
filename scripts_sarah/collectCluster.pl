@@ -343,7 +343,32 @@ else{
     $psestr=~s/$dstr/$cstr/g;
 }
 
-my $outstr = "$spstr\!$psestr";
+
+my %pse = ();
+my %spe = ();
+my @S = split '=', $spstr;
+my @P = split '=', $psestr;
+
+my $newspstr = "";
+for(my $s=0;$s<scalar @S;$s++){
+    my @Tmp = split '-', $S[$s];
+    $spe{$Tmp[0]} = $Tmp[1];
+}
+for(my $p=0;$p<scalar @P;$p++){
+    my @Tmp2 = split '-', $P[$p];
+    $pse{$Tmp2[0]} = $Tmp2[1];
+}
+
+
+foreach my $pf (keys %spe){
+    my $val =$spe{$pf};
+    if(exists($pse{$pf})){
+	$val = $spe{$pf}-$pse{$pf};
+    }
+    $newspstr = "$newspstr$pf\-$val\=";
+}
+
+my $outstr = "$newspstr\!$psestr";
 
 #include typeinformation in order to hand it over
 my $numdifftypes = scalar (keys %difftypes);
