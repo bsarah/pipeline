@@ -1050,7 +1050,7 @@ for(my $tt=0;$tt < scalar @T;$tt++){
 	    print $outn "$T[$tt],$T[$tt],0,#000000,normal,1,0\n";
 	    my $sumi2 = $insertions{$T[$tt]} + $plusnodes{$T[$tt]};
 	    my $psumi2 = $pseudos{$T[$tt]} + $psein{$T[$tt]};
-	    print $outi "$T[$tt],$sumi2\($psumi2\),0.3,#00ff00,normal,1,0\n";
+	    print $outi "$T[$tt],$sumi2\($psumi2\),0.6,#00ff00,normal,1,0\n";
 	    print $outd "$T[$tt],$minusnodes{$T[$tt]}\($psdels{$T[$tt]}\),0.8,#ff0000,normal,1,0\n";
 	    #duplications do not occur at inner nodes
 	    #print $outu "$T[$tt],$duplications{$T[$tt]},0.8,#0000ff,normal,1,0\n";

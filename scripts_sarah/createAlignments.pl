@@ -134,8 +134,9 @@ while(<FA>){
     $alncount++;
     ##one letter codes needed
     ##are all the chars ok? ##no - or ~ as they appear in the alignment
-    my @letters = ('A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','0','1','2','3','4','5','6','7','8','9','!','@','#','$','%','^','&','*','(',')','=','+','"','?','>','<','[',']','|'); 
+    my @letters = ('A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','0','1','2','3','4','5','6','7','8','9','!','@','#','$','%','^','&','*','(',')','=','+','>','<','?','[',']','|'); 
     my $letcount = 0;
+    my $letnum = scalar @letters;
    
     my %node2letter = ();
     my %species = ();
@@ -277,16 +278,23 @@ while(<FA>){
 		else{
 		    $node2letter{$n1} = $letters[$letcount];
 		    $node2letter{$n2} = $letters[$letcount];
-		    $letcount++;
+		    if($letcount > $letnum){$letcount=0;}
+		    else{$letcount++;}
 		}
 	    }
 	}
 	else{
 	    ##similarity does not fit, nodes get different letters.
 	    if (exists $node2letter{$n1}) {}
-	    else{$node2letter{$n1} = $letters[$letcount];$letcount++;}
+	    else{$node2letter{$n1} = $letters[$letcount];
+		 if($letcount > $letnum){$letcount=0;}
+		 else{$letcount++;}
+	    }
 	    if (exists $node2letter{$n2}) {}
-	    else{$node2letter{$n2} = $letters[$letcount];$letcount++;}
+	    else{$node2letter{$n2} = $letters[$letcount];
+		 if($letcount > $letnum){$letcount=0;}
+		 else{$letcount++;}
+	    }
 	}
 
     }
