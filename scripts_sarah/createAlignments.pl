@@ -375,8 +375,9 @@ while(<FA>){
 	    my $psseq = $spec2pseudo{$k};
 	    my $zcount = $psseq =~ tr/0/0/; #normal genes
 	    my $ecount = $psseq =~ tr/1/1/; #pseudogenes
-	    if(exists $insevents{$k}){$insevents{$k} += $zcount;}
-	    else{$insevents{$k} = $zcount;}
+	    #substract 1 from zcount as there was an extra 0-element added in order to keep in range
+	    if(exists $insevents{$k}){$insevents{$k} += $zcount-1;}
+	    else{$insevents{$k} = $zcount-1;}
 	    if(exists($psevents{$k})){$psevents{$k}+=$ecount;}
 	    else{$psevents{$k}=$ecount;}
 	    $jump=1;
