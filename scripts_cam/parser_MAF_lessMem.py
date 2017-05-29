@@ -1,4 +1,3 @@
-
 #this program takes multiple sequence alignments in MAF format and parses them.
 #It then makes BED files for each species that contain the allignments for that species.
 import subprocess
@@ -66,6 +65,7 @@ def maf2TempWrapper(mafDir, outputDir, repoDir, listOfSpecies):
     close all the files
     '''
 
+    #print('starting temp')
     if 'temp' in listdir(outputDir):
         subprocess.call("rm -r "+outputDir+'temp', shell=True)
     subprocess.call("mkdir "+outputDir+'temp', shell = True)
@@ -94,6 +94,7 @@ def maf2TempWrapper(mafDir, outputDir, repoDir, listOfSpecies):
         #use Popen to catch stdOutput of reading file, stdOutput being the current block number
         proc = subprocess.Popen("zcat "+name+" | python3 "+repoDir+"maf2TempBed.py "+str(blockNum)+" "+tempOutputDir, shell=True, universal_newlines=True, stdout=subprocess.PIPE)
 
+        #print('read: {}'.format(name))
         stdOutput, errors = proc.communicate()
         #print('output: {}'.format(stdOutput))
         try:
@@ -103,11 +104,11 @@ def maf2TempWrapper(mafDir, outputDir, repoDir, listOfSpecies):
             blockNum = oldblockNum
     #End of piping operation
     
-    #print("sorting temp files")
     for _file in speciesFiles:
         #sort -k1,1 -k2,2n outputDir/dm6_temp.bed > outputDir/dm6_temp_sorted.bed
         subprocess.call("sort -k1,1 "+_file+" > "+_file.replace('.bed','_sorted.bed', 1), shell=True)
-
+        #print('sorted: {}'.format(_file))
+        
     #returnList is a list of file paths.
     #Initialized with the reference species as the first element
     #however this is done with literals so be careful if changing the file name schema
@@ -119,7 +120,8 @@ def maf2TempWrapper(mafDir, outputDir, repoDir, listOfSpecies):
                 sortedTempList.append(fileName)
             else:
                 subprocess.call("rm "+fileName, shell=True)
-            
+
+    #print('ending temp')
     return sortedTempList
 
 def parseTempWrapper(tempFiles, listOfListOfGenes, outputDir, threshold, infernalVersion):
@@ -131,6 +133,7 @@ def parseTempWrapper(tempFiles, listOfListOfGenes, outputDir, threshold, inferna
         The tempFiles must be sorted by chromosome
     '''
 
+    #print('start parsing temp')
     bedFileDir = outputDir+'bed/'
     if 'bed' in listdir(outputDir):
         subprocess.call("rm -r "+bedFileDir, shell=True)
@@ -170,6 +173,7 @@ def parseTempWrapper(tempFiles, listOfListOfGenes, outputDir, threshold, inferna
             if _list[0].species == species:
                 listOfGenes = _list
 
+        #print('Species: {}'.format(listOfGenes[0].species))
         overlappingBlockNums = parseTemp(tempBlockFile, finalBlockFile, geneFile, listOfGenes, overlappingBlockNums, threshold)
         #print('done')
 
@@ -180,6 +184,8 @@ def parseTempWrapper(tempFiles, listOfListOfGenes, outputDir, threshold, inferna
         subprocess.call('gzip '+finalBlockFileName, shell=True)
         #subprocess.call('gzip '+tempBlockFileName, shell=True)
         subprocess.call('rm '+tempBlockFileName, shell=True)
+
+    #print('end parseTemp')
     '''
     if len(listOfGenes) > 0:
         listOfSC = []
@@ -194,7 +200,6 @@ def parseTempWrapper(tempFiles, listOfListOfGenes, outputDir, threshold, inferna
     else:
         print('no unsorted genes')
     '''
-
 
 def parseTemp(tempFile, finalFile, geneFile, listOfGenes, overlapSet, threshold):
     '''
@@ -236,13 +241,15 @@ def parseTemp(tempFile, finalFile, geneFile, listOfGenes, overlapSet, threshold)
         #print('writing orphin')
         #print("species: {}".format(chromo.species))
         #print('chromos:  {}'.format([gene.chromosome for gene in listOfGenes]))
-        for gene in listOfGenes:
-            fivePrime, threePrime = None, None
-            if not gene.ownGene:
+        if not listOfGenes[0].ownGene:
+            for gene in listOfGenes:
+                fivePrime, threePrime = None, None
                 geneFile.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(\
                                gene.chromosome, chromo.species+"_"+str(gene.blockNum), gene.s,\
                                gene.getEndPos(), gene.strand, fivePrime, threePrime, gene.structure, gene.sequence, gene.score))
-            else:
+        else:
+            #print('ownGenes')
+            for gene in listOfGenes:
                 geneFile.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(\
                                gene.chromosome, chromo.species+"_"+str(gene.blockNum), gene.s,\
                                gene.getEndPos(), gene.strand, fivePrime, threePrime, gene.structure, gene.sequence, \
@@ -321,9 +328,9 @@ def readChromo(finalFile, geneFile, listOfGenes, overlapSet, threshold, chromo):
             threePrime = None
         else:
             threePrime = writeList[i+1].blockNum
-            finalFile.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(\
-                            chromo.name, chromo.species+"_"+str(block.blockNum), block.s,\
-                            block.getEndPos(), block.strand, fivePrime, threePrime))
+        finalFile.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(\
+                        chromo.name, chromo.species+"_"+str(block.blockNum), block.s,\
+                        block.getEndPos(), block.strand, fivePrime, threePrime))
 
     return overlapSet, listOfGenes
 
@@ -336,6 +343,7 @@ def maf2bed(mafDir, outputDir, repoDir, geneObjs, listOfSpecies, threshold, infe
 
     parseTempWrapper(tempFiles, geneObjs, outputDir, threshold, infernalVersion)
 
+'''    
 #if this python file is called from the command line
 if __name__ == "__main__":
 
@@ -345,3 +353,4 @@ if __name__ == "__main__":
                      'droSuz1', 'droTak2', 'droVir3', 'droWil2', 'droYak3', 'musDom2', 'triCas2'] #------------------------Testing -----------------------------
 
     maf2TempWrapper("/scr/rum/cameron/maf","/homes/biertruck/cameron/Desktop/Project_May_June_2016/test/Insects/Output8/",listOfSpecies)
+'''
