@@ -96,8 +96,16 @@ my $skipg;
 my $skipa;
 
 
-my $dirname = dirname(__FILE__);
+my $pwdcmd = "pwd";
+my @outpwd = readpipe("$pwdcmd");
+#my $dirname = $outpwd[0];
+#chomp($dirname);
+#my $dirname = dirname(__FILE__);
+#my $dirname = File::Spec->rel2abs(__FILE__);
 
+#ATTENTION hardcoded dirname!
+my $dirname = "/homes/biertank/bsarah/Documents/projects/trnaevo/pipeline";
+print STDERR "dirname: $dirname \n";
 
 #define other information
 my $toolname = "FindAFancyAbbrevation";
@@ -210,7 +218,11 @@ elsif((! $newicktree) && $createalns == 1){print "Please give a newick tree as i
 else{}
 my $idstr = "";
 if($ids && $createalns == 1){$idstr = "--id $ids ";}
-elsif((! $ids) && $createalns == 1){print "No file given to translate newick IDs into MAF IDs (option --id). Please make sure that IDs fit!\n";}
+elsif((! $ids) && $createalns == 1)
+{
+print "No file given to translate newick IDs into MAF IDs (option --id). Please make sure that IDs fit!\n";
+$ids="=";
+}
 else{}
 
 
@@ -305,22 +317,32 @@ if($genefile){
 ##not all the information has to be given, if there is none, put NA
 
 
+##TODO IMPORTANT: change mode parameter for the again case, thus find out which mode it is...
 
+my $path2Temp;
 ###Repetition mode
 my $doitagainstr = "";
 if($pathtocam){
     $doitagainstr="--again $pathtocam ";
     $genefile=$pathtocam;
+    $path2Temp = "$pathtocam\/\.\.\/temp";
+    $mode = 1; 
     if(-e $pathtocam){}
     else{print "Option -a given but argument folder $pathtocam doesn't exist! \n"; exit 1;}
 }
+else{
+    $path2Temp = "$outpath\/temp";
+}
 
-if($mode == -1){print "either enter a genelist or a cm file option! \n"; exit 1;}
+if($mode == -1 && ! $pathtocam){print "either enter a genelist or a cm file option! \n"; exit 1;}
+
+
+
 
 
 ##Program call
 my $optstr = "$outpathstr$cmoptstr$mafstr$genomesstr$refspeciesstr$newickstr$idstr$simstr$doitagainstr$filterstr$incloptstr$skipgstr$skipastr$pystr$pestr$rstr$infstr";
-print "program called with: $optstr \n";
+print STDERR "program called with: $optstr \n";
 
 
 ##DEBUG
@@ -343,7 +365,7 @@ my $summarypath = "$outpath\/summaries";
 
 ##extendtree
 my $formtree = "tree_formatted.newick";
-my $formcmd = "$perlpath\/perl $scripts_sarah\/extendTree.pl $newicktree $summarypath\/$formtree";
+my $formcmd = "$perlpath\/perl $scripts_sarah\/extendTree.pl $newicktree $ids $summarypath\/$formtree";
 my @formout = readpipe("$formcmd");
 $newicktree = "$summarypath\/$formtree";
 
@@ -385,6 +407,7 @@ print $outs "\n";
 my $genesfolder="";
 if(! $pathtocam){
     print "analysis of maf files started (this might take a while)..\n";
+    print STDERR "call to cam's prog:\n $pythonpath\/python3 $scripts_cam\/main.py $cmoption $inclopt $mafs $outpath $dirname $refspecies 2>>$err0 | \n";
     if($perc eq ""){
 	open(PROG,"$pythonpath\/python3 $scripts_cam\/main.py $cmoption $inclopt $mafs $outpath $dirname $refspecies 2>>$err0 |") or die "Couldn't start program!";
 	while(<PROG>){print "$_";}
@@ -406,6 +429,7 @@ else{
 
 ###check with specieslist if the species names appear in the tree, if not, stop!
 my $cmd2 = "ls $genesfolder\/*.bed \> $genesfolder\/specieslist 2>>$err";
+print "specieslist command: $cmd2\n";
 my $checkcmd = "$perlpath\/perl $scripts_sarah\/checkTree.pl $newicktree $genesfolder\/specieslist";
 my @out2 = readpipe("$cmd2");
 my @checkout = readpipe("$checkcmd");
@@ -430,20 +454,15 @@ my @out3 = readpipe("$cmd3");
 my @out4 = readpipe("$cmd4");
 my @out5 = readpipe("$cmd5");
 
-##looks like: $species\-$num_elems\=$species\-..!$species\-$num_pseudo\=$species\-..
+##looks like: $numdifftypes!$species\-$num_elems\=$species\-..!$species\-$num_pseudo\=$species\-..
 my $elemsNpseudos = $out3[0];
-print "all: $elemsNpseudos\n";
+print STDERR "all: $elemsNpseudos\n";
 my @R = split '!', $elemsNpseudos;
-my $totelemnumstr = $R[0];
-print "$totelemnumstr\n";
-#my $totpseudostr = "=";
-#if($pseudoscore >= 0){
-#    if(scalar @R > 1){
-#	$totpseudostr = $R[1];
-#    }
-#    print "$totpseudostr\n";
-#}
-
+my $numdifftypes = $R[0];
+print STDERR "Number of different types: $numdifftypes\n";
+#totelemnumstr is to be handed over to countEvents later on
+my $totelemnumstr = "$R[1]\!$R[2]";
+print STDERR "$totelemnumstr\n";
 
 append2file($outs,$sumcollectcluster);
 append2file($outs,$sumgetnumbers);
@@ -455,7 +474,7 @@ my $cmd6 = "mkdir $outpath\/clusters\/NoneCluster 2>>$err";
 my $cmd7 = "mv $outpath\/clusters\/cluster-None\* $outpath\/clusters\/NoneCluster 2>>$err";
 my $cmd7a = "touch $outpath\/clusters\/NoneCluster/nonecluslist 2>>$err";;
 my $cmd7b = "ls $outpath\/clusters\/NoneCluster/*.clus > $outpath\/clusters\/NoneCluster/nonecluslist 2>>$err";
-my $cmd7c = "$perlpath\/perl $scripts_sarah\/countNones.pl $outpath\/clusters\/NoneCluster/nonecluslist";
+my $cmd7c = "$perlpath\/perl $scripts_sarah\/countNones.pl $outpath\/clusters\/NoneCluster/nonecluslist $mode $pseudoscore 2>>$err";
 ##report the number of elements for each species that are contained in none clusters
 
 print "sort clusters..";
@@ -466,7 +485,8 @@ my @out7b = readpipe("$cmd7b");
 my @out7c = readpipe("$cmd7c");
 print "Done!\n";
 
-my $nonestr = $out7c[0];
+#allnonestr will be handed over to countEvents later
+my $allnonestr = $out7c[0];
 
 #create bedfile about clusters (without none clusters)
 my $sumallclusters = "$summarypath\/Summary_allClusters.txt";
@@ -495,9 +515,12 @@ my $outname2 = "allClusters_joined.bed";
 my $cmd9a = "$perlpath\/perl $scripts_sarah\/writeBED\.pl $outpath\/clusters\/cluslist_joined $outpath $outname2 $sumallclustersjoined 2>>$err";
 
 #sort out singletons
+##change this later!
+if($mode == -1){$mode = 1;}
 ##sortCluster should output a summaryfile for singletons...
 my $cmd15 = "mkdir $outpath\/clusters/singletons 2>>$err";
-my $cmd16 = "$perlpath\/perl $scripts_sarah\/sortCluster.pl $outpath\/clusters/cluslist_joined $outpath\/clusters/singletons 2>>$err";
+my $tmpfile = "$outpath\/clusters/singletons/tmp";
+my $cmd16 = "$perlpath\/perl $scripts_sarah\/sortCluster.pl $outpath\/clusters/cluslist_joined $mode $pseudoscore $outpath\/clusters/singletons $tmpfile 2>>$err";
 my $cmd17 = "ls $outpath\/clusters/*.clus > $outpath\/clusters/cluslist_nosingles 2>>$err";
 
 print "join clusters..";
@@ -513,61 +536,73 @@ my @out17 = readpipe("$cmd17");
 append2file($outs,$sumallclustersjoined);
 print "Done!\n";
 
+print "sortCluster cnmd: $cmd16 \n";
+
 ##this string contains $species\-$num_singletons\=$species\-...has to be separated like this in order to be able to hand it over as a parameter
 ##give this to create alignments in order to add the singleton count to the genetic events list (as insertions)
-
 my $singletoncount;
-if($out16[0] eq ""){$singletoncount = "=";}
-else{$singletoncount = "$out16[0]";}
-#print "singletoncount: $singletoncount \n";
+my $tmppseudocount;
 
-##add another summary file that includes the singleton and none cluster count
-my $singlecounts = "$summarypath\/Singleton_Counts.txt";
-my $cmdallsingles = "ls $outpath\/clusters/singletons\/*.clus > $outpath\/clusters/singletons\/singletonlist";
-my $cmdsingles = "$perlpath\/perl $scripts_sarah\/countElems.pl $outpath\/clusters/singletons/singletonlist $pseudoscore $summarypath\/Singleton_Counts.txt 2>>$err";
-my $nonecounts = "$summarypath\/None_Counts.txt";
-my $cmdnones = "$perlpath\/perl $scripts_sarah\/countElems.pl $outpath\/clusters\/NoneCluster/nonecluslist $pseudoscore $summarypath\/None_Counts.txt 2>>$err";
 
-readpipe("$cmdallsingles");
-my @outsingles = readpipe("$cmdsingles");
-my @outnones = readpipe("$cmdnones");
-append2file($outs,$singlecounts);
-append2file($outs,$nonecounts);
+my $allsinglestr="=!=";
 
-my $totpseudostr = "";
-if($pseudoscore >= 0){
-    ##this is taking care for the pseudogenes that are in the singles or none cluster
-    my @SinglesPseus = split '=', $outsingles[0];
-    my @NonePseus = split '=', $outnones[0];
-    
-    my %tmppseu = ();
-    for(my $sp=0;$sp < scalar @SinglesPseus;$sp++){
-	my @TMP = split '-', $SinglesPseus[$sp];
-	if(exists $tmppseu{$TMP[0]}){$tmppseu{$TMP[0]}+=$TMP[1];}
-	else{$tmppseu{$TMP[0]}=$TMP[1];}
-	
-    }
-    for(my $np=0;$np < scalar @NonePseus;$np++){
-	my @NTMP = split '-', $NonePseus[$np];
-	if(exists $tmppseu{$NTMP[0]}){$tmppseu{$NTMP[0]}+=$NTMP[1];}
-	else{$tmppseu{$NTMP[0]}=$NTMP[1];}
-	
-    }
-    
-    foreach my $tk (keys %tmppseu){
-	$totpseudostr = "$totpseudostr$tk\-$tmppseu{$tk}\=";
-    }
-    if($totpseudostr eq ""){$totpseudostr = "=";}
+open TF,"<$tmpfile" or die "can't open $tmpfile\n";
+while(<TF>){
+    my $line = $_;
+    $allsinglestr = $line;
+    print "singles and pseudos: $line \n";
+    my @O16 = split '!', $line;
+    if($O16[0] eq ""){$singletoncount = "=";}
+    else{$singletoncount = "$O16[0]";}
+    if((scalar @O16) <= 1 || $O16[1] eq ""){$tmppseudocount = "=";}
+    else{$tmppseudocount = "$O16[1]";}
+    last;
 }
-else{$totpseudostr = "=";}
+    
 
-print "totpseudostr: $totpseudostr \n";
+my @N1 = split '!',$allnonestr;
+my $nonestr;
+if($N1[0] eq ""){$nonestr="=";}
+else{$nonestr = $N1[0];}
+my $nonpseustr;
+my $pseudocount="";
+if(scalar @N1 <= 1 || $N1[1] eq ""){}
+else{
+    my %tmppseudo = ();
+    my @NP = split '=', $N1[1];
+    my @SP = split '=', $tmppseudocount;
+    for(my $np = 0;$np < scalar @NP;$np++){
+	my @Q = split '-', $NP[$np];
+	if(exists($tmppseudo{$Q[0]})){$tmppseudo{$Q[0]}+=$Q[1];}
+	else{$tmppseudo{$Q[0]}=$Q[1];}
+    }
+    for(my $sp = 0;$sp < scalar @SP; $sp++){
+	my @R = split '-', $SP[$sp];
+	if(exists($tmppseudo{$R[0]})){$tmppseudo{$R[0]}+=$R[1];}
+	else{$tmppseudo{$R[0]}=$R[1];}
+    }
+    foreach my $p (sort keys %tmppseudo){
+	$pseudocount = "$pseudocount$p\-$tmppseudo{$p}=";
+    }
+}
+if($pseudocount eq ""){$pseudocount = "=";}
+
+print "singletoncount: $singletoncount \n";
+print "tmppseudocount: $tmppseudocount \n";
+print "Nones: $allnonestr\n";
+print "nonestr: $nonestr\n";
+print "pseudocount $pseudocount\n";
+
+my $totpseudostr = "=";
 
 #create graphs
 my $sumbuildedges = "$summarypath\/Summary_buildedges.txt";
 my $cmd18 = "mkdir $outpath\/graphs 2>>$err";
 my $cmd19 = "$perlpath\/perl $scripts_sarah\/buildEdgeList.pl $outpath\/clusters/cluslist_nosingles $outpath\/clusters $mode $outpath\/graphs $altnwpath $seqsim $strucsim $pseudoscore $sumbuildedges 2>>$err";
 my $cmd20 = "ls $outpath\/graphs/*.edli > $outpath\/graphs/edlilist 2>>$err";
+##count elems per species that are in the graphs files to check if the numbers fit
+my $summary_countGraphelems = "$summarypath\/Summary_countGraphElems.txt";
+my $cmd21 = "$perlpath\/perl $scripts_sarah\/countElemsGraphs.pl $outpath\/graphs/edlilist $summary_countGraphelems 2>>$err";
 ##no edge graphs are graphs with node from only one species, as all other graphs have a completely connected graph (except same species)
 #my $cmd21 = "mkdir $outpath\/graphs/noEdgeGraphs 2>>$err";   
 #my $cmd22 = "$perlpath\/perl $scripts_sarah\/sortEdli.pl $outpath\/graphs/edlilist $outpath\/graphs $outpath\/graphs/noEdgeGraphs 2>>$err";
@@ -577,7 +612,7 @@ my @out18 = readpipe("$cmd18");
 my @out19 = readpipe("$cmd19");
 my @out20 = readpipe("$cmd20");
 append2file($outs,$sumbuildedges);
-#my @out21 = readpipe("$cmd21");
+my @out21 = readpipe("$cmd21");
 #my @out22 = readpipe("$cmd22");
 #my @out22 = readpipe("$cmd22");
 print "Done!\n";
@@ -592,7 +627,7 @@ if($checkgraphs == 1){
     my $cmd25 = "touch $outpath\/graphs/noncographs 2>>$err";
     my $cmd26 = "mkdir $outpath\/graphs/showGraphs 2>>$err";
     ##TODO set the pseqsim and pstruclim if we have a solution for pseudogenes
-    my $cmd27 = "$perlpath\/perl $scripts_sarah\/checkGraph.pl $outpath\/graphs/edlilist $outpath\/graphs $outpath\/graphs/showGraphs $seqsim $strucsim -1 -1 $outpath\/graphs/cographs $outpath\/graphs/noncographs $outpath\/graphs/list-noEdgeGraphs.txt $outpath\/graphs/list-EdgeGraphs.txt $sumcheckgraph >>$db 2>>$err";
+    my $cmd27 = "$perlpath\/perl $scripts_sarah\/checkGraph.pl $outpath\/graphs/edlilist $outpath\/graphs $outpath\/graphs/showGraphs $seqsim $strucsim $mode $outpath\/graphs/cographs $outpath\/graphs/noncographs $outpath\/graphs/list-noEdgeGraphs.txt $outpath\/graphs/list-EdgeGraphs.txt $sumcheckgraph >>$db 2>>$err";
     print "analyse graphs..";
     my @out23 = readpipe("$cmd23");
     my @out23a = readpipe("$cmd23a");
@@ -610,30 +645,44 @@ if($checkgraphs == 1){
 if($createalns == 1){
     #create duplication alignments for each graph, thus take care for the similarity thresholds
     my $sumcreatealn = "$summarypath\/Summary_createAlignments.txt";
+    my $sumremoldings = "$summarypath\/List_Remoldings.txt";
+    my $suminremoldings = "$summarypath\/List_Inremoldings.txt";
     my $cmd28 = "mkdir $outpath\/graphs/alignments 2>>$err";
     my $cmd281 = "mkdir $outpath\/data_iTOL 2>>$err";
     my $cmd291 = "touch $outpath\/matches.txt 2>>$err";
     my $cmd292 = "touch $outpath\/duplications.txt 2>>$err";
     my $cmd293 = "touch $outpath\/insertions.txt 2>>$err";
-    my $cmd294 = "touch $outpath\/pseudogenes.txt 2>>$err";
-    my $cmd29a = "mkdir $outpath\/graphs/GainLoss 2>>$err";
+    my $cmd294 = "touch $outpath\/pseudogenes.txt 2>>$err"; #this is the matching pseudogenes
+    my $cmd294a = "touch $outpath\/pseudogenes_missingAnchor.txt 2>>$err";
+    my $cmd294b = "touch $outpath\/pseudogenes_dels.txt 2>>$err";
+    my $cmd294c = "touch $outpath\/pseudogenes_ins.txt 2>>$err"; 
+    my $cmd295 = "touch $outpath\/deletions.txt 2>>$err";
+    my $cmd296 = "touch $outpath\/missingData.txt 2>>$err";
+#    my $cmd29a = "mkdir $outpath\/graphs/GainLoss 2>>$err";
 #    my $cmd29b = "touch $outpath\/graphs/showGraphs/graphsToDraw 2>>$err";
 ##getDuplication not needed anymore as it was replaced by create alignments
 #    my $cmd30 = "$perlpath\/perl $scripts_sarah\/getDuplication.pl $outpath\/graphs/edlilist $outpath\/graphs/showGraphs $outpath\/graphs/alignments $altnwpath $outpath\/matches.txt $outpath\/duplications.txt $outpath\/insertions.txt $outpath\/pseudogenes.txt 2>>$err";
     my $cmd301 = "touch $outpath\/tree.out 2>>$err";
     my $cmd302 = "touch $outpath\/geneticEvents.txt 2>>$err";
     ##TODO set the pseqsim and pstruclim if we have a solution for pseudogenes
-    my $cmd30b = "$perlpath\/perl $scripts_sarah\/createAlignments.pl $outpath\/graphs/edlilist $outpath\/graphs/alignments $altnwpath $seqsim $strucsim $pseudoscore $singletoncount $mode $outpath\/graphs/GainLoss $outpath\/matches.txt $outpath\/duplications.txt $outpath\/insertions.txt $outpath\/pseudogenes.txt $sumcreatealn 2>>$err";
-    my $cmd30a = "$perlpath\/perl $scripts_sarah\/countEvents.pl $newicktree $outpath\/matches.txt $outpath\/duplications.txt $outpath\/insertions.txt $outpath\/pseudogenes.txt $outpath\/tree.out $outpath\/geneticEvents.txt $totelemnumstr $nonestr $totpseudostr $outpath\/data_iTOL 2>>$err";
+    #path to epope out, not used at the moment:    $outpath\/graphs/GainLossA
+    #pseudoscore, not used at the moment:  $pseudoscore
+    my $cmd30b = "$perlpath\/perl $scripts_sarah\/createAlignments.pl $outpath\/graphs/edlilist $outpath\/graphs/alignments $altnwpath $seqsim $strucsim $mode $numdifftypes $outpath\/matches.txt $outpath\/duplications.txt $outpath\/insertions.txt $outpath\/pseudogenes.txt $outpath\/pseudogenes_missingAnchor.txt $outpath\/pseudogenes_dels.txt $outpath\/pseudogenes_ins.txt $outpath\/deletions.txt $outpath\/missingData.txt $newicktree $path2Temp $sumcreatealn $sumremoldings $suminremoldings 2>>$err";
+    my $cmd30a = "$perlpath\/perl $scripts_sarah\/countEvents.pl $newicktree $allsinglestr $outpath\/matches.txt $outpath\/duplications.txt $outpath\/insertions.txt $outpath\/pseudogenes.txt $outpath\/pseudogenes_missingAnchor.txt $outpath\/pseudogenes_dels.txt $outpath\/pseudogenes_ins.txt $outpath\/deletions.txt $outpath\/missingData.txt $outpath\/tree.out $outpath\/geneticEvents.txt $totelemnumstr $allnonestr $outpath\/data_iTOL 2>>$err";
     
     print "create duplication alignments..";
+    print "createALNs cmd: $cmd30b \n";
     my @out28 = readpipe("$cmd28");
     my @out281 = readpipe("$cmd281");
     my @out291 = readpipe("$cmd291");
     my @out292 = readpipe("$cmd292");
     my @out293 = readpipe("$cmd293");
     my @out294 = readpipe("$cmd294");
-    my @out29a = readpipe("$cmd29a");
+    my @out294a = readpipe("$cmd294a");
+    my @out294b = readpipe("$cmd294b");
+    my @out295 = readpipe("$cmd295");
+    my @out296 = readpipe("$cmd296");
+#    my @out29a = readpipe("$cmd29a");
 #    my @out29b = readpipe("$cmd29b");
 #    my @out30 = readpipe("$cmd30");
     my @out301 = readpipe("$cmd301");

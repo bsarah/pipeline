@@ -101,7 +101,7 @@ elif args.own_genes != None:
     #print("own Genes")
 
     geneObjects, listOfSpecies = parseGenes(args.own_genes, [args.referenceSpecies])
-    #print("Genes parsed")
+    #print("search Genes")
     numgenes = len(geneObjects)
     numspecs = len(listOfSpecies)
     #print("num genes: {}".format(numgenes))

@@ -54,6 +54,7 @@ my $numseqs = 0;
 my %species = ();
 my %pseudos = ();
 my %types = ();
+my %difftypes = ();
 open(my $outs, ">>$summary");
 
 
@@ -132,7 +133,7 @@ while(<FA>){
 	#standardize secondary structure
 	my $struc;
 	if($mode==0){$struc = $F[$arrlen-3];}
-	else{$struc = $F[$arrlen-4];}
+	else{$struc = $F[$arrlen-5];}
 	my $a = "<";
 	my $b="(";
 	my $c=">";
@@ -153,13 +154,13 @@ while(<FA>){
 	if($mode == 0){
 	    $F[$arrlen-3]=$struc;
 	}
-	else{$F[$arrlen-4]=$struc;}
+	else{$F[$arrlen-5]=$struc;}
 	    
 	# work on sequence, find intron, delete - and turn to lower case
 
 	my $preseq;
 	if($mode == 0){$preseq = $F[$arrlen-2];}
-	else{$preseq = $F[$arrlen-5];}
+	else{$preseq = $F[$arrlen-4];}
 	my @introns = ();
 	my @intronpos = ();
 	my $pos1 = index($preseq,"*");
@@ -209,7 +210,7 @@ while(<FA>){
 	my $seq2 = lc $seq;
 
 	if($mode ==0){$F[$arrlen-2]=$seq2;}
-	else{$F[$arrlen-5]=$seq2;}
+	else{$F[$arrlen-4]=$seq2;}
 
 	if($mode == 0){
 	    my $score = $F[$arrlen-1];
@@ -231,6 +232,8 @@ while(<FA>){
 	}
 	else{
 	    my $pretype = $F[$arrlen-3];
+	    if(exists $difftypes{$pretype}){$difftypes{$pretype}++;}
+	    else{$difftypes{$pretype}=1;}
 	    my @L3 = split '\/', $curname;
 	    my @M3 = split '\.', $L3[(scalar @L3) -1];
 	    my $type = "$M3[0]\_$pretype";
@@ -289,7 +292,7 @@ if($psestr eq ""){$psestr = "No pseudogenes detected.\n";$nopseudos = 1;}
 
 my $typstr = "";
 foreach my $ty (sort (keys(%types))) {
-    $typstr = "$ty $types{$ty}\n";
+    $typstr = "$typstr$ty $types{$ty}\n";
 }
 
 
@@ -340,6 +343,36 @@ else{
     $psestr=~s/$dstr/$cstr/g;
 }
 
-my $outstr = "$spstr\!$psestr";
+
+my %pse = ();
+my %spe = ();
+my @S = split '=', $spstr;
+my @P = split '=', $psestr;
+
+my $newspstr = "";
+for(my $s=0;$s<scalar @S;$s++){
+    my @Tmp = split '-', $S[$s];
+    $spe{$Tmp[0]} = $Tmp[1];
+}
+for(my $p=0;$p<scalar @P;$p++){
+    my @Tmp2 = split '-', $P[$p];
+    $pse{$Tmp2[0]} = $Tmp2[1];
+}
+
+
+foreach my $pf (keys %spe){
+    my $val =$spe{$pf};
+    if(exists($pse{$pf})){
+	$val = $spe{$pf}-$pse{$pf};
+    }
+    $newspstr = "$newspstr$pf\-$val\=";
+}
+
+my $outstr = "$newspstr\!$psestr";
+
+#include typeinformation in order to hand it over
+my $numdifftypes = scalar (keys %difftypes);
+
+$outstr = "$numdifftypes\!$outstr";
 
 print $outstr;

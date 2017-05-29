@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-## perl createAlignments.pl edlilist outpath pathtonw secsim strsim pseudoscore singletoncount mode outfolder match dupl ins pseudo summary
+## perl createAlignments.pl edlilist outpath pathtonw secsim strsim mode numdifftypes outfolder match dupl ins pseudo pseumis pseudels pseuins dels missing newicktree pathoTemp summary remodlingsout inremoldingsout
 
 ##program will produce sequences of letters, where the same letter means similar sequences, depending on the threshold.
 ##thus one letter for each connected component.
@@ -25,17 +25,28 @@ my $outpath=shift;
 my $pathtonw = shift;
 my $seqlim = shift;
 my $strlim = shift;
-my $pseudosc = shift;
-my $singletoncount = shift;
+#my $nonecount = shift; #I don't need those counts here
+#my $pseudocount = shift;
+#my $singletoncount = shift;
 my $mode = shift;
-my $outfolder = shift; ##write files for ePoPE
+my $numdifftypes = shift;
+#my $outfolder = shift; ##write files for ePoPE #not used at the moment!
 my $matchout = shift;
 my $duplout = shift;
 my $insout = shift;
 my $pseout = shift;
+my $psemisout = shift;
+my $psedelout = shift;
+my $pseinsout = shift;
+my $delout = shift;
+my $misout = shift;
+my $nwtree = shift;
+my $path2Temp = shift; #temp folder which contains gipped lists about anchors for each species
 my $summary = shift; #usual summary after running the script
+my $sumrems = shift;
+my $suminrems = shift;
 
-
+#print STDERR "createALN input tree: $nwtree\n";
 
 #create a hash with strings that show spec1_spec2,spec1,spec3,spec5 as key whereas
 #spec1 is the current species and the others are in the same cluster.
@@ -45,16 +56,33 @@ my $summary = shift; #usual summary after running the script
 my %dupevents =();
 my %matevents =();
 my %insevents =();
-##are mismatches needed? use pseudogenes INSTEAD of mistmatches
-#my %misevents =();
-my %psevents = ();
-my @remoldings = ();
+my %misevents =(); #missing data=no anchors
+my %delevents = ();#deletions
+my %psevents = (); #insertions of pseudogenes
+my %psedels = ();
+my %psemis = ();
+my %pseins = ();
 
-open(my $outm,">>",$matchout);
-open(my $outd,">>",$duplout);
-open(my $outi,">>",$insout);
-open(my $outp,">>",$pseout);
+
+my @remoldings = ();
+# The pairs of elements (separated with ':') are defined 
+#as orthologs based on the similarity score but have distinct types according to the input";
+
+my @inremoldings = ();
+#The pairs of elements are defined as orthologs as they have the same types but the similarity is below the orthology threshold.
+#this is only reported IFF there are more than just one type!
+
+my %elemcount = (); #count how many elements of which species occur during the creation of alignments
+
+
+
+
+open(my $outsr,">>", $sumrems);
+open(my $outsi,">>", $suminrems);
+
 open(my $outs,">>", $summary);
+
+
 
 ##filter which is the biggest alignment created
 my $maxlen = 0;
@@ -97,17 +125,23 @@ while(<FA>){
     my $path = "$outpath\/$newname";
     open(my $outgr,">>",$path);
 
+    my @AN = split '-', $almostname;
+    
+    my $leftanchor = $AN[1];
+    my $rightanchor = $AN[2];
+
     print $outgr ">$almostname\n";
     $alncount++;
     ##one letter codes needed
-    ##are all the chars ok?
-    my @letters = ('A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','0','1','2','3','4','5','6','7','8','9','!','@','#','$','%','^','&','*','(',')','=','+','-','~'); 
+    ##are all the chars ok? ##no - or ~ as they appear in the alignment
+    my @letters = ('A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','0','1','2','3','4','5','6','7','8','9','!','@','#','$','%','^','&','*','(',')','=','+','>','<','?','[',']','|'); 
     my $letcount = 0;
+    my $letnum = scalar @letters;
    
     my %node2letter = ();
     my %species = ();
     my %start2node = ();
-    my @pgenes = (); ##pseudogenes
+    my %pgenes = (); ##pseudogenes
     my %spec2pseudo = ();   
     my @vertices = ();
     my @arcs = ();
@@ -120,55 +154,111 @@ while(<FA>){
 	my $line = $_;
 #	print "line: $line \n";
 	my @F = split ' ', $line;
-	my $n1 = $F[0];
-	my $n2 = $F[1];
+	my $n1 = $F[0]; #node 1
+	my $n2 = $F[1]; #node 2
 	my $seqsim = $F[2];
 	my $strsim = $F[3];
 
 	my @G = split '_', $n1;
 	my @G2 = split '_', $n2;
+	my $isp1 = 0; #check if genes are pseudo or not
+	my $isp2 = 0;
+
 	if($mode == 0){
 	    #nodes look like: chr_spec_id_start_end_strand_pseudo
 	    my $spec = $G[(scalar @G) - 6];
+	    my $spec2 = $G2[(scalar @G2) - 6];
 	    $species{$spec} = "";
+	    $species{$spec2} = "";
 	    $spec2pseudo{$spec} = "";
-	    my $startvec = $G[(scalar @G) - 4] + (0.0001 * $G[(scalar @G) - 5]);
-	    if(exists $start2node{$startvec}){}
-	    else{$start2node{$startvec} = $n1;}
-	    my $p1 = $G[(scalar @G) - 1];
-	    
+	    $spec2pseudo{$spec2} = "";
+	    ##if we find a pseudogenes, add it to the pseudogene vector and remove it from the analysis
+	    my $p1 = $G[(scalar @G) - 1];	    
+	    if($p1 eq "P"){if(exists($pgenes{$n1})){}else{$pgenes{$n1}=1;} $isp1 = 1;}
+#	    else{
+		my $startvec = $G[(scalar @G) - 4] + (0.0001 * $G[(scalar @G) - 5]);
+		if(exists $start2node{$startvec}){}
+		else{$start2node{$startvec} = $n1;}
+#	    }
 	    my $p2 = $G2[(scalar @G2) - 1];
-	    if($p1 eq "P"){push @pgenes, $n1;}
-	    if($p2 eq "P"){push @pgenes, $n2;}
+	    if($p2 eq "P"){if(exists($pgenes{$n2})){}else{$pgenes{$n2}=1;}$isp2 = 1;}
+#	    else{	
+		my $startvec2 = $G2[(scalar @G2) - 4] + (0.0001 * $G2[(scalar @G2) - 5]);
+		if(exists $start2node{$startvec2}){}
+		else{$start2node{$startvec2} = $n2;}
+#	    }
 	}
 	else{
 	    #nodes look like: chr_spec_id_start_end_strand_type_pseudo
+	    #	    chr2A_gorGor3_276_9333523_9333524_-_Undet_TRUE
+#	    chr6_GL000252v2_alt_hg38_1276_10814083_10814084_-_Ala_FALSA
 	    my $spec = $G[(scalar @G) - 7];
 	    $species{$spec} = "";
+	    my $spec2 = $G2[(scalar @G2) - 7];
+	    $species{$spec2} = "";
 	    $spec2pseudo{$spec} = "";
-	    my $startvec = $G[(scalar @G) - 5] + (0.0001 * $G[(scalar @G) - 6]);
-	    if(exists $start2node{$startvec}){}
-	    else{$start2node{$startvec} = $n1;}
+	    $spec2pseudo{$spec2} = "";
+	    ##if we find a pseudogenes, add it to the pseudogene vector and remove it from the analysis
 	    my $p1 = $G[(scalar @G) - 1];
 	    my $p2 = $G2[(scalar @G2) - 1];
 	    if($p1 eq "T" || $p1 eq "t" || $p1 eq "True" || $p1 eq "true"
-	       || $p1 eq "1" || $p1 eq "TRUE"){push @pgenes, $n1;}
+	       || $p1 eq "1" || $p1 eq "TRUE"){if(exists($pgenes{$n1})){}else{$pgenes{$n1}=1;}$isp1 = 1;}
+#	    else{
+		my $startvec = $G[(scalar @G) - 5] + (0.0001 * $G[(scalar @G) - 6]);
+		if(exists $start2node{$startvec}){}
+		else{$start2node{$startvec} = $n1;}
+#	    }
 	    if($p2 eq "T" || $p2 eq "t" || $p2 eq "True" || $p2 eq "true"
-	       || $p2 eq "1" || $p2 eq "TRUE"){push @pgenes, $n2;}
-
+	       || $p2 eq "1" || $p2 eq "TRUE"){if(exists($pgenes{$n2})){}else{$pgenes{$n2}=1;} $isp2 = 1;}
+#	    else{	    
+		my $startvec2 = $G2[(scalar @G2) - 5] + (0.0001 * $G2[(scalar @G2) - 6]);
+		if(exists $start2node{$startvec2}){}
+		else{$start2node{$startvec2} = $n2;}
+#	    }
 	    ##check types:
 	    my $t1 = $G[(scalar @G) - 2];
 	    my $t2 = $G2[(scalar @G2) - 2];
-	    if($seqsim >= $seqlim && $strsim >= $strlim && $t1 ne $t2){
-		##sequence similarity is high but types seem to be different
-		my $remstr = "";
-		if($n1 le $n2){$remstr = "$n1\:$n2";}
-		else{$remstr = "$n2\:$n1";}
-		if(grep( /^$remstr$/, @remoldings)){}
-		else{push @remoldings, $remstr;}
+	    if($numdifftypes > 0){
+		if($numdifftypes > 1 && $seqsim >= $seqlim && $strsim >= $strlim && $t1 ne $t2 && $isp1 == 0 && $isp2 == 0){
+		    ##sequence similarity is high but types seem to be different
+		    my $remstr = "";
+		    if($n1 le $n2){$remstr = "$n1\:$n2";}
+		    else{$remstr = "$n2\:$n1";}
+		    if(grep( /^$remstr$/, @remoldings)){}
+		    else{push @remoldings, $remstr;}
+		}
+		if($numdifftypes > 1 && $t1 eq $t2 && $seqsim < $seqlim && $isp1 == 0 && $isp2 == 0){
+		    ##equal types but low sequence similarity
+		    my $inremstr = "";
+		    if($n1 le $n2){$inremstr = "$n1\:$n2";}
+		    else{$inremstr = "$n2\:$n1";}
+		    if(grep( /^$inremstr$/, @inremoldings)){}
+		    else{push @inremoldings, $inremstr;}
+		    
+		}
 	    }
 	}
-	
+
+#	if($isp1 == 1 && $isp2 == 1){next;}
+#	elsif($isp1 == 1 && $isp2 == 0){
+#	    if(exists $node2letter{$n2}){}
+#	    else{
+#		$node2letter{$n2} = $letters[$letcount];
+#		$letcount++;
+#	    }
+#	    next;
+#	}
+#	elsif($isp1 == 0 && $isp2 == 1){
+#	    if (exists $node2letter{$n1}) {}
+#	    else{
+#		$node2letter{$n1} = $letters[$letcount];
+#		$letcount++;
+#	    }
+#	    next;
+#	}
+#	else{}
+#	##the following is the else case, as we do 'next' above, this is ok
+#	##both genes are not pseudo
 	
 	if($seqsim >= $seqlim && $strsim >= $strlim){
 	    ##similarity fits, nodes get the same letter
@@ -188,20 +278,29 @@ while(<FA>){
 		else{
 		    $node2letter{$n1} = $letters[$letcount];
 		    $node2letter{$n2} = $letters[$letcount];
-		    $letcount++;
+		    if($letcount > $letnum){$letcount=0;}
+		    else{$letcount++;}
 		}
 	    }
 	}
 	else{
 	    ##similarity does not fit, nodes get different letters.
 	    if (exists $node2letter{$n1}) {}
-	    else{$node2letter{$n1} = $letters[$letcount];$letcount++;}
+	    else{$node2letter{$n1} = $letters[$letcount];
+		 if($letcount > $letnum){$letcount=0;}
+		 else{$letcount++;}
+	    }
 	    if (exists $node2letter{$n2}) {}
-	    else{$node2letter{$n2} = $letters[$letcount];$letcount++;}
+	    else{$node2letter{$n2} = $letters[$letcount];
+		 if($letcount > $letnum){$letcount=0;}
+		 else{$letcount++;}
+	    }
 	}
 
     }
 
+
+    
     
 #    print $outp "pgenes\n";
 #    my $pgenestr = join(",",@pgenes);
@@ -264,10 +363,34 @@ while(<FA>){
     ##create graphs out of the duplciation alignments, edges are where the columns fit
     ##nodes are: letter_spec_id!!!
     ##edges are alphabetically sorted e1 < e2 (unique edges), written with e1 e2
-    
 
+ 
+    
+    
+    my $lseq1sum = 0;
+    my $jump = 0;
     ##get alignments for each species against each other
     foreach my $k (keys %species){
+	my $lseq1 = $species{$k};
+	my $lseq1len = length($lseq1);
+	$lseq1sum += $lseq1len;
+	if(exists($elemcount{$k})){$elemcount{$k}+=$lseq1len;}
+	else{$elemcount{$k}=$lseq1len;}
+	##skip if it is the same species as there cannot be an edge
+	##problem, if the cluster consists of only nodes of the same species!
+	##thus, add those elements directly to the insertions
+	if(scalar (keys %species) == 1){
+	    my $psseq = $spec2pseudo{$k};
+	    my $zcount = $psseq =~ tr/0/0/; #normal genes
+	    my $ecount = $psseq =~ tr/1/1/; #pseudogenes
+	    #substract 1 from zcount as there was an extra 0-element added in order to keep in range
+	    if(exists $insevents{$k}){$insevents{$k} += $zcount-1;}
+	    else{$insevents{$k} = $zcount-1;}
+	    if(exists($psevents{$k})){$psevents{$k}+=$ecount;}
+	    else{$psevents{$k}=$ecount;}
+	    $jump=1;
+	    last;
+	}
 	print $outgr "\@$k\t$species{$k}\n";
 #	print "\@$k\t$species{$k}\n";
 	my $match=0; #m
@@ -277,8 +400,8 @@ while(<FA>){
 	my $del=0; #l
 	foreach my $k2 (keys %species){
 	    if($k eq $k2) {next;}
-	    my $lseq1 = $species{$k};
 	    my $lseq2 = $species{$k2};
+	    my $lseq2len = length($lseq2);
 	    my $cmd1 = "$pathtonw/altNW 1 1 \"$lseq1\" \"$lseq2\"";
 #	    print "altnwcmd: $cmd1 \n";
 	    my @out1 = readpipe("$cmd1");
@@ -301,8 +424,21 @@ while(<FA>){
 #	    my $p =0;
 	    my @ref = split '',$out1[1];
 	    my @oth = split '',$out1[2];
+	    if(scalar @ref != scalar @oth){print $outs "alignment does not fit! file: $curfile \n";}
+	    my $rcount =0;
+	    my $ocount=0;
+	    for(my $r=0;$r<scalar @ref;$r++){
+		if($ref[$r] eq '-' || $ref[$r] eq '~'){}
+		else{$rcount++;}
+		if($oth[$r] eq '-' || $oth[$r] eq '~'){}
+		else{$ocount++;}
+	    }
+	    #compare sequence lengths with seq len in alignment
+	    if($lseq1len != $rcount){print $outs "lengths don't fit! sequence:$lseq1len, alnseq: $rcount, file: $curfile \n";}
+	    if($lseq2len != $ocount){print $outs "lengths don't fit! sequence:$lseq2len, alnseq: $ocount, file: $curfile \n";}
+
 #	    print "spec2pseudo k,k2: $spec2pseudo{$k},$spec2pseudo{$k2} \n";
-	    my @sp12pseudo = split '', $spec2pseudo{$k};
+	    my @sp12pseudo = split '', $spec2pseudo{$k};  ##this is the sequence for species k for pseudogene or not
 	    my @sp22pseudo = split '', $spec2pseudo{$k2};	    
 	    my $tild = "~";
 	    my $mins = "-";
@@ -347,6 +483,7 @@ while(<FA>){
 			    if($v1 lt $v2){$ed = "$v1 $v2";}
 			    else{$ed = "$v2 $v1";}
 			    if(none {$_ eq $ed} @arcs){push @arcs, $ed;}
+			    last;
 			}
 			$zz--;
 		    }
@@ -373,6 +510,7 @@ while(<FA>){
 			    if($v1 lt $v2){$ed = "$v1 $v2";}
 			    else{$ed = "$v2 $v1";}
 			    if(none {$_ eq $ed} @arcs){push @arcs, $ed;}
+			    last;
 			}
 			$zz2--;
 		    }
@@ -389,42 +527,52 @@ while(<FA>){
 	}
 
     }
+    ##if jump==1, no graph could be built
+    if($jump==1){
+	next;
+    }
+
     
     ##graph for this cluster is built.
     ##get connected components
     my $vertices = join(',',@vertices);
+    my $curvertnum = scalar @vertices;
+    if($lseq1sum != $curvertnum){print STDERR "Sequence sum does not fit vertex num: seq: $lseq1sum, vertex: $curvertnum, vertices: $vertices, file: $curfile \n";}
     my $arcs = join(',',@arcs);
  #   print "vertices: $vertices \n";
- #   print "arcs: $arcs \n";
-    my @CCs = connectedComponents($vertices,$arcs);
+    #   print "arcs: $arcs \n";
 
+
+    my @CCs = connectedComponents($vertices,$arcs);
     
     ##count events for each CC, build ePoPE input for each CC
-    my $ccnum = scalar @CCs;
- #   print "ccnum: $ccnum \n";
+    my $perccnum = scalar @CCs; #add all nodes of each cc for this graph to see if it fits the curvertnum
+    #   print "ccnum: $ccnum \n";
+    my $ccnodecount = 0;
     my $cccount = 0;
     for(my $ii = 0; $ii < scalar @CCs; $ii++){
 #	print "cc: $CCs[$ii] \n";
 	my %spe2count = ();
 	my %pse2count = ();
 	my @verts = split ' ', $CCs[$ii];
-	my $outpo;
-	if(scalar @verts >= 2){
-	    my $outname = "$newname\_$cccount\.ali";
-	    my $path2 = "$outfolder\/$outname";
-	    open($outpo,">>",$path2);
-	    if($cccount == 0){$totALNnum++;}
-	    $cccount++;
-	    $totCCnum++;
-	    if($cccount > $maxCCnum){
-		$maxCCnum = $cccount;
-		$maxCCnumaln = $newname;
-	    }
-	    if(scalar @verts > $maxCC){
-		$maxCC = scalar @verts;
-		$maxCCaln = $outname;
-	    }
-	}	
+	$ccnodecount += scalar @verts;
+#	my $outpo;
+#	if(scalar @verts >= 2){
+#	    my $outname = "$newname\_$cccount\.ali";
+#	    my $path2 = "$outfolder\/$outname";
+#	    open($outpo,">>",$path2);
+#	    if($cccount == 0){$totALNnum++;}
+#	    $cccount++;
+#	    $totCCnum++;
+#	    if($cccount > $maxCCnum){
+#		$maxCCnum = $cccount;
+#		$maxCCnumaln = $newname;
+#	    }
+#	    if(scalar @verts > $maxCC){
+#		$maxCC = scalar @verts;
+#		$maxCCaln = $outname;
+#	    }
+#	}	
 	##what about singleton clusters?
 	##In order to make the program faster, 
 	##only multigene clusters should be used with ePoPE, 
@@ -436,18 +584,13 @@ while(<FA>){
 	    my @SP = split '_', $verts[$jj];
 	    my $spe = $SP[1];
 	    my $pseudi = $SP[2];
-	    if(scalar @verts >= 2){	
-		my $word = "sequence";
-		my $outst = "$spe $word\n";
-		print $outpo $outst;
-	    }
-	    if(exists $spe2count{$spe}){
-		$spe2count{$spe}++;
-	    }
-	    else{
-		$spe2count{$spe}=1;
-	    }
-#	    if($pseudi eq "0"){print "0\n";}
+#	    if(scalar @verts >= 2){	
+#		my $word = "sequence";
+#		my $outst = "$spe $word\n";
+#		print $outpo $outst;
+	    #	    }
+
+
 	    if($pseudi eq "1"){
 		if(exists $pse2count{$spe}){
 		    $pse2count{$spe}++;
@@ -456,6 +599,15 @@ while(<FA>){
 		    $pse2count{$spe}=1;
 		}
 	    }
+	    else{
+		if(exists $spe2count{$spe}){
+		    $spe2count{$spe}++;
+		}
+		else{
+		    $spe2count{$spe}=1;
+		}
+	    }
+	    
 	}
 
 #	my @kp = keys %pse2count;
@@ -466,32 +618,34 @@ while(<FA>){
 #	    print $outp Dumper(\%pse2count);
 #	    print $outp "\n";
 #	}
-	
-
 #	print "count now!\n";
 	
 	##counting: only matches and dup (and pseudogenes?), losses later when adding to the tree
 	##add elements from the singleton clusters that were sorted
 	##and specify the number of elements per species for the None cluster
 	my $spstr = join(',',sort (keys %spe2count));
+	my $spnum = scalar (keys %spe2count);	
 #	print "spstr: $spstr \n";
 	my @vals = values %spe2count;
 	my $vnum = scalar @vals;
+	my $mini = min @vals;
 #	print "hash spe2count \n";
 #	print Dumper(\%spe2count);
 #	print "\n";
-#	print "num vals: $vnum\n";
-	if(scalar @vals == 1){##singleton/insertion
+	#	print "num vals: $vnum\n";
+	#	my @smallvals = splice(@vals,1);
+	if(scalar @vals == 0){}
+	elsif(scalar @vals == 1){##singleton/insertion
 	    if(exists $insevents{$spstr}){$insevents{$spstr} += $vals[0];}
 	    else{$insevents{$spstr} = $vals[0];}
 	}
-	elsif(none {$_ != $vals[0]} @vals)
+	elsif(none {$_ != $vals[0]} @vals)#check if all values are equal
 	{
 	    if(exists $matevents{$spstr}){$matevents{$spstr} += $vals[0];}
 	    else{$matevents{$spstr} = $vals[0];}
 	}
 	else{##count duplications
-	    my $mini = min @vals;
+
 #	    print "min vals $mini\n";
 	    if(exists $matevents{$spstr}){$matevents{$spstr} += $mini;}
 	    else{$matevents{$spstr} = $mini;}
@@ -507,12 +661,15 @@ while(<FA>){
 	    }
 	}
 	my @pseuvals = values %pse2count;
+	my $psnum = scalar @pseuvals;
+	my $psestr = "";
+	my $pmin = min @pseuvals;
 	if(scalar @pseuvals > 0){
-	    my $psestr = join(',',sort (keys %pse2count));
+	    $psestr = join(',',sort (keys %pse2count));
 	    ##do the same distinguishing for the pseudogenes as for matching
 	    if(scalar @pseuvals == 1){#singleton
-		if(exists $psevents{$psestr}){$psevents{$psestr} += $pseuvals[0];}
-		else{$psevents{$psestr} = $pseuvals[0];}
+		if(exists $pseins{$psestr}){$pseins{$psestr} += $pseuvals[0];}
+		else{$pseins{$psestr} = $pseuvals[0];}
 	    }
 	    elsif(none {$_ != $pseuvals[0]} @pseuvals)
 	    {
@@ -520,7 +677,7 @@ while(<FA>){
 		else{$psevents{$psestr} = $pseuvals[0];}
 	    }
 	    else{#add the minimum common value for the complete psestr and the remainings as singletons, as the duplications have been counted already
-		my $pmin = min @pseuvals;
+		$pmin = min @pseuvals;
 		if(exists $psevents{$psestr}){$psevents{$psestr} += $pmin;}
 		else{$psevents{$psestr} = $pmin;}
 		foreach my $ppp (keys %pse2count){
@@ -533,28 +690,157 @@ while(<FA>){
 	    
 
 	    }
-	}	
+	}
+	#do check for missing data or deletions here
+	
+	##if cluster >= 2 nodes && num_species >= 2
+	##check if all species below the LCA appear in this cluster
+	##if a species does not appear, check if
+	##the missing species have the anchoring blocks
+	##if yes: write the combination of species as a deletion(like matches)
+	##if no: ignore this element in the species (add to missing data list)
+	
+	#do this for every CC as we are looking at genetic events of homologs
+	#steps:
+	#collect set of species
+	#missing species = find LCA and missing species below (sub)
+	#check if anchors exist
+	#thus here: counting of deletion events and missing data
+	if($spnum > 1){
+	    #species: comma-separated in $spstr
+	    my @missingspecs = getMissingSpecs($spstr,$nwtree);
+	    if(scalar @missingspecs > 0){
+		my @missingtmp = ();
+		my @missingdel = ();
+		for(my $mi = 0; $mi < scalar @missingspecs;$mi++){
+		    my $specii = $missingspecs[$mi];
+		    my $grepcmdleft = "zcat $path2Temp\/$specii\_temp\_sorted\.bed\.gz \| grep \"$specii\_$leftanchor\" ";
+		    my $grepcmdright = "zcat $path2Temp\/$specii\_temp\_sorted\.bed\.gz \| grep \"$specii\_$rightanchor\" ";
+		    #print STDERR "$grepcmdleft ; $grepcmdright\n";
+		    my @outleft = readpipe("$grepcmdleft");
+		    if(scalar @outleft == 0){
+			push @missingtmp, $specii;
+			next;
+		    }
+		    my @outright = readpipe("$grepcmdright");
+		    #check if both out[0] are nonempty
+		    if(scalar @outright == 0){
+			push @missingtmp, $specii;
+			next;
+		    }
+		    push @missingdel, $specii;
+		}
+
+		if(scalar @missingtmp > 0){
+		    my $misstr = join(',', @missingtmp);
+		    if(exists $misevents{$misstr}){$misevents{$misstr} += $mini;}
+		    else{$misevents{$misstr} = $mini;}
+		}
+		if(scalar @missingdel > 0){
+		    my $delstr = join(',',@missingdel);
+		    if(exists $delevents{$delstr}){$delevents{$delstr} += $mini;}
+		    else{$delevents{$delstr} = $mini;}
+		}
+	    }
+	}
+
+	#do the same for pseudogenes in order to detect missing data and deletions for pseudogenes
+	#extra files for pseudo: -singletons, ins, del, ex, mis
+
+
+	if($psnum > 0){
+	    	    #species: comma-separated in $psestr
+	    my @pmissingspecs = getMissingSpecs($psestr,$nwtree);
+	    if(scalar @pmissingspecs > 0){
+		my @pmissingtmp = ();
+		my @pmissingdel = ();
+		for(my $mi = 0; $mi < scalar @pmissingspecs;$mi++){
+		    my $pspecii = $pmissingspecs[$mi];
+		    my $pgrepcmdleft = "zcat $path2Temp\/$pspecii\_temp\_sorted\.bed\.gz \| grep \"$pspecii\_$leftanchor\" ";
+		    my $pgrepcmdright = "zcat $path2Temp\/$pspecii\_temp\_sorted\.bed\.gz \| grep \"$pspecii\_$rightanchor\" ";
+		    #print STDERR "$grepcmdleft ; $grepcmdright\n";
+		    my @poutleft = readpipe("$pgrepcmdleft");
+		    if(scalar @poutleft == 0){
+			push @pmissingtmp, $pspecii;
+			next;
+		    }
+		    my @poutright = readpipe("$pgrepcmdright");
+		    #check if both out[0] are nonempty
+		    if(scalar @poutright == 0){
+			push @pmissingtmp, $pspecii;
+			next;
+		    }
+		    push @pmissingdel, $pspecii;
+		}
+
+		if(scalar @pmissingtmp > 0){
+		    my $pmisstr = join(',', @pmissingtmp);
+		    if(exists $psemis{$pmisstr}){$psemis{$pmisstr} += $pmin;}
+		    else{$psemis{$pmisstr} = $pmin;}
+		}
+		if(scalar @pmissingdel > 0){
+		    my $pdelstr = join(',',@pmissingdel);
+		    if(exists $psedels{$pdelstr}){$psedels{$pdelstr} += $pmin;}
+		    else{$psedels{$pdelstr} = $pmin;}
+		}
+	    }
+	}
+	
+
+	
     }#done check for every CC
-    
-    ##how to get those events into the tree?
+    #check if ccnodecount == curvertnum
+    if($ccnodecount != $curvertnum){
+	print $outs "numbers don't fit! previous nodenum: $curvertnum, now: $ccnodecount\n";
+    }
+
+    ##pseudogenes here!
+#    foreach my $k (keys %pgenes){
+#	my @Ktmp = split '_', $k;
+#	my $kspec;
+#	if($mode == 0){
+#	    $kspec = $Ktmp[-6];
+#	}
+#	else{
+#	    $kspec=$Ktmp[-7];
+#	}
+#	if(exists($psevents{$kspec})){$psevents{$kspec}++;}
+#	else{$psevents{$kspec}=1;}
+ #   }
     
 }
 
 #my $now_string = strftime "%a %b %e %H:%M:%S %Y", localtime;
 
 
+
+##shift the singletoncount to countEvents.pl
 ##include insertion events from the singleton clusters that were not included in the graph analysis, as they were sorted out before
-my @SC = split "=", $singletoncount;
-for(my $s = 0; $s < scalar @SC; $s++){
-    if($SC[$s] eq ""){next;}
-    my @stmp = split "-", $SC[$s];
-    if(exists $insevents{$stmp[0]}){$insevents{$stmp[0]} += $stmp[1];}
-    else{$insevents{$stmp[0]} = $stmp[1];}
-}
+#my @SC = split "=", $singletoncount;
+#for(my $s = 0; $s < scalar @SC; $s++){
+#    if($SC[$s] eq ""){next;}
+#    my @stmp = split "-", $SC[$s];
+#    my $tmpnum = $insevents{$stmp[0]};
+#    if(exists $insevents{$stmp[0]}){$insevents{$stmp[0]} = $tmpnum + $stmp[1];}
+#    else{$insevents{$stmp[0]} = $stmp[1];}
+#}
+
+
+
+#my @PC = split "=", $pseudocount;
+#for(my $pc = 0;$pc < scalar @PC; $pc++){
+#    if($PC[$pc] eq ""){next;}
+#    my @ptmp = split "-", $PC[$pc];
+#    if(exists($psevents{$ptmp[0]})){$psevents{$ptmp[0]}+=$ptmp[1];}
+#    else{$psevents{$ptmp[0]}=$ptmp[1];}
+#}
 
 
 
 ##sort the entries in each entry for the hashes alphabetically
+
+
+open(my $outd,">>",$duplout);
 
 foreach my $du (sort keys %dupevents) {
     my @devs = split ',', $du;
@@ -562,53 +848,106 @@ foreach my $du (sort keys %dupevents) {
     my $dustr = join(',',@devs);
     print $outd "$dustr\t$dupevents{$du}\n";
 }
+close $outd;
 
-
+open(my $outm,">>",$matchout);
 foreach my $ma (sort keys %matevents) {
     my @mevs = split ',', $ma;
     @mevs = sort @mevs;
     my $mastr = join(',',@mevs);
     print $outm "$mastr\t$matevents{$ma}\n";
 }
+close $outm;
 
+open(my $outi,">>",$insout);
 foreach my $in (sort keys %insevents) {
     my @ievs = split ',', $in;
     @ievs = sort @ievs;
     my $instr = join(',',@ievs);
     print $outi "$instr\t$insevents{$in}\n";
 }
+close $outi;
 
 
+open(my $outpi,">>",$pseinsout);
+foreach my $pin (sort keys %pseins) {
+    my @pievs = split ',', $pin;
+    @pievs = sort @pievs;
+    my $pinstr = join(',',@pievs);
+    print $outpi "$pinstr\t$pseins{$pin}\n";
+}
+close $outpi;
+
+
+open(my $outp,">>",$pseout);
 foreach my $mi (sort keys %psevents) {
     my @mevs = split ',', $mi;
     @mevs = sort @mevs;
     my $mistr = join(',',@mevs);
     print $outp "$mistr\t$psevents{$mi}\n";
 }
+close $outp;
 
+open(my $oute,">>",$delout);
+foreach my $dl (sort keys %delevents) {
+    my @dls = split ',', $dl;
+    @dls = sort @dls;
+    my $dlstr = join(',',@dls);
+    print $oute "$dlstr\t$delevents{$dl}\n";
+}
+close $oute;
 
+open(my $outn,">>",$misout);
+foreach my $ms (sort keys %misevents) {
+    my @miss = split ',', $ms;
+    @miss = sort @miss;
+    my $msstr = join(',',@miss);
+    print $outn "$msstr\t$misevents{$ms}\n";
+}
+close $outn;
 
+open(my $outpm,">>",$psemisout);
+foreach my $pm (sort keys %psemis) {
+    my @pmiss = split ',', $pm;
+    @pmiss = sort @pmiss;
+    my $pmsstr = join(',',@pmiss);
+    print $outpm "$pmsstr\t$psemis{$pm}\n";
+}
+close $outpm;
+
+open(my $outpd,">>",$psedelout);
+foreach my $pd (sort keys %psedels) {
+    my @pdls = split ',', $pd;
+    @pdls = sort @pdls;
+    my $pdlstr = join(',',@pdls);
+    print $outpd "$pdlstr\t$psedels{$pd}\n";
+}
+close $outpd;
 
 
 #my $totALNnum = 0; ##num of alignments that are checked for ePoPE
 #my $totCCnum = 0; ##num of CCs for ePoPE in total
 #my $maxCC = 0;
 #my $maxCCaln = "";
-	
+
+#print $outs "===============Element counts\===============\n";
+#for my $kel (keys %elemcount){
+#    print $outs "$kel $elemcount{$kel}\n";
+#}
 
 print $outs "===============Duplication alignments\===============\n";
 print $outs "Duplication alignments and genetic events information: \n";
 print $outs "Number of clusters: $alncount. \n";
 print $outs "The longest alignment has length $maxlen and is in file $maxlenname . \n";
 print $outs "\n";
-print $outs "For the Gain/Loss analysis, $totALNnum alignments are used that
-are subdivided in total in $totCCnum connected components.
-The alignment with the maximal number of connected components contains $maxCCnum connected
-components and is called $maxCCnumaln. 
-The connected component with most nodes contains $maxCC nodes and can be found in $maxCCaln. \n";
-print $outs "The Gain/Loss analysis for multi gene cluster is done based on the files
-that can be found in $outfolder \n";
-print $outs "\n";
+#print $outs "For the Gain/Loss analysis, $totALNnum alignments are used that
+#are subdivided in total in $totCCnum connected components.
+#The alignment with the maximal number of connected components contains $maxCCnum connected
+#components and is called $maxCCnumaln. 
+#The connected component with most nodes contains $maxCC nodes and can be found in $maxCCaln. \n";
+#print $outs "The Gain/Loss analysis for multi gene cluster is done based on the files
+#that can be found in $outfolder \n";
+#print $outs "\n";
 print $outs "The summary file contains information about how many genetic events were 
 counted in a certain combination of species. This can be used to draw a 
 phylogenetic tree with genetic events at its nodes. \n";
@@ -625,10 +964,18 @@ stand for duplications, '-' for insertions or deletions in the alignment. \n";
 print $outs "\n";
 
 if(scalar @remoldings > 0){
-    print $outs "The following pairs of elements (separated with ':') are defined 
+    print $outsr "The following pairs of elements (separated with ':') are defined 
 as orthologs based on the similarity score but have distinct types according to the input:\n";
     for(my $i=0;$i< scalar @remoldings; $i++){
-	print $outs "$remoldings[$i] \n";
+	print $outsr "$remoldings[$i] \n";
+    }
+}
+
+if(scalar @inremoldings > 0){
+    print $outsi "The following pairs of elements (separated with ':') are defined 
+as orthologs as they have the same types but they sequence similarity is below the given threshold:\n";
+    for(my $i=0;$i< scalar @inremoldings; $i++){
+	print $outsi "$inremoldings[$i] \n";
     }
 }
 
@@ -684,4 +1031,271 @@ sub connectedComponents{
     }
     
     return @permnodes1;
+}
+
+
+
+#find LCA
+#get diffset of leafs_under_LCA - spstr
+sub getMissingSpecs{
+    my @inp = @_;
+    my $spstr = $inp[0];
+    my $treefile = $inp[1];
+
+    open TF,"<$treefile" or die "can't open $treefile\n";
+    
+    my $tree="";
+    
+    while(<TF>){
+	chomp;
+	$tree = $_;
+	last;
+    }
+
+
+    
+    my @output = ();
+    my @species = split ',', $spstr;
+    if(scalar @species <= 1){return @output;}
+
+
+    if($tree eq ""){print STDERR "createAlignments: tree format doesn't fit!\n"; exit 1;}
+    
+    #print $outs "tree: $tree \n";
+    
+    ##split the tree into an array of its elements
+    my @T = (); ##tree with its components
+    my @N = (); ##at each position there is a number showing opening brackets - closing brackets before this position, except for ( ) , ; then -2
+    my @L = (); #leaves
+    my @Lids = ();
+    my @tr = split '', $tree;
+    my $brackets = 0;
+    my $tmp = "";
+    for(my $i = 0; $i < scalar @tr; $i++)
+    {
+	if($tr[$i] eq ')' || $tr[$i] eq '(' || $tr[$i] eq ',' || $tr[$i] eq ';'){
+	    if($tmp ne ""){
+		push @T, $tmp; 
+		push @N, $brackets;
+		#	    print "leaves? $T[(scalar @T) -2] \n";
+		if($T[(scalar @T) -2] ne ")"){ #leaves
+		    push @L, $tmp;
+		    push @Lids, (scalar @T) -1;
+		}
+		$tmp="";
+	    }
+	    push @T, $tr[$i];
+	    push @N, -2;
+	    if($tr[$i] eq '('){$brackets++;}
+	    if($tr[$i] eq ')'){$brackets--;}
+	}
+	else{
+	    $tmp = "$tmp$tr[$i]";
+	}
+    }
+
+    my @leafbutnospec = (); #insert ids of leaves in T: Lids
+    for(my $l=0;$l< scalar @L;$l++){
+	my $isnotspec = 1;
+	for(my $s = 0;$s < scalar @species;$s++){
+	    if($species[$s] eq $L[$l]){
+		$isnotspec = 0;
+		last;
+	    }
+	}
+	if($isnotspec == 1){
+	    push @leafbutnospec, $Lids[$l];
+	}
+    }
+    
+    my $treestr = join('=',@T);
+    my $leafbuitnotspecstr = join('=',@leafbutnospec);
+    #print STDERR "createALN findLCA leafbutnotspec: $leafbuitnotspecstr \n";
+    #print STDERR "createALN findLCA: $spstr \n";
+    
+    #print STDERR "createALN findLCA: $treestr \n";
+    my $lca = findLCA($treestr,$spstr);
+    #print STDERR "createALNs lca: $lca \n";
+    #lca is the id in T
+    #check for all elements in leafbutnospec if lca is on their path to the root
+    #if yes, put in output
+    for(my $z=0;$z<scalar @leafbutnospec;$z++){
+	my $num = $N[$leafbutnospec[$z]];
+	for(my $t=$leafbutnospec[$z];$t<scalar @T;$t++){
+	    if($N[$t] != $num){next;}
+	    if($T[$lca] eq $T[$t]){
+		push @output, $T[$leafbutnospec[$z]];
+		last;
+	    }
+	    $num--;
+	    if($num < 0){last;}
+	}
+    }
+
+    my $outputstr = join('=',@output);
+    #print STDERR "createAlns missingspecs $outputstr\n";
+    return @output;
+
+}
+
+
+
+
+
+sub findLCA{
+    my @inp= @_;
+    #tree and leaf string is separated by =
+    my @T = split '=', $inp[0];
+    my @L = split ',', $inp[1]; #names of the species
+    my @Ltmp = split ',', $inp[1];
+    
+    my @output = ();
+    my $rootid = -1;
+    
+    my @N = ();
+    my @allleaves = ();
+    my $brackets = 0;
+    my $maxbracket = 0;
+    for(my $i = 0; $i < scalar @T; $i++)
+    {
+	if($T[$i] eq ')' || $T[$i] eq '(' || $T[$i] eq ',' || $T[$i] eq ';'){
+	    
+	    push @N, -2;
+	    if($T[$i] eq '('){$brackets++;}
+	    if($T[$i] eq ')'){$brackets--;}
+	    if($brackets > $maxbracket){$maxbracket = $brackets;}
+	}
+	else{
+	    push @N, $brackets;
+	    if($brackets == 0){$rootid = $i;}
+	    if($i>0){
+		if($T[$i-1] eq ')'){
+		    ##this is an inner node
+		}
+		else{
+		    push @allleaves, $T[$i];
+		}
+	    }	
+	}
+    }
+
+    if($rootid == -1){return @output;}
+    
+    #print join(" ",@T);
+    #print "\n";
+    #print join(" ",@N);
+    #print "\n";
+    #print join(" ",@allleaves);
+    #print "\n";
+    my @Lids = (); #ids of the leaves in T and N
+    for(my $l=0;$l<scalar @L;$l++){
+	for(my $t=0;$t<scalar @T;$t++){
+	    if($L[$l] eq $T[$t]){
+		push @Lids, $t;
+	    }
+	}	
+    }
+
+    my @Ltmpids = @Lids;
+    my @L2tmp = ();
+    my @L2tmpids = ();
+    
+    #######################################
+    my $pstr1="";
+    my $pstr2="";
+
+    ##try to find curlca by always looking at two species at the same time
+    ##then, get set of nodes from the pathes from the current leaves to the root and intersect them
+    ##if there are several nodes in the intersection, take the one with the highest N
+    my $curlca = $Lids[0]; #start with species at $S[0]
+    for(my $k=1; $k < scalar @L; $k++){
+	my @path1 = ();
+	my @path2 = ();
+	push @path1, $curlca;
+	push @path2, $Lids[$k];
+	my $num1 = $N[$curlca];
+	for(my $t4=$curlca;$t4<scalar @T;$t4++){
+	    #got up in the tree and check the bracketnums
+	    if($N[$t4] != $num1){next;}
+	    $num1--; #bracketnum
+	    if($num1 < 0){push @path1, $rootid;last;}
+	    push @path1, $t4;
+	}
+
+	my $num2 = $N[$Lids[$k]];
+	for(my $t5=$Lids[$k];$t5<scalar @T;$t5++){
+	    if($N[$t5] != $num2){next;}
+	    $num2--;
+	    if($num2 < 0){push @path2, $rootid;last;}
+	    push @path2, $t5;
+	}
+
+	if(scalar @path1 == 0){
+#	    print $outs "path1 zero: $F[0]\n";
+	}
+	else{$pstr1 = join("=",@path1);}
+
+	if(scalar @path2 == 0){
+#	    print $outs "path2 zero: $F[0]\n";
+	}
+
+	if(scalar @path1 == 0 || scalar @path2 == 0){
+	    next;
+	}
+	else{$pstr2 = join("=",@path2);}
+
+	
+
+
+	#do the intersection of both
+	##as we go from leaves to root, we take the first element that we have in common
+	my @pdiff = ();
+	for(my $a1 = 0; $a1 < scalar @path1;$a1++){
+	    for(my $b1 = 0; $b1 < scalar @path2; $b1++){
+		if($path1[$a1] == $path2[$b1]){
+		    push @pdiff, $path2[$b1];
+#		    last; #this can be deleted later on in order to get all overlapping nodes
+		}
+	    }
+
+	}
+
+	my $pdiffstr = join('=',@pdiff);
+
+	#print STDERR "createALNs path1: $pstr1\n";	
+	#print STDERR "createALNs path2: $pstr2\n";
+	#print STDERR "createALNs pdiff: $pdiffstr\n";
+
+	if(scalar @pdiff == 0){
+	    print STDERR "son mist pathes: $pstr1; $pstr2\n";
+	    #	    print $outs "son mist pathes: $pstr1; $pstr2\n";
+	}
+	elsif(scalar @pdiff == 1){
+	    $curlca = $pdiff[0];
+	}
+	else{
+	    #choose the curlca with the highest N
+	    my $curplca = $N[$pdiff[0]];
+	    my $curpid = $pdiff[0];
+	    for(my $pd=1;$pd<scalar @pdiff;$pd++){
+		if($N[$pdiff[$pd]] >= $curplca){
+		    $curplca = $N[$pdiff[$pd]];
+		    $curpid = $pdiff[$pd];
+		}
+	    }
+	    $curlca = $curpid;
+	}
+    }
+
+    if($N[$curlca] < 0){
+	print STDERR "createAlignments: strange curlca\n";
+    }
+
+
+
+    return $curlca;
+
+    
+
+
 }
