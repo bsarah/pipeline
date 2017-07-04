@@ -61,7 +61,7 @@ while(<TF>){
     
 if($tree eq ""){print STDERR "countEvents: tree format doesn't fit!\n"; exit 1;}
 
-#print $outs "tree: $tree \n";
+print $outs "tree: $tree \n";
 
 ##split the tree into an array of its elements
 my @T = (); ##tree with its components
@@ -123,8 +123,9 @@ open PS,"<$pseudo" or die "can't open $pseudo\n";
 while(<PS>){
     chomp;
     my $psline = $_;
+    if($psline eq ""){next;}
     my @PS = split '\t', $psline;
-    if(scalar @PS < 2){print STDERR "misformatted input line, will be skipped! \n"; next;}
+    if(scalar @PS < 2){print STDERR "misformatted input line, will be skipped! line= $psline \n"; next;}
     my @SS = split ',', $PS[0];
     my $psnum = $PS[1];
     if(scalar @SS == 0){next;}
@@ -157,7 +158,7 @@ while(<FA>){
     chomp;
     my $line = $_;
     my @F = split '\t', $line; ##should have at least 2! entries
-    if(scalar @F < 2){print STDERR "misformatted input line, will be skipped! \n"; next;}
+    if(scalar @F < 2){print STDERR "misformatted input line, will be skipped! line= $line \n"; next;}
     
     my @S = split ',', $F[0]; ##species
     my $num = $F[1];
@@ -396,7 +397,7 @@ while(<FD>){
     chomp;
     my $line = $_;
     my @F = split '\t', $line; ##should have at least 2! entries
-    if(scalar @F < 2){print STDERR "misformatted input line, will be skipped! \n"; next;}
+    if(scalar @F < 2){print STDERR "misformatted input line, will be skipped! line = $line \n"; next;}
     my @S = split ',', $F[0]; ##species
     my $num = $F[1];
 
@@ -428,7 +429,7 @@ while(<FDP>){
     chomp;
     my $pline = $_;
     my @FP = split '\t', $pline; ##should have at least 2! entries
-    if(scalar @FP < 2){print STDERR "misformatted input line, will be skipped! \n"; next;}
+    if(scalar @FP < 2){print STDERR "misformatted input line, will be skipped! line = $pline\n"; next;}
     my @PS = split ',', $FP[0]; ##species
     my $pnum = $FP[1];
 
@@ -460,13 +461,14 @@ for(my $s = 0; $s < scalar @SC; $s++){
     $singletons{$stmp[0]} = $stmp[1];
 }
 
+if(scalar @allS > 1){
 my @SP = split "=", $allS[1];
 for(my $sp = 0; $sp < scalar @SP; $sp++){
     if($SP[$sp] eq ""){next;}
     my @sptmp = split "-", $SP[$sp];
     $pseusingles{$sptmp[0]} = $sptmp[1];
 }
-
+}
 
 ##DUPLICATIONS
 open FD,"<$dupl" or die "can't open $dupl\n";
@@ -475,7 +477,7 @@ while(<FD>){
     chomp;
     my $dline = $_;
     my @D = split '\t', $dline; ##should have at least 2! entries
-    if(scalar @D < 2){print STDERR "misformatted input line in duplications, will be skipped! \n"; next;}
+    if(scalar @D < 2){print STDERR "misformatted input line in duplications, will be skipped! line = $dline \n"; next;}
     if(exists($duplications{$D[0]})){$duplications{$D[0]} += $D[1];}
     else{$duplications{$D[0]} = $D[1];}
     if(exists($totcounts{$D[0]})){$totcounts{$D[0]}+=$D[1];}
@@ -490,7 +492,7 @@ while(<FI>){
     chomp;
     my $iline = $_;
     my @I = split '\t', $iline; ##should have at least 2! entries
-    if(scalar @I < 2){print STDERR "misformatted input line in insertions, will be skipped! \n"; next;}
+    if(scalar @I < 2){print STDERR "misformatted input line in insertions, will be skipped! line = $iline \n"; next;}
     if(exists($insertions{$I[0]})){ $insertions{$I[0]}+= $I[1];}
     else{ $insertions{$I[0]} = $I[1];}
     if(exists($totcounts{$I[0]})){$totcounts{$I[0]}+=$I[1];}
@@ -506,7 +508,7 @@ while(<FPI>){
     chomp;
     my $piline = $_;
     my @PI = split '\t', $piline; ##should have at least 2! entries
-    if(scalar @PI < 2){print STDERR "misformatted input line in insertions, will be skipped! \n"; next;}
+    if(scalar @PI < 2){print STDERR "misformatted input line in insertions, will be skipped! line = $piline \n"; next;}
     if(exists($psein{$PI[0]})){$psein{$PI[0]} += $PI[1];}
     else{$psein{$PI[0]} = $PI[1];}
     if(exists($totcounts{$PI[0]})){$totcounts{$PI[0]}+=$PI[1];}
@@ -520,7 +522,7 @@ while(<FM>){
     chomp;
     my $mline = $_;
     my @M = split '\t', $mline;
-    if(scalar @M < 2){print STDERR "misformatted input line in insertions, will be skipped! \n"; next;}
+    if(scalar @M < 2){print STDERR "misformatted input line in insertions, will be skipped! line = $mline \n"; next;}
     my @specs = split ',', $M[0];
     my $num = $M[1];
     for(my $s = 0;$s<scalar @specs;$s++){
@@ -542,7 +544,7 @@ while(<FPM>){
     chomp;
     my $pmline = $_;
     my @PM = split '\t', $pmline; ##should have at least 2! entries
-    if(scalar @PM < 2){print "misformatted input line in pseudogenes, will be skipped! \n"; next;}
+    if(scalar @PM < 2){print "misformatted input line in pseudogenes, will be skipped! line = $pmline \n"; next;}
     my @pmspecs = split ',', $PM[0];
     for(my $pm = 0; $pm < scalar @pmspecs;$pm++){
 	if(exists($psemis{$pmspecs[$pm]})){$psemis{$pmspecs[$pm]} += $PM[1];}
@@ -591,13 +593,14 @@ for(my $gg=0;$gg<scalar @GG;$gg++){
     $nonenums{$HG[0]} = $HG[1];
 }
 
+if(scalar @allG > 1){
 my @GP = split '=', $allG[1];
 for(my $gp=0;$gp<scalar @GP;$gp++){
     if($GP[$gp] eq ""){next;}
     my @HP = split '-', $GP[$gp];
     $pseunons{$HP[0]} += $HP[1];
 }
-
+}
 
 
 

@@ -63,6 +63,21 @@ my $space = " ";
 my $count = 0;
 my $newtree = "";
 my $tmp = "";
+if($T[-1] eq $semco){}
+else{print "tree format doesn't fit! No \';\' at the end! \n"; exit 1;}
+
+#my $subtree = "";
+#if($preT[0] eq $obrac && $preT[-2] eq $cbrac){
+#    #eliminate useless brackets
+#    $preT[0] = $semco;
+#    $preT[-2] = $semco;
+#    $tmptree = join('',@preT);
+#    my $len = length($tmptree);
+#    $subtree = substr($tmptree,1,$len-2);
+#}
+#else{$subtree = $tree;}
+
+#my @T = split "", $subtree;
 push @Tnew, $T[0];
 for(my $i  = 1; $i < scalar @T; $i++){
     if($T[$i] eq $obrac || $T[$i] eq $com || $T[$i] eq $semco || $T[$i] eq $cbrac){ 
