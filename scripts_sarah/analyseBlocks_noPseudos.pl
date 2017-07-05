@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-#call: analyseBlocks.pl bedfile genesfile outfile
+#call: analyseBlocks.pl TEMPfile genesfile outfile
 #check the distance for each element to the adjacent blocks
 #output: table with dist_to_left dist_to_right dist_left_to_right length_element length_leftblock length_rightblock
 
@@ -11,7 +11,7 @@ use warnings;
 use Data::Dumper;
 
 
-my $bedfile = shift;
+my $bedfile = shift; #file in TEMP folder!
 my $genesfile = shift;
 my $outfile = shift;
 
@@ -43,12 +43,6 @@ while(<FA>){
     }
     my $lnum = $F[5];
     my $rnum = $F[6];
-    my $dist2left;
-    my $dist2right;
-    my $distL2R;
-    my $ellen;
-    my $llen;
-    my $rlen;
     if($lnum eq "None"){
 	next;
     }
@@ -56,8 +50,8 @@ while(<FA>){
 	next;
     }
 
-    my $grpr = "zcat $bedfile \| grep $spec\_$rnum";
-    my $grpl = "zcat $bedfile \| grep $spec\_$lnum";
+    my $grpr = "zcat $bedfile \| grep -w $spec\_$rnum";
+    my $grpl = "zcat $bedfile \| grep -w $spec\_$lnum";
     my @outl = readpipe("$grpl");
     if(scalar @outl == 0){next;}
     my @outr = readpipe("$grpr");
@@ -65,33 +59,22 @@ while(<FA>){
     my @L = split '\t', $outl[0];
     my @R = split '\t', $outr[0];
 
-    my $lstart;
-    my $lend;
-    my $rstart;
-    my $rend;
-    if($L[2] < $L[3]){
-	$lstart = $L[2];
-	$lend = $L[3];
-    }
-    else{
-	$lstart = $L[3];
-	$lend = $L[2];
-    }
-    if($R[2] < $R[3]){
-	$rstart = $R[2];
-	$rend = $R[3];
-    }
-    else{
-	$rstart = $R[3];
-	$rend = $R[2];
-    }
-    $dist2left = abs($lend-$elstart);
-    $dist2right = abs($elend-$rstart);
-    $distL2R = abs($lend-$rstart);
-    $ellen = abs($elstart - $elend);
-    $llen = abs($lend-$lstart);
-    $rlen = abs($rend-$rstart);
+    my $lstart = $L[2];
+    my $llen = $L[3];
+    my $rstart = $R[2];
+    my $rlen = $R[3];
+
+    #Always take distance from element to block start!
+    #If not, there will be a problem with the distances in the reference species!
+    #in the reference species, blocks are always directly next to each other
+    
+    my $dist2left = abs($lstart-$elstart);
+    my $dist2right = abs($elend-$rstart);
+    my $distL2R = abs($lstart-$rstart);
+    my $ellen = abs($elstart - $elend);
+#    my $outinfo = ">$lnum\t$rnum\t$lstart\t$elstart\t$elend\t$rstart\n";
     my $outstr = "$dist2left\t$dist2right\t$distL2R\t$ellen\t$llen\t$rlen\n";
+#    print $outf $outinfo;
     print $outf $outstr;
 
 }
