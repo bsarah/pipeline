@@ -37,6 +37,10 @@ my %pseudonones = ();
 my %nonesNT = ();
 my %pseudononesNT = ();
 
+my $eventlist = "$outpath\/allClusters\.txt";
+my $listcmd = "touch $eventlist";
+readpipe("$listcmd");
+
 
 open FA,"<$specieslist" or die "can't open $specieslist\n";
 
@@ -252,13 +256,22 @@ my %pseusinglesNT = (); #include types
 ##sort keys of blocks and join adjacent ones?
 #my $clusnum = scalar (keys %blocks);
 #print "NUM CLUSTER: $clusnum \n";
-
-
+open(my $outg, ">>",$eventlist);
+my $cluscount = 0;
+my $sumelems = 0;
 foreach my $k (keys %blocks){
     my @A = split '_', $k;
     my $leftanchor = $A[0];
     my $rightanchor = $A[1];
     my @B = split ';', $blocks{$k};
+    my $clussize = scalar @B;
+    #write to allClustersList
+    print $outg ">clus$cluscount $clussize\n";
+    $cluscount++;
+    $sumelems+=$clussize;
+    for(my $cb = 0;$cb < $clussize;$cb++){
+	print $outg "$B[$cb]\n";
+    }
     if(scalar @B == 1){
 	##sort single element cluster into hash
 	my @F = split '\t', $B[0];
@@ -329,13 +342,21 @@ foreach my $k (keys %blocks){
 	$graphstr = "$graphstr\=$outgraph[$g]";
     }
 #    print "GRAF: $graphstr\n";
-
-
+    #check graph for cograph or not and edit slightly
+    my $cglist = "$outpath\/list\_cographs\.txt";
+    my $ncglist = "$outpath\/list\_noncographs\.txt";
+    my $cgcmd = "touch $cglist";
+    my $ncgcmd = "touch $ncglist";
+    readpipe("$cgcmd");
+    readpipe("$ncgcmd");
+    my $checkcmd = "perl $scriptpath\/checkGraph_fast.pl \"$graphstr\" $k $seqsim $strucsim $mode $cglist $ncglist";
+    my @newoutgraph = readpipe("$checkcmd");
+    my $newgraphstr = $newoutgraph[0];
     
     #sort the non edges graphs
 
     #create alignment
-    my $alncmd = "perl $scriptpath\/createAlignments_fast.pl \"$graphstr\" $outpath $pathtonw $seqsim $strucsim $mode 0 $nwtree $inpath\/temp $leftanchor $rightanchor";
+    my $alncmd = "perl $scriptpath\/createAlignments_fast.pl \"$newgraphstr\" $outpath $pathtonw $seqsim $strucsim $mode 0 $nwtree $inpath\/temp $leftanchor $rightanchor";
 #    print "ALNCMD: $alncmd \n";
     my @outaln = readpipe("$alncmd"); #this array contains: dup mat insertion pseins pseudomatch deletion missinganchor missinanchorpseu deletionpseu
     my $alen = scalar @outaln;
@@ -402,7 +423,7 @@ foreach my $k (keys %blocks){
     }
     
 }
-
+close $outg;
 ##print singletons to file and create allsinglestr
 my $singleout = "$outpath\/singletons.txt";
 my $pseusingleout = "$outpath\/pseusingletons.txt";
@@ -539,17 +560,20 @@ readpipe("$cmderr");
 ##create summarypath and itolout
 my $cmditol = "mkdir $outpath\/data_iTOL";
 readpipe("$cmditol");
-my $cmdsum = "touch $outpath\/Summary\.txt";
+my $cmdsum = "touch $outpath\/geneticEvents\.txt";
 readpipe("$cmdsum");
 my $cmdtree = "touch $outpath\/OutTree\.txt";
 readpipe("$cmdtree");
-my $countcmd = "perl $scriptpath\/countEvents.pl $nwtree $allsinglestr $matchout $duplout $insout $pseout $psemisout $psedelout $pseinsout $delout $misout $outpath\/OutTree\.txt $outpath\/Summary\.txt $allspecstr $allnonestr $outpath\/data_iTOL 2>> $err";
+my $countcmd = "perl $scriptpath\/countEvents.pl $nwtree $allsinglestr $matchout $duplout $insout $pseout $psemisout $psedelout $pseinsout $delout $misout $outpath\/OutTree\.txt $outpath\/geneticEvents\.txt $allspecstr $allnonestr $outpath\/data_iTOL 2>> $err";
 #print "COUNTING: $countcmd\n";
 readpipe("$countcmd");
 
 
 
-
+print "Program run ended.\n";
+print "Number of clusters: $cluscount\n";
+my $avnum = $sumelems/$cluscount;
+print "Average number of elements per cluster: $avnum\n";
 
 sub getMaxBlock{
     my @inp = @_;
