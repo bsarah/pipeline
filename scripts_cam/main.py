@@ -41,6 +41,7 @@ parser.add_argument("outPutDir", type=str, help="directory where you want the ou
 parser.add_argument("pathToRepo", type=str, help="absolute path of the git repo")
 parser.add_argument("referenceSpecies", type=str, help="the name of the reference species as it appears in the "\
                     + "multiple sequence alignment.")
+parser.add_argument("python", type=str, help="path to python 3.0 or greater")
 parser.add_argument("-sg","--search_genes", action="store", nargs=3,help="search for genes using infernal cmsearch. "\
                     + "First argument must be a file pathway to a RNA Model. "\
                     + "Second argument must be a file pathway to the Genomes."\
