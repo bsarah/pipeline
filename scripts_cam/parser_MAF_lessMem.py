@@ -173,11 +173,6 @@ def parseTempWrapper(tempFiles, listOfListOfGenes, outputDir, threshold, inferna
             if _list[0].species == species:
                 listOfGenes = _list
 
-<<<<<<< HEAD
-        #print('Species: {}'.format(listOfGenes[0].species))
-=======
-                
->>>>>>> cb9ba4fbca4b92a1b7ca201e536292ce6d8f71db
         overlappingBlockNums = parseTemp(tempBlockFile, finalBlockFile, geneFile, listOfGenes, overlappingBlockNums, threshold)
         #print('done')
 
@@ -186,15 +181,8 @@ def parseTempWrapper(tempFiles, listOfListOfGenes, outputDir, threshold, inferna
         geneFile.close()
 
         subprocess.call('gzip '+finalBlockFileName, shell=True)
-<<<<<<< HEAD
         #subprocess.call('gzip '+tempBlockFileName, shell=True)
         subprocess.call('rm '+tempBlockFileName, shell=True)
-
-    #print('end parseTemp')
-=======
-        subprocess.call('gzip '+tempBlockFileName, shell=True)
-        #subprocess.call('rm '+tempBlockFileName, shell=True)
->>>>>>> cb9ba4fbca4b92a1b7ca201e536292ce6d8f71db
     '''
     if len(listOfGenes) > 0:
         listOfSC = []
@@ -257,21 +245,6 @@ def parseTemp(tempFile, finalFile, geneFile, listOfGenes, overlapSet, threshold)
     #print("len geneList parseTemp: {}".format(len(listOfGenes4)))
     
     if len(listOfGenes) > 0:
-<<<<<<< HEAD
-        #print('writing orphin')
-        #print("species: {}".format(chromo.species))
-        #print('chromos:  {}'.format([gene.chromosome for gene in listOfGenes]))
-        if not listOfGenes[0].ownGene:
-            for gene in listOfGenes:
-                fivePrime, threePrime = None, None
-                geneFile.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(\
-                               gene.chromosome, chromo.species+"_"+str(gene.blockNum), gene.s,\
-                               gene.getEndPos(), gene.strand, fivePrime, threePrime, gene.structure, gene.sequence, gene.score))
-        else:
-            #print('ownGenes')
-            for gene in listOfGenes:
-                geneFile.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(\
-=======
 #        print('writing orphin')
 #        print("species: {}".format(chromo.species))
 #        print('chromos:  {}'.format([gene.chromosome for gene in listOfGenes4]))
@@ -283,7 +256,6 @@ def parseTemp(tempFile, finalFile, geneFile, listOfGenes, overlapSet, threshold)
                                gene.getEndPos(), gene.strand, fivePrime, threePrime, gene.structure, gene.sequence, gene.score))
             else:
                 geneFile.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(\
->>>>>>> cb9ba4fbca4b92a1b7ca201e536292ce6d8f71db
                                gene.chromosome, chromo.species+"_"+str(gene.blockNum), gene.s,\
                                gene.getEndPos(), gene.strand, fivePrime, threePrime, gene.structure, gene.sequence, \
                                gene._type, gene.pseudo, gene.comment))
