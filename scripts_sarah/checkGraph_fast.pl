@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 ##fast verscion of checkGraph, only for one single graph in order to include the cograph editing
 
-## perl checkGraph.pl curgraph almostname secsim strucsim mode cographlist noncographlist noEdgeGraohs_list edgegraphs
+## perl checkGraph.pl curgraphfile almostname secsim strucsim mode cographlist noncographlist noEdgeGraohs_list edgegraphs
 
 ##outpath is for files that will be visualized with R (no weights), extra folder
 ## .edli is the edgelist file with node1 node2 seqval strucval (separated with space)
@@ -44,9 +44,11 @@ my $struclim = $strucsim;
     my %seqscore = ();
     my %strscore= ();
 
-my @CF = split '=', $file;
-for(my $cf = 0;$cf < scalar @CF;$cf++){
-	my $line = $CF[$cf];
+
+open FA,"<$file" or die "can't open $file\n";
+while(<FA>){
+    chomp;
+	my $line = $_;
 	if($line eq ""){next;}
 	my @F = split ' ', $line;
 	my $n1 = $F[0];
@@ -124,7 +126,8 @@ for(my $cf = 0;$cf < scalar @CF;$cf++){
 	
 }
     
-    
+ 
+
     my $numn = scalar @nodes;
     my $nume = scalar @uniqedges;
     my $numsp = scalar (keys %species);
@@ -160,7 +163,8 @@ for(my $cf = 0;$cf < scalar @CF;$cf++){
 #	print STDERR "graph without nodes or edges \n";
 	#	print STDERR "graph file: $file \n";
 	print $outcg "$almostname\t$numn\t$nume\t$numenew\t$density\n";
-	print $file;
+	#graph didn't change, keep the same file
+#	print $file;
 	exit 0;
     }
 
@@ -168,7 +172,7 @@ for(my $cf = 0;$cf < scalar @CF;$cf++){
     my $cliquenum=(($numn-1)*$numn)/2;
     if($nume == $cliquenum || $numenew == $cliquenum){
 	print $outcg "$almostname\t$numn\t$nume\t$numenew\t$density\n";
-	print $file;
+#	print $file;
 	exit 0;
     }
     
@@ -206,13 +210,14 @@ for(my $cf = 0;$cf < scalar @CF;$cf++){
     if(scalar @noCGCC == 0){
 	#is a cograph
 	print $outcg "$almostname\t$numn\t$nume\t$numenew\t$density\n";
-	print $file;
+#	print $file;
 	exit 0;
     }
     else{
 	#no cograph
+	#edge difference to clique
 	my $ediff = $numn*($numn-1)/2 - $numenew;
-	print $outn "$almostname\t$numn\t$nume\t$numenew\t$density\t$ediff\n";
+	print $outn "$almostname\t$numn\t$nume\t$numenew\t$density\n";
 	my @allnewedges = ();
 	#edit only CCs that are noncographs
 	for(my $z=0;$z<scalar @noCGCC;$z++){
@@ -266,17 +271,21 @@ for(my $cf = 0;$cf < scalar @CF;$cf++){
 		if($nodes[$n1] lt $nodes[$n2]){$tmped = "$nodes[$n1] $nodes[$n2]";}
 		else{$tmped = "$nodes[$n2] $nodes[$n1]";}
 		if(none {$tmped eq $_ } @allnewedges){
-		    $newgraphstr =  "$newgraphstr$nodes[$n1] $nodes[$n2] 0 0\=";
-		    $newgraphstr =  "$newgraphstr$nodes[$n2] $nodes[$n1] 0 0\=";
+		    $newgraphstr =  "$newgraphstr$nodes[$n1] $nodes[$n2] 0 0\n";
+		    $newgraphstr =  "$newgraphstr$nodes[$n2] $nodes[$n1] 0 0\n";
 		}
 		else{
-		    $newgraphstr = "$newgraphstr$nodes[$n1] $nodes[$n2] 1 1\=";
-		    $newgraphstr = "$newgraphstr$nodes[$n2] $nodes[$n1] 1 1\=";
+		    $newgraphstr = "$newgraphstr$nodes[$n1] $nodes[$n2] 1 1\n";
+		    $newgraphstr = "$newgraphstr$nodes[$n2] $nodes[$n1] 1 1\n";
 		}
 	    }
 	}
-	print $newgraphstr;
-    }
+	my $rmcmd = "rm $file";
+	readpipe("$rmcmd");
+	open(my $outgr, ">>", $file);
+	print $outgr $newgraphstr;
+	close $outgr;
+}
 
 
 
@@ -604,7 +613,7 @@ sub IsCograph{ #arguments is nodestring, uniqedgelist, input is a connected grap
     my @edges = @_;
     my @nodes = split ' ', $edges[0];
     $edges[0]="";
-    if(scalar @edges <= 3){return 1;}
+    if(scalar @edges <= 4){return 1;}#pos 0 is not an edges, thus the limit is 4
     
     my @uniqedges=(); #unique edges from complement
     if(scalar @nodes <4){return 1;}

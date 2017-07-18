@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-## perl createAlignments.pl graphstring outpath pathtonw secsim strsim mode numdifftypes outfolder match dupl ins pseudo pseumis pseudels pseuins dels missing newicktree pathoTemp summary remodlingsout inremoldingsout
+## perl createAlignments.pl graphfile outpath pathtonw secsim strsim mode numdifftypes outfolder match dupl ins pseudo pseumis pseudels pseuins dels missing newicktree pathoTemp summary remodlingsout inremoldingsout
 
 ##program will produce sequences of letters, where the same letter means similar sequences, depending on the threshold.
 ##thus one letter for each connected component.
@@ -79,8 +79,6 @@ my %elemcount = (); #count how many elements of which species occur during the c
 
 
 
-#open(my $outsr,">>", $sumrems);
-#open(my $outsi,">>", $suminrems);
 
 #open(my $outs,">>", $summary);
 
@@ -135,9 +133,12 @@ my $maxCCnumaln = "";
 
 
 #    print "file: $curfile \n";
-    my @inFile = split "=", $file;
-    for(my $iF=0;$iF < scalar @inFile;$iF++){
-	my $line = $inFile[$iF];
+    open FA,"<$file" or die "can't open $file\n";
+
+    while(<FA>){
+	chomp;
+
+	my $line = $_;
 	if($line eq ""){next;}
 #	print STDERR "LINE: $line \n";
 	my @F = split ' ', $line;
@@ -719,8 +720,8 @@ else{
 		my @missingdel = ();
 		for(my $mi = 0; $mi < scalar @missingspecs;$mi++){
 		    my $specii = $missingspecs[$mi];
-		    my $grepcmdleft = "zcat $path2Temp\/$specii\_temp\_sorted\.bed\.gz \| grep \"$specii\_$leftanchor\" ";
-		    my $grepcmdright = "zcat $path2Temp\/$specii\_temp\_sorted\.bed\.gz \| grep \"$specii\_$rightanchor\" ";
+		    my $grepcmdleft = "zcat $path2Temp\/$specii\_temp\_sorted\.bed\.gz \| grep -w \"$specii\_$leftanchor\" ";
+		    my $grepcmdright = "zcat $path2Temp\/$specii\_temp\_sorted\.bed\.gz \| grep -w \"$specii\_$rightanchor\" ";
 		    #print STDERR "$grepcmdleft ; $grepcmdright\n";
 		    my @outleft = readpipe("$grepcmdleft");
 		    if(scalar @outleft == 0){
@@ -761,8 +762,8 @@ else{
 		my @pmissingdel = ();
 		for(my $mi = 0; $mi < scalar @pmissingspecs;$mi++){
 		    my $pspecii = $pmissingspecs[$mi];
-		    my $pgrepcmdleft = "zcat $path2Temp\/$pspecii\_temp\_sorted\.bed\.gz \| grep \"$pspecii\_$leftanchor\" ";
-		    my $pgrepcmdright = "zcat $path2Temp\/$pspecii\_temp\_sorted\.bed\.gz \| grep \"$pspecii\_$rightanchor\" ";
+		    my $pgrepcmdleft = "zcat $path2Temp\/$pspecii\_temp\_sorted\.bed\.gz \| grep -w \"$pspecii\_$leftanchor\" ";
+		    my $pgrepcmdright = "zcat $path2Temp\/$pspecii\_temp\_sorted\.bed\.gz \| grep -w \"$pspecii\_$rightanchor\" ";
 		    #print STDERR "$grepcmdleft ; $grepcmdright\n";
 		    my @poutleft = readpipe("$pgrepcmdleft");
 		    if(scalar @poutleft == 0){
@@ -924,25 +925,28 @@ foreach my $pd (sort keys %psedels) {
 }
 $outstring = "$outstring\n";
 
-print $outstring;
 
-#if(scalar @remoldings > 0){
+
+if(scalar @remoldings > 0){
 #    print $outsr "The following pairs of elements (separated with ':') are defined 
 #as orthologs based on the similarity score but have distinct types according to the input:\n";
-#    for(my $i=0;$i< scalar @remoldings; $i++){
-#	print $outsr "$remoldings[$i] \n";
-#    }
-#}
+    for(my $i=0;$i< scalar @remoldings; $i++){
+	$outstring = "$outstring$remoldings[$i]\=";
+    }
+}
+$outstring="$outstring\n";
 
-#if(scalar @inremoldings > 0){
+if(scalar @inremoldings > 0){
 #    print $outsi "The following pairs of elements (separated with ':') are defined 
 #as orthologs as they have the same types but they sequence similarity is below the given threshold:\n";
-#    for(my $i=0;$i< scalar @inremoldings; $i++){
-#	print $outsi "$inremoldings[$i] \n";
-#    }
-#}
+    for(my $i=0;$i< scalar @inremoldings; $i++){
+	$outstring = "$outstring$inremoldings[$i]\=";
+    }
+}
 
+$outstring="$outstring\n";
 
+print $outstring;
 
 sub connectedComponents{
 

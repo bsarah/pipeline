@@ -13,20 +13,27 @@ use Data::Dumper;
 use strict;
 use warnings;
 
-my $instring = shift;
+my $infile = shift;
 my $mode = shift; #1=genelist, 0=cm
 my $pathtonw=shift;
 my $strucsim = shift;
 my $seqsim = shift;
+my $outfile = shift;
 
 
-my @Elements = split ';', $instring;
 
 my @nodes=();
 my @seqs=();
 my @strucs = ();
 my @specs=();
-    
+
+
+open FA,"<$infile" or die "can't open $infile\n";
+
+while(<FA>){
+    chomp;
+    my $instring = $_;
+    my @Elements = split ';', $instring;
 for(my $i=0;$i<scalar @Elements;$i++){
 
 	my $line = $Elements[$i];
@@ -90,13 +97,14 @@ for(my $i=0;$i<scalar @Elements;$i++){
 	push @strucs,$struc;
 	push @specs, $spec;
 }
+}
     
     
-#    open(my $outf, ">>$outname");
+    open(my $outf, ">>",$outfile);
 
     if((scalar @nodes)==1) {
 	my $res = "$nodes[0]";
-	print "$res\n";
+	print $outf "$res\n";
     }
 
     ##divide all those numbers by 2 as every edge appears twice in the edgelist!
@@ -143,6 +151,7 @@ for(my $i=0;$i<scalar @Elements;$i++){
 	    }
 	    my $diff2_rounded = sprintf("%.2f", $diff2);
 	    my $res2 = "$res $nodes[$j] $diff_rounded $diff2_rounded\n";
-	    print "$res2";
+	    print $outf "$res2";
 	}	
 }
+close $outf;

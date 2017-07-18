@@ -125,7 +125,7 @@ while(<PS>){
     my $psline = $_;
     if($psline eq ""){next;}
     my @PS = split '\t', $psline;
-    if(scalar @PS < 2){print STDERR "misformatted input line, will be skipped! line= $psline \n"; next;}
+    if(scalar @PS < 2){print STDERR "misformatted input line (pseudo), will be skipped! line= $psline \n"; next;}
     my @SS = split ',', $PS[0];
     my $psnum = $PS[1];
     if(scalar @SS == 0){next;}
@@ -157,8 +157,9 @@ open FA,"<$matches" or die "can't open $matches\n";
 while(<FA>){
     chomp;
     my $line = $_;
+    if($line eq ""){next;}
     my @F = split '\t', $line; ##should have at least 2! entries
-    if(scalar @F < 2){print STDERR "misformatted input line, will be skipped! line= $line \n"; next;}
+    if(scalar @F < 2){print STDERR "misformatted input line (matches), will be skipped! line= $line \n"; next;}
     
     my @S = split ',', $F[0]; ##species
     my $num = $F[1];
@@ -396,8 +397,9 @@ open FD,"<$dels" or die "can't open $dels\n";
 while(<FD>){
     chomp;
     my $line = $_;
+    if($line eq ""){next;}
     my @F = split '\t', $line; ##should have at least 2! entries
-    if(scalar @F < 2){print STDERR "misformatted input line, will be skipped! line = $line \n"; next;}
+    if(scalar @F < 2){print STDERR "misformatted input line (dels), will be skipped! line = $line \n"; next;}
     my @S = split ',', $F[0]; ##species
     my $num = $F[1];
 
@@ -428,8 +430,9 @@ open FDP,"<$pseudels" or die "can't open $pseudels\n";
 while(<FDP>){
     chomp;
     my $pline = $_;
+    if($pline eq ""){next;}
     my @FP = split '\t', $pline; ##should have at least 2! entries
-    if(scalar @FP < 2){print STDERR "misformatted input line, will be skipped! line = $pline\n"; next;}
+    if(scalar @FP < 2){print STDERR "misformatted input line (pseudel), will be skipped! line = $pline\n"; next;}
     my @PS = split ',', $FP[0]; ##species
     my $pnum = $FP[1];
 
@@ -476,6 +479,7 @@ open FD,"<$dupl" or die "can't open $dupl\n";
 while(<FD>){
     chomp;
     my $dline = $_;
+    if($dline eq ""){next;}
     my @D = split '\t', $dline; ##should have at least 2! entries
     if(scalar @D < 2){print STDERR "misformatted input line in duplications, will be skipped! line = $dline \n"; next;}
     if(exists($duplications{$D[0]})){$duplications{$D[0]} += $D[1];}
@@ -491,6 +495,7 @@ open FI,"<$ins" or die "can't open $ins\n";
 while(<FI>){
     chomp;
     my $iline = $_;
+    if($iline eq ""){next;}
     my @I = split '\t', $iline; ##should have at least 2! entries
     if(scalar @I < 2){print STDERR "misformatted input line in insertions, will be skipped! line = $iline \n"; next;}
     if(exists($insertions{$I[0]})){ $insertions{$I[0]}+= $I[1];}
@@ -507,8 +512,9 @@ open FPI,"<$pseuins" or die "can't open $pseuins\n";
 while(<FPI>){
     chomp;
     my $piline = $_;
+    if($piline eq ""){next;}
     my @PI = split '\t', $piline; ##should have at least 2! entries
-    if(scalar @PI < 2){print STDERR "misformatted input line in insertions, will be skipped! line = $piline \n"; next;}
+    if(scalar @PI < 2){print STDERR "misformatted input line in pseudoinsertions, will be skipped! line = $piline \n"; next;}
     if(exists($psein{$PI[0]})){$psein{$PI[0]} += $PI[1];}
     else{$psein{$PI[0]} = $PI[1];}
     if(exists($totcounts{$PI[0]})){$totcounts{$PI[0]}+=$PI[1];}
@@ -521,8 +527,9 @@ open FM,"<$misses" or die "can't open $misses\n";
 while(<FM>){
     chomp;
     my $mline = $_;
+    if($mline eq ""){next;}
     my @M = split '\t', $mline;
-    if(scalar @M < 2){print STDERR "misformatted input line in insertions, will be skipped! line = $mline \n"; next;}
+    if(scalar @M < 2){print STDERR "misformatted input line in missing, will be skipped! line = $mline \n"; next;}
     my @specs = split ',', $M[0];
     my $num = $M[1];
     for(my $s = 0;$s<scalar @specs;$s++){
@@ -543,8 +550,9 @@ open FPM,"<$pseumis" or die "can't open $pseumis\n";
 while(<FPM>){
     chomp;
     my $pmline = $_;
+    if($pmline eq ""){next;}
     my @PM = split '\t', $pmline; ##should have at least 2! entries
-    if(scalar @PM < 2){print "misformatted input line in pseudogenes, will be skipped! line = $pmline \n"; next;}
+    if(scalar @PM < 2){print "misformatted input line in pseudomissing, will be skipped! line = $pmline \n"; next;}
     my @pmspecs = split ',', $PM[0];
     for(my $pm = 0; $pm < scalar @pmspecs;$pm++){
 	if(exists($psemis{$pmspecs[$pm]})){$psemis{$pmspecs[$pm]} += $PM[1];}
