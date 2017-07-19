@@ -244,6 +244,10 @@ foreach my $an (sort { $a <=> $b} keys %block2spec){
     my $tabline = "$an";
     my $j=0;
     for(my $i=0;$i<scalar @allspec;$i++){
+	if($j*5 >= scalar @tmp){
+	    $tabline = "$tabline\t$nostr";
+	    next;
+	}
 	my $tocheck = $tmp[(5*$j)+0];
 	my $curs = "$allspec[$i]\_$an";
 	if($tocheck eq $curs){
@@ -258,7 +262,20 @@ foreach my $an (sort { $a <=> $b} keys %block2spec){
 }
 close $outbt;
 
+my %spec2file = (); #species and its sorted blockfile
+for(my $s=0;$s<scalar @allspec;$s++){
+    my $col1 = 5*$s+3;
+    my $col2 = 5*$s+4;
+    my $sortfile = "$outpath\/$allspec[$s]\_blocktable\.tab";
+    my $sortcmd = "sort -k$col1,$col1 -nk$col2,$col2 $blocktable > $sortfile";
+    readpipe("$sortcmd");
+    $spec2file{$s} = $sortfile;
+}
+
+
 ##NO JOINING of blocks based on block number as they are only consecutive in the reference!
+##but the leftblocks are a first step and then, we check if all species are adjacent in the blocktable
+#sorted for each species
 my $blockfile = "$outpath\/Leftblocks\.txt";
 open(my $outb,">>",$blockfile);
 
@@ -281,31 +298,80 @@ foreach my $lb (sort { $a <=> $b} keys %leftblocks){
 	next;
     }
     #as keys are sorted, if the blocks are adjacent and joinable, lb should be the same as curend
-    my $isgood = 0;
+    #adjacent doesn't have to be directly adjacent but all elements in both clusters should be adjacent in all species
+    my $isgood = 1;
     #change checkBlocks based on the created blocktable
-#    if($lb == $curend && $rb>0){
-#	$isgood = checkBlocks($curblock,$curb);#implement checkBlocks (intersecting species? check tempfiles?)
-#    }
-    if($lb == $curend && $rb>0){# && $isgood == 1){
+    #grep for blocknum in each sorted file (for each species) and check if the blocknums are adjacent in all of them
+    if($rb>0 && $curend > 0){
+	foreach my $sk (keys %spec2file){
+	    my $tmpgrep = "grep -A 1 -w $lb $spec2file{$sk}";
+	    my @outtmpgrep = readpipe("$tmpgrep"); #output should contain two lines
+	    if(scalar @outtmpgrep >= 2 && $outtmpgrep[1] =~ /^$rb/){ #the adjacent block is rb
+		$isgood = 1;
+	    }
+	    else{
+		$isgood = 0;
+		last;
+	    }
+	    
+	}
+    }
+    if($rb>0 && $isgood == 1 && $curend > 0){
 	#should be joinable
-#	print "join a,b,c: $curstart, $curend, $rb\n";
+	print STDERR "join a,b,c: $curstart, $curend, $rb\n";
 	$curend = $rb;
 	$curblock = "$curblock\;$curb";
     }
     else{
 	#add the old block to joined clusters
 	if($curend == -1){
-	    #separately add each element in curblock
+	    #check if the elements are still neighbors
+	    #if not separately add each element in curblock
+	    my %rb2clus = ();
 	    my @F = split ';', $curblock;
 	    for(my $f=0;$f<scalar @F;$f++){
 		my @G = split '\t', $F[$f];
-		my $newkey;
-		if($G[5] < $G[6]){$newkey = "$G[5]\_$G[6]";}
-		else{$newkey = "$G[6]\_$G[5]";}
-		if(exists($joinedblocks{$newkey})){
-		    $joinedblocks{$newkey}="$joinedblocks{$newkey}\;$F[$f]";
+		my $rkey;
+		if($G[5] < $G[6]){$rkey = $G[6]}
+		else{$rkey = $G[5]}
+		if(exists($rb2clus{$rkey})){$rb2clus{$rkey}="$rb2clus{$rkey}\;$F[$f]";}		  
+		else{$rb2clus{$rkey} = $F[$f];}
+	    }
+	    print STDERR "curend=-1, lb: $curstart, rb: $rb\n";
+	    print STDERR Dumper(\%rb2clus);
+	    print STDERR "\n";
+	    #curstart = $lb
+	    my $curclus = "";
+	    my $curend = -1;
+	    my $neighborsum = 0; #if this is equals scalar @rks, then we don't have neighbors
+	    my @rks = sort { $a <=> $b} keys %rb2clus;
+	    for(my $r=0;$r<scalar @rks;$r++){
+		my $noneighbor = 0;
+		for(my $k=$r+1;$k<scalar @rks;$k++){
+		    foreach my $sk (keys %spec2file){
+			my $tmpgrep = "grep -A 1 -w $rks[$r] $spec2file{$sk}";
+			my @outtmpgrep = readpipe("$tmpgrep"); #output should contain two lines
+			if(scalar @outtmpgrep >= 2 && $outtmpgrep[1] =~ /^$rks[$k]/){}
+			else{
+			    $neighborsum += 1;
+			    last;
+			}
+		    }
 		}
-		else{$joinedblocks{$newkey}="$F[$f]";}
+	    }
+	    
+	    if($neighborsum < scalar @rks){ ##check again, but we first check the prints
+		print STDERR "join overlapping cluster\n"
+		$joinedblocks{$rks[-1]} = join(';',values %rb2clus);
+	    }
+	    else{
+		for(my $e=0;$e<scalar @rks;$e++){
+		    my $newkey = "$lb\_$rks[$e]";
+		    if(exists($joinedblocks{$newkey})){
+			$joinedblocks{$newkey}="$joinedblocks{$newkey}\;$rb2clus{$rks[$e]}";
+		    }
+		    else{$joinedblocks{$newkey}="$rb2clus{$rks[$e]}";}
+		}
 	    }
 	}
 	else{
@@ -408,11 +474,11 @@ my %pseusinglesNT = (); #include types
 open(my $outg, ">>",$eventlist);
 my $cluscount = 0;
 my $sumelems = 0;
-foreach my $k (keys %blocks){
+foreach my $k (keys %joinedblocks){
     my @A = split '_', $k;
     my $leftanchor = $A[0];
     my $rightanchor = $A[1];
-    my @B = split ';', $blocks{$k};
+    my @B = split ';', $joinedblocks{$k};
     my $clussize = scalar @B;
     #write to allClustersList
     print $outg ">clus$cluscount $clussize\n";
@@ -482,7 +548,7 @@ foreach my $k (keys %blocks){
     #have a tmpfile for blocks string
     my $tmpfile0 = "$outpath\/tmpdata0";
     open(my $outtmp0, ">>", $tmpfile0);
-    print $outtmp0 $blocks{$k};
+    print $outtmp0 $joinedblocks{$k};
     close $outtmp0;
     my $tmpfile1 = "$outpath\/tmpdata1";
     #build graph, tmpfile1 will contain the output
@@ -754,7 +820,8 @@ print "Average number of elements per cluster: $avnum\n";
 	if($F[5] < $F[6]){$rightanchor = $F[6];}
 	else{$rightanchor = $F[5];}
 	if($curmin==-1){$curmin = $rightanchor;}
-	if($curmin != $rightanchor){return -1;}
+	elsif($curmin != $rightanchor){return -1;}
+	else{}
     }
     return $curmin;
 }
