@@ -407,13 +407,13 @@ print $outs "\n";
 my $genesfolder="";
 if(! $pathtocam){
     print "analysis of maf files started (this might take a while)..\n";
-    print STDERR "call to cam's prog:\n $pythonpath\/python3 $scripts_cam\/main.py $cmoption $inclopt $mafs $outpath $dirname $refspecies 2>>$err0 | \n";
+    print STDERR "call to cam's prog:\n $pythonpath\/python3 $scripts_cam\/main.py $cmoption $inclopt $mafs $outpath $dirname $refspecies $pythonpath 2>>$err0 | \n";
     if($perc eq ""){
-	open(PROG,"$pythonpath\/python3 $scripts_cam\/main.py $cmoption $inclopt $mafs $outpath $dirname $refspecies 2>>$err0 |") or die "Couldn't start program!";
+	open(PROG,"$pythonpath\/python3 $scripts_cam\/main.py $cmoption $inclopt $mafs $outpath $dirname $refspecies $pythonpath 2>>$err0 |") or die "Couldn't start program!";
 	while(<PROG>){print "$_";}
     }
     else{
-	open(PROG,"$pythonpath\/python3 $scripts_cam\/main.py $perc $cmoption $inclopt $mafs $outpath $dirname $refspecies 2>>$err0 |") or die "Couldn't start program!";
+	open(PROG,"$pythonpath\/python3 $scripts_cam\/main.py $perc $cmoption $inclopt $mafs $outpath $dirname $refspecies $pythonpath 2>>$err0 |") or die "Couldn't start program!";
 	while(<PROG>){print "$_";}
     }
     print "Done!\n";
