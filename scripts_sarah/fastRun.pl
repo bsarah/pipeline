@@ -361,8 +361,9 @@ foreach my $lb (sort { $a <=> $b} keys %leftblocks){
 	    }
 	    
 	    if($neighborsum < scalar @rks){ ##check again, but we first check the prints
-		print STDERR "join overlapping cluster\n"
-		$joinedblocks{$rks[-1]} = join(';',values %rb2clus);
+		print STDERR "join overlapping cluster\n";
+		my $nkey = "$lb\_$rks[-1]";
+		$joinedblocks{$nkey} = join(';',values %rb2clus);
 	    }
 	    else{
 		for(my $e=0;$e<scalar @rks;$e++){
@@ -377,6 +378,7 @@ foreach my $lb (sort { $a <=> $b} keys %leftblocks){
 	else{
 	    #all elements in curblock are in one cluster
 	    my $newkey2 = "$curstart\_$curend";
+	    
 	    if(exists($joinedblocks{$newkey2})){
 		$joinedblocks{$newkey2}="$joinedblocks{$newkey2}\;$curblock";
 	    }
@@ -577,7 +579,7 @@ foreach my $k (keys %joinedblocks){
     #create alignment
     my $alncmd = "perl $scriptpath\/createAlignments_fast.pl $tmpfile1 $outpath $pathtonw $seqsim $strucsim $mode 0 $nwtree $inpath\/temp $leftanchor $rightanchor";
 
-#    print "ALNCMD: $alncmd \n";
+#    print STDERR "ALNCMD: $alncmd \n";
     my @outaln = readpipe("$alncmd"); #this array contains: dup mat insertion pseins pseudomatch deletion missinganchor missinanchorpseu deletionpseu
     my $rmcmd = "rm $tmpfile1 $tmpfile0";
     readpipe("$rmcmd");
