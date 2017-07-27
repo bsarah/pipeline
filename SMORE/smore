@@ -1,0 +1,581 @@
+#!/usr/bin/perl -w
+## wrapper for smore tool
+
+use Data::Dumper;
+use strict;
+use warnings;
+use Getopt::Long qw(GetOptions);
+use POSIX qw(strftime);
+use File::Basename;
+use File::Find;
+
+##general information
+my $toolname = "SMORE : Synteny Modulator Of Repetitive Elements";
+my $version = "0.1";
+my $citation = "Beerinformatics Leipzig";
+my $contact = "bsarah at bioinf dot uni-leipzig dot de or anneh at bioinf.uni-leipzig dot de";
+
+my $mode = "";
+##program mode
+$mode = shift;
+##general options
+my $help;
+my $cont;
+my $vers;
+my $cit;
+my $helpout;
+##options for all modes
+my $toolpath;
+my $outpath;
+my $pythonpath;
+my $perlpath;
+##options for prep
+my $refspecies="";
+my $genomes="";
+my $mafs="";
+my $cmfile="";
+my $genelist="";
+my $locilist="";
+my $perc="";
+my $evalin=0.01;
+my $bitvalin="";
+my $infernalpath;
+my $pseudoscore;
+##options for toast and bake
+my $pathtocam; #path to output of smore prep (genes folder)
+my $seqsim =0.8;
+my $strucsim =0.8;
+my $newicktree;
+my $ids;
+my $joinmode = "relaxed";
+##options for bake
+my $skipg;
+my $skipa;
+my $skipc;
+
+
+
+GetOptions(
+#general
+    'help|h' => \$help,
+    'version|v' => \$vers,
+    'citation' => \$cit,
+    'contact' => \$cont,
+    'helpout' => \$helpout,
+#all modes
+    'tool|t' => \$toolpath,
+    'out|o' => \$outpath,
+    'python' => \$pythonpath,
+    'perl' => \$perlpath,
+##options for prep
+    'ref|r' => \$refspecies,
+    'genomes|g' => \$genomes,
+    'maf|m' => \$mafs,
+    'cm|c' => \$cmfile,
+    'genes' => \$genelist,
+    'loci' => \$locilist,
+    'filter' => \$perc,
+    'incE' => \$evalin,
+    'incT' => \$bitvalin,
+    'infernal' => \$infernalpath,
+    'pseudo' => \$pseudoscore,
+##options for toast and bake
+    'prep|i' => \$pathtocam, #path to output of smore prep (genes folder)
+    'seqsim|s' => \$seqsim,
+    'strucsim|p' => \$strucsim,
+    'newick' => \$newicktree,
+    'id' => \$ids,
+    'join' => \$joinmode,
+##options for bake
+    'nograph' => \$skipg,
+    'noaln' => \$skipa,
+    'noclus' => \$skipc
+    ) or die HelpShort();
+
+
+if($help && $mode eq "prep"){HelpPrep(); exit 0;}
+if($help && $mode eq "toast"){HelpToast(); exit 0;}
+if($help && $mode eq "bake"){HelpBake(); exit 0;}
+
+
+my $doexit = 0;
+if(! $mode){HelpShort(); exit 0;}
+if($mode eq "help" || $mode eq "Help" ||
+   $mode eq "--help" || $mode eq "-h" ||
+   $mode eq "Recipe" || $mode eq "recipe")
+{HelpComplete();exit 0;}
+
+
+##Help
+if ($help){HelpComplete();exit 0;}
+##Version
+if($mode eq "--version" || $mode eq "-v" || $vers){print "Program version $version \n"; $doexit = 1;}
+##Contact
+if($mode eq "--contact" || $cont){print "If you have further questions, please contact $contact \n"; $doexit = 1;}
+##Citation
+if($mode eq "--citation" || $cit){print "If you use this program, please cite: $citation \n"; $doexit = 1;}
+if($mode eq "--helpout" || $helpout ){HelpOut(); $doexit = 1;}
+
+
+if($doexit == 1){exit 0;}
+
+
+
+if($mode eq "prep" || $mode eq "Prep")
+{
+    print "prep mode started..\n";
+    #we always need: tool, perl, python, maf, ref, (filter)
+    if(!$toolpath){print "Please specify the path to where the tool's files are located.\n"; exit 0;}
+    if(!$outpath){print "Please specify a location for the output files.\n"; exit 0;}
+    #create outfolder if it doesnt exist
+    if(-e $outpath){}
+    else{
+	my $cmd42= "mkdir $outpath";
+	my @out42 = readpipe("$cmd42");
+    }
+    if(!$mafs){print "Please specify a location for the maf/MultiZ files.\n";  exit 0;}
+    if(!$refspecies){print "Please specify the name of the reference species as given in the maf/MultiZ files.\n";  exit 0;}
+    if(!$perlpath){print "Please specify the path to perl.\n";  exit 0;}
+    if(!$pythonpath){print "Please specify the path to python.\n";  exit 0;}
+    my $filstr = "";
+    if($perc){$filstr = "--filter $perc";}
+    my $preperrors = "$outpath\/errors_smoreprep\.txt";
+    if($cmfile){
+	#we need genomes, infernalpath, (pseudoscore), (infernaloptions)
+	if(!$genomes){print "Please specify the path to where the genomes are located.\n";  exit 0;}
+	if(!$infernalpath){print "Please specify the path to infernal.\n";  exit 0;}
+	my $infe = "";
+	my $inft = "";
+	if($evalin){$infe = "--incE $evalin";}
+	if(!$evalin && $bitvalin){$inft = "--incT $bitvalin";}
+	##call prep script
+	my $prepcm = "$perlpath\/perl $toolpath\/smoreprep.pl --tool $toolpath --out $outpath --python $pythonpath --perl $perlpath --maf $mafs --ref $refspecies --cm $cmfile --genomes $genomes --infernal $infernalpath $infe $inft $filstr 2>> $preperrors";
+	my @outprepcm = readpipe("$prepcm");
+	print (join("",@outprepcm));
+	print "\n";
+	if($pseudoscore){
+	    #an extra script to change the output format of genes file
+	    print "Reminder, there is another script missing!\n";
+	}
+    }
+    elsif($genelist){
+	#nothing more needed
+	my $prepgl = "$perlpath\/perl $toolpath\/smoreprep.pl --tool $toolpath --out $outpath --python $pythonpath --perl $perlpath --maf $mafs --ref $refspecies --genes $genelist $filstr 2>> $preperrors";
+	my @outprepgl = readpipe("$prepgl");
+	print (join("",@outprepgl));
+	print "\n";
+    }
+    elsif($locilist){
+	if(!$genomes){print "Please specify the path to where the genomes are located.\n";  exit 0;}
+	#we need: genomes
+	#an extra script to create the input file
+	print "locilist option needs a further script. afterwards, it is the same as the genelist option!\n";
+    }
+    else{print "Please one of the following options when in prep mode: cm, genes or loci.\n";  exit 0;}
+    print "prep mode done!\n";
+}
+elsif($mode eq "toast" || $mode eq "Toast")
+{
+    print "toast mode started..\n";
+    my $toasterrors = "$outpath\/errors_smoretoast\.txt";
+    #we always need: tool, perl, python, maf, ref, (filter)
+    if(!$toolpath){print "Please specify the path to where the tool's files are located.\n";  exit 0;}
+    if(!$outpath){print "Please specify a location for the output files.\n";  exit 0;}
+    #create outfolder if it doesnt exist
+    if(-e $outpath){}
+    else{
+	my $cmd42= "mkdir $outpath";
+	my @out42 = readpipe("$cmd42");
+    }
+    if(!$perlpath){print "Please specify the path to perl.\n";  exit 0;}
+    if(!$pythonpath){print "Please specify the path to python.\n";  exit 0;}
+    
+    if(!$pathtocam){print "Please specify the location of the output folders by smore prep.\n";  exit 0;}
+    my $specieslist = "$outpath\/specieslist";
+    my $gencmd = "ls  $pathtocam\/genes \> $specieslist";
+    my @outgncmd = readpipe("$gencmd");
+    if(!$newicktree){print "Please specify a newick tree representing the species' evolutionary relationship. \n";  exit 0;}
+    my $formtree = "$outpath\/tree_formatted.newick";
+    if($ids){
+	#only convert tree identifier if id file is given
+	my $formcmd = "$perlpath\/perl $toolpath\/extendTree.pl $newicktree $ids $formtree 2>> $toasterrors";
+	my @formout = readpipe("$formcmd");
+    }
+    else{$formtree = $newicktree;}
+    #check tree
+    my $checkcmd1 = "$perlpath\/perl $toolpath\/checkTree.pl $formtree $specieslist 2>> $toasterrors";
+    my @checkout1 = readpipe("$checkcmd1");
+    my $noneout = "none";
+    if(index($checkout1[0],$noneout) != -1){print "Tree file consistent with genomes!\n";}
+    else{
+        print "The following speciesidentifier do appear in the genomes but do not appear in the tree: $checkout1[0]\n"; exit 0;
+    }
+    if($joinmode eq "relaxed" || $joinmode eq "strict" || $joinmode eq "none"){}
+    else{print "Specify a valid option for the mode of joining. \n";  exit 0;}
+    my $toastcmd = "$perlpath\/perl $toolpath\/smoretoast.pl --tool $toolpath --out $outpath --python $pythonpath --perl $perlpath --prep $pathtocam --seqsim $seqsim --strucsim $strucsim --newick $formtree --join $joinmode --species $specieslist 2>> $toasterrors";
+    my @outtoast = readpipe("$toastcmd");
+    print (join("",@outtoast));
+    print "\n";
+    print "toast mode done!\n";
+}
+elsif($mode eq "bake" || $mode eq "Bake")
+{
+    print "bake mode started..\n";
+    my $bakeerrors = "$outpath\/errors_smorebake\.txt";
+    #we always need: tool, perl, python, maf, ref, (filter)
+    if(!$toolpath){print "Please specify the path to where the tool's files are located.\n";  exit 0;}
+    if(!$outpath){print "Please specify a location for the output files.\n";  exit 0;}
+    #create outfolder if it doesnt exist
+    if(-e $outpath){}
+    else{
+	my $cmd42= "mkdir $outpath";
+	my @out42 = readpipe("$cmd42");
+    }
+    if(!$perlpath){print "Please specify the path to perl.\n";  exit 0;}
+    if(!$pythonpath){print "Please specify the path to python.\n";  exit 0;}
+    
+    if(!$pathtocam){print "Please specify the location of the output folders by smore prep.\n";  exit 0;}
+    my $specieslist = "$outpath\/specieslist";
+    my $gencmd = "ls  $pathtocam\/genes \> $specieslist";
+    my @outgncmd = readpipe("$gencmd");
+    if(!$newicktree){print "Please specify a newick tree representing the species' evolutionary relationship. \n";  exit 0;}
+    my $formtree = "$outpath\/tree_formatted.newick";
+    if($ids){
+	#only convert tree identifier if id file is given
+	my $formcmd = "$perlpath\/perl $toolpath\/extendTree.pl $newicktree $ids $formtree 2>> $bakeerrors";
+	my @formout = readpipe("$formcmd");
+    }
+    else{$formtree = $newicktree;}
+    #check tree
+    my $checkcmd1 = "$perlpath\/perl $toolpath\/checkTree.pl $formtree $specieslist 2>> $bakeerrors";
+    my @checkout1 = readpipe("$checkcmd1");
+    my $noneout = "none";
+    if(index($checkout1[0],$noneout) != -1){print "Tree file consistent with genomes!\n";}
+    else{
+        print "The following speciesidentifier do appear in the genomes but do not appear in the tree: $checkout1[0]\n"; exit 0;
+    }
+    if($joinmode eq "relaxed" || $joinmode eq "strict" || $joinmode eq "none"){}
+    else{print "Specify a valid option for the mode of joining. \n";  exit 0;}
+    my $skipstr = "";
+    if($skipc){$skipstr = "$skipstr --noclus";}
+    if($skipg){$skipstr = "$skipstr --nograph";}
+    if($skipa){$skipstr = "$skipstr --noaln";}
+   
+    my $bakecmd = "$perlpath\/perl $toolpath\/smorebake.pl --tool $toolpath --out $outpath --python $pythonpath --perl $perlpath --prep $pathtocam --seqsim $seqsim --strucsim $strucsim --newick $formtree --join $joinmode --species $specieslist $skipstr 2>> $bakeerrors";
+    my @outbake = readpipe("$bakecmd");
+    print (join("",@outbake));
+    print "\n";
+    print "bake mode done!\n";
+}
+else{print "\'$mode\' is not a valid option! \n";  exit 0;}
+
+
+sub HelpShort{
+print "
+This is the short help page of the SMORE pipeline, a Synteny Modulator Of Repetitive Elements.
+usage: ./smore <subcommand> [options]
+
+or ./smore [general_options]
+
+The general options are:
+        --help|-h       print help page
+	--version|-v    print version information
+	--citation	print citation information
+	--contact       print contact information
+        --helpout       print explanation for structure and visualization of
+	                output files
+
+The smore subcommands are:
+
+    prep    This program will sort genetic elements in between genomic anchors
+            based on MultiZ alignments. The genetic elements are
+            taken from a list given as input or retrieved based on a covariance
+	    model as input for infernal.
+
+    toast   This program will take the prep-output and calculate the numbers
+            for evolutionary events at the given phylogenetic tree.
+
+    bake    This program will take the prep-output, calculate the phylogenetic
+            tree with numbers of events and give additional output.
+            This version is very verbose and might take significantly longer.
+	    It is recommended to first run toast. Then, bake can be used to get
+	    a deeper insight into the data or more details.
+
+";
+
+
+}
+
+
+sub HelpComplete{
+print "
+This is the help page of the SMORE pipeline, a Synteny Modulator Of Repetitive Elements.
+usage: ./smore <subcommand> [options]
+
+or ./smore [general_options]
+
+The general options are:
+        --help|-h       print help page
+	--version|-v    print version information
+	--citation	print citation information
+	--contact       print contact information
+        --helpout       print explanation for structure and visualization of
+	                output files
+
+The smore subcommands are:
+
+    prep    This program will sort genetic elements in between genomic anchors
+            based on MultiZ alignments. The genetic elements are
+            taken from a list given as input or retrieved based on a covariance
+	    model as input for infernal.
+
+    toast   This program will take the prep-output and calculate the numbers
+            for evolutionary events at the given phylogenetic tree.
+
+    bake    This program will take the prep-output, calculate the phylogenetic
+            tree with numbers of events and give additional output.
+            This version is very verbose and might take significantly longer.
+	    It is recommended to first run toast. Then, bake can be used to get
+	    a deeper insight into the data or more details.
+
+";
+HelpPrep();
+HelpToast();
+HelpBake();
+HelpOut();
+ }  
+
+sub HelpPrep{
+print "
+This program will sort genetic elements in between genomic anchors
+based on MultiZ alignments. The genetic elements are
+taken from a list given as input or retrieved based on a covariance
+model as input for infernal.
+
+
+Usage: 
+smore prep --tool _ --out _ --python _ --perl _  --ref _ --maf _ --filter _ 
+
+with one of the following possibilities (a-c):
+
+a)       [--cm _ --genomes _ --infernal _ (--incE _ |--incT _) (--pseudo _)]
+b)       [--genes _ ]
+c)       [--genomes _ --loci _ ]
+
+    #options needed in all subcommands
+        --tool|-t       path to where the smore tool is located. In this way,
+	                no installation is needed.
+	--out|-o        folder where to write the output files. If the folder
+	                does not exist, it will be created
+	--python        path to python
+	--perl          path to perl
+
+    #options for prep
+
+        ##general options
+        --ref|-r        name of the reference species as given in MultiZ
+                        files
+	--maf|-m        folder containing all MultiZ alignments. Files can be
+	                compressed.
+	--filter        optional: remove a percentage of the lowest scoring
+	                blocks base on the MAF scores; between 0 and 100
+        ##CM mode
+        --cm|-c         covariance model file, input for infernal
+	--genomes|-g    folder with genomes of the species used as an input
+                        to infernal to scan the genomes for genetic elements
+			specified by the CM. Filenames should match species
+			names in MultiZ files.
+        --incE          optional parameter for infernal, e-value threshold
+	--incT          optional parameter for infernal, bitscore threshold
+	--infernal      path to infernal
+        --pseudo        optional parameter, bitscore threshold that defines
+	                pseudogenes
+	#Genelist mode
+        --genes         a list of genetic elements as input.
+			Format (tab separated):
+			
+			chromosome start_pos end_pos species strand type
+			pseudogene sequence structure comment
+			
+			-fields to be omitted are filled with NA
+			-species name should be the same as in MultiZ files
+			-type is optional (e.g. tRNA type Met)
+			-pseudogene (optional): true or false
+			-structure is optional, dot-bracket-notation
+			-for optional sequence, take loci mode
+			-comment is optional
+	##Loci mode
+	--genomes|-g    folder with genomes of the species used to retrieve
+			the sequence of the genetic elements in the loci list
+			based on their coordinates. Filenames should match
+			species names in loci list files.
+	--loci          list with genetic elements without sequence
+			Format (tab separated):
+			
+			chromosome start_pos end_pos species strand type
+			pseudogene
+			
+			-fields to be omitted are filled with NA
+			-species name should be the same as in MultiZ files
+			-type is optional (e.g. tRNA type Met)
+			-pseudogene (optional): true or false
+";
+}
+
+
+sub HelpToast{
+print "
+This program will take the prep-output and calculate the numbers
+for evolutionary events at the given phylogenetic tree.
+Toast is the fast version, omitting all output files that are not
+necessarily needed. For more output, use bake.
+
+Usage: 
+smore toast --tool _ --out _ --python _ --perl _  --ref _ --maf _ --filter _ 
+            --prep _ --newick _
+            (--seqsim _) (--strucsim _) (--id _) (--join _) 
+
+    #options needed in all subcommands
+        --tool|-t       path to where the smore tool is located. In this way,
+	                no installation is needed.
+	--out|-o        folder where to write the output files. If the folder
+	                does not exist, it will be created
+	--python        path to python
+	--perl          path to perl
+
+    #options for toast
+        --prep|-i       folder with output from smore prep run
+	--seqsim|-s     percentage of sequence similarity to be considered
+	                homolog sequences, default 0.8
+	--strucsim|-p   percentage of structure similarity to be considered
+	                homolog sequences, default 0.8
+	--newick        tree in newick format containing the species included
+	                in the output of smore prep.
+	--id 		in case the species' identifier do not fit, this file
+	 		can be used to automatically translate the names
+			Format (tab separated):
+			current_name_in_tree name_to_translate_to
+	--join		the way of how original clusters should be joined,
+			either none, strict or relaxed; default: relaxed
+							   
+";
+}
+
+
+sub HelpBake{
+print "
+This program will take the prep-output, calculate the phylogenetic
+tree with numbers of events and give additional output.
+This version is very verbose and might take significantly longer.
+It is recommended to first run toast. Then, bake can be used to get
+a deeper insight into the data or more details.
+
+Usage: 
+smore bake --tool _ --out _ --python _ --perl _  --ref _ --maf _ --filter _ 
+            --prep _ --newick _
+            (--seqsim _) (--strucsim _) (--id _) (--join _) 
+            (--noclus) (--nograph) (--noaln)
+
+    #options needed in all subcommands
+        --tool|-t       path to where the smore tool is located. In this way,
+	                no installation is needed.
+	--out|-o        folder where to write the output files. If the folder
+	                does not exist, it will be created
+	--python        path to python
+	--perl          path to perl
+
+    #options for bake
+       #this program is very verbose and will print all inbetween results
+        such as clusters, graphs and duplication alignments
+	In case of many species or many genetic elements, this might take
+	a while...
+	
+    	--prep|-i       folder with output from smore prep run
+	--seqsim|-s     percentage of sequence similarity to be considered
+	                homolog sequences, default 0.8
+	--strucsim|-p   percentage of structure similarity to be considered
+	                homolog sequences, default 0.8
+	--newick        tree in newick format containing the species included
+	                in the output of smore prep.
+	--id 		in case the species' identifier do not fit, this file
+	 		can be used to automatically translate the names
+			Format (tab separated):
+			current_name_in_tree name_to_translate_to
+	--join		the way of how original clusters should be joined,
+			either none, strict or relaxed; default: relaxed
+	--nograph       do not print graphs
+	--noclus        do not print clusters
+	--noaln         do not print duplication alignments
+
+
+";
+}
+
+
+sub HelpOut{
+print "
+General Output:
+    data_iTOL:   folder giving files that can be uploaded to itol.embl.de
+                 The file called F0tree.txt is uploaded at
+                 http://itol.embl.de/upload.cgi.
+                 The remaining files can be added using drag and drop
+                 into the browser window. This will result in a
+                 interactive visualization of the resulting tree.
+		 A legend is added automatically. All nodes in the tree will
+                 have unique names, thus some nodes might have names such as
+                 'innerNode0' because it was added automatically.
+
+    OutTree.txt: the resulting tree in newick format with numbers at the
+                 nodes given in brackets. This format can be used to
+                 visualize the tree with newick compatible programs.
+
+geneticEvents.txt: File listing all genetic events counted during the 
+                   analysis. The numbers are sorted by event and node of
+                   the tree. The file includes a event called 'Other'. This
+                   will give the difference of genetic elements between the
+                   total amount and the elements used in the analysis.
+                   For a successful run of the pipeline, the numbers should
+                   be 0.
+
+allClusters_original.txt 
+and allClusters_joined.txt: These two files contain lists of clusters
+                            showing which elements are contained together
+                            in one cluster before and after joining.
+
+*_errors: for each part of the smore pipeline, there is a file giving errors
+          that happened during the run. If no errors occured, the file is
+          empty.
+
+list_cographs.txt  and
+list_noncographs.txt: these files contain statistics about graphs that were
+                      cographs from the beginning or had to be edited in
+                      order to become a cograph. The tables list number of
+                      nodes, number of edges and density of the graphs.
+
+remoldings.txt and
+inremoldings.txt: These files contain genetic elements that (a) have
+                  highly similar sequences but different types or (b)
+                  have the same types but clearly distinct sequences.
+						
+allTypes.txt and
+allPseudoTypes.txt: These two files list the different types of genetic
+                    elements for all species and functional or pseudogenized
+                    genes. This can be used to analyse the distribution of
+                    different types of genetic elements.
+
+Additional files:
+- for each species, there are files listing their genetic elements as
+they were used as intermediate files.
+- there are files for each of the evolutionary events where counts are
+listed.
+- for singletons, there is also a listing about types and pseudogenes
+- for elements which could not be sorted in between genomic anchors (nones)
+there is listings about types and pseudogenes.
+
+Bake output: the bake subcommand will output three additional files for
+each cluster, named with left and right anchor numbers to match all three
+files. They will be in three different folders: cluster, graph and duplication_alignment. The files contain the specific structures of the cluster in
+each step of the analysis and can be used to gain a deeper insight.
+	    
+";
+}
