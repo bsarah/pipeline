@@ -181,8 +181,8 @@ def parseTempWrapper(tempFiles, listOfListOfGenes, outputDir, threshold, inferna
         geneFile.close()
 
         subprocess.call('gzip '+finalBlockFileName, shell=True)
-        #subprocess.call('gzip '+tempBlockFileName, shell=True)
-        subprocess.call('rm '+tempBlockFileName, shell=True)
+        subprocess.call('gzip '+tempBlockFileName, shell=True)
+        #subprocess.call('rm '+tempBlockFileName, shell=True)
     '''
     if len(listOfGenes) > 0:
         listOfSC = []

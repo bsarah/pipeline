@@ -11,6 +11,8 @@
 #newicktree
 #path to temp folder of cameron
 
+
+use IO::Uncompress::Gunzip qw($GunzipError);
 use Data::Dumper;
 use strict;
 use warnings;
@@ -28,6 +30,14 @@ my $nwtree = shift;
 my $specieslist = "$outpath\/fast_species";
 my $gencmd = "ls  $inpath\/genes \> $specieslist";
 my @outgncmd = readpipe("$gencmd");
+
+my $tmpfilelist = "$outpath\/tmpfiles";
+my $tmplscmd = "ls $inpath\/temp \> $tmpfilelist";
+my @outlscmd = readpipe("$tmplscmd");
+
+my $del2check = "$outpath\/tmpfile\_deletionsCheck\.txt";
+my $pseudel2check = "$outpath\/tmpfile\_pseudeletionsCheck\.txt";
+
 
 my %blocks = ();
 my %leftblocks = ();
@@ -57,6 +67,7 @@ my %pallTypes = (); #hash with spec_type -> num
 
 my %block2spec = ();
 my @allspec = ();
+my %neighbors = (); #species_anchor -> leftneighbor_rightneighbor or -1 
 
 open FA,"<$specieslist" or die "can't open $specieslist\n";
 
@@ -64,8 +75,6 @@ while(<FA>){
     chomp;
     my $precurfile = $_;
     my $curfile = "$inpath\/genes\/$precurfile";
-    #print "CURFILE: $curfile\n";
-
     #get species name
     my @S1 = split '\/', $curfile;
     my @S2 = split '\.', $S1[-1];
@@ -78,14 +87,21 @@ while(<FA>){
     my $curfile_nb = "$outpath\/$spec\_nb\.bed";
     my $curfile_sorted = "$outpath\/$spec\_sorted\.bed";
     my $cmdnoblanks = "awk \'NF\' $curfile \> $curfile_nb";
-    my $cmdsort = "sort -n -k 6,7 $curfile_nb \> $curfile_sorted";
-
-#    print "CMDNOBLANKS: $cmdnoblanks\n";
-#    print "CMDSORT: $cmdsort\n";
-    
+    #sort by chr, elemstart, elemend
+    my $col1 = 1;
+    my $col3 = 3;
+    my $col4 = 4;
+    my $coln = "n";
+    my $cmdsort = "sort -k$col1,$col1 -k$col3,$col3$coln -k$col4,$col4$coln $curfile_nb \> $curfile_sorted";
+#    print STDERR "SORT: $cmdsort \n";
     readpipe("$cmdnoblanks");
     readpipe("$cmdsort");
-    
+
+    #this describes the neighbors
+    my $chr2 = "-1";
+    my $bl2 = "-1";
+    my $chr1 = "-1";
+    my $bl1 = "-1";
     #read file to blocks/nones
     open CF, "<$curfile_sorted" or die "can't open $curfile_sorted\n";
     while(<CF>){
@@ -166,47 +182,19 @@ while(<FA>){
 	    next;
 	}
 	else{
-	    #grep the block and species from temp and store blocks that appear in element context
-	    my $bl1 = "$spec\_$F[5]";
-	    my $bl2 = "$spec\_$F[6]";
-#	    print "BLOCK1,2: $bl1,$bl2\n";
-	    my $grepcmdleft = "zcat $inpath\/temp\/$spec\_temp\_sorted\.bed\.gz \| grep -w \"$bl1\" ";
-	    my $grepcmdright = "zcat $inpath\/temp\/$spec\_temp\_sorted\.bed\.gz \| grep -w \"$bl2\" ";
-	    my @outleft = readpipe("$grepcmdleft");
-	    my $lstr = join(';',@outleft);
-#	    print "LEFTGREP $lstr \n";
-	    if(scalar @outleft == 0){print STDERR "anchor does not exist: $bl1\n";}
-	    else{
-		my @Fleft = split '\t', $outleft[0];
-		my $newstr1 = "$bl1\=$Fleft[0]\=$Fleft[2]\=$Fleft[3]\=$Fleft[4]";#bl1 chr start len strand
-		#check if the block already exists for THIS species!
-		if(exists($block2spec{$F[5]}) && (index($block2spec{$F[5]},$bl1) == -1)){$block2spec{$F[5]} = "$block2spec{$F[5]}\=$newstr1";}
-		else{$block2spec{$F[5]} = $newstr1;}
-	    }
-	    my @outright = readpipe("$grepcmdright");
-	    my $rstr = join(';',@outright);
-#	    print "RIGHTGREP $rstr \n";
-	    if(scalar @outright == 0){print STDERR "anchor does not exist: $bl2\n";}
-	    else{
-		my @Fright = split '\t', $outright[0];
-		my $newstr2 = "$bl2\=$Fright[0]\=$Fright[2]\=$Fright[3]\=$Fright[4]";
-		if(exists($block2spec{$F[6]}) && (index($block2spec{$F[6]},$bl2)== -1)){$block2spec{$F[6]} = "$block2spec{$F[6]}\=$newstr2";}
-		else{$block2spec{$F[6]} = $newstr2;}
-	    }
-	    
-
-
-	    #first, hash by left block variable
-	    #then check the largest right block value and join until then in the hash
+	    ##store neighbor relations of blocks in each species
 	    my $key;
 	    my $leftkey;
+	    my $rightkey;
 	    if($F[5] < $F[6]){
 		$key = "$F[5]\_$F[6]";
 		$leftkey = "$F[5]";
+		$rightkey = "$F[6]";
 	    }
 	    else{
 		$key = "$F[6]\_$F[5]";
 		$leftkey = "$F[6]";
+		$rightkey = "$F[5]";
 	    }
 	    if(exists($blocks{$key})){
 		my $tmp = $blocks{$key};
@@ -222,9 +210,59 @@ while(<FA>){
 	    else{
 		$leftblocks{$leftkey} = "$line";
 	    }
+	    if($chr1 eq "-1"){
+		$chr1 = $F[1];
+		$bl1 = $leftkey;
+		my $nkey = "$spec\_$bl1";
+		my $nval = "$bl2\_$rightkey";
+		$neighbors{$nkey} = $nval;
+		$chr2 = $chr1;
+		$bl2 = $bl1;
+		$chr1 = $F[1];
+		$bl1 = $rightkey;
+
+	    }
+	    elsif($chr1 eq $F[1]){
+		if($bl1 ne $leftkey){
+		    my $nkey = "$spec\_$bl1";
+		    my $nval = "$bl2\_$leftkey";
+		    $neighbors{$nkey} = $nval;
+		    my $mkey = "$spec\_$leftkey";
+		    my $mval = "$bl1\_$rightkey";
+		    $neighbors{$mkey} = $mval;
+		    $chr2 = $chr1;
+		    $bl2 = $bl1;
+		    $chr1 = $F[1];
+		    $bl1 = $rightkey;
+		}
+		else{
+		    my $mkey = "$spec\_$leftkey";
+		    my $mval = "$bl2\_$rightkey";
+		    $neighbors{$mkey} = $mval;
+		    $chr2 = $chr1;
+		    $bl2 = $bl1;
+		    $chr1 = $F[1];
+		    $bl1 = $rightkey;		    
+		}
+	    }
+	    elsif($chr1 ne $F[1]){
+		my $nkey = "$spec\_$bl1";
+		my $nval = "$bl2\_-1";
+		$neighbors{$nkey} = $nval;
+		my $mkey = "$spec\_$leftkey";
+		my $mval = "-1\_$rightkey";
+		$neighbors{$mkey} = $mval;
+		$bl2 = $leftkey;
+		$chr2 = $F[1];
+		$bl1 = $rightkey;
+		$chr1 = $F[1];
+	    }
+	    else{
+	    }
 	}
     }
 }
+
 
 my $orignum = scalar (keys %blocks);
 print "ORIG CLUSNUM: $orignum \n";
@@ -233,67 +271,18 @@ print "ORIG CLUSNUM: $orignum \n";
 my $numspec = scalar @allspec;
 print "Number of species: $numspec \n";
 
-my $blocktable = "$outpath\/blocktable\.tab";
-my $nostr = "\=\t\=\t\=\t\=\t\=";
-open(my $outbt, ">>", $blocktable);
-foreach my $an (sort { $a <=> $b} keys %block2spec){
-    #print species in the order as they are in allspec
-    #if a species doesnt exist, put =
-    #in this way we get a nice table to print
-    my @tmp = split '=', $block2spec{$an};
-    my $tabline = "$an";
-    my $j=0;
-    for(my $i=0;$i<scalar @allspec;$i++){
-	if($j*5 >= scalar @tmp){
-	    $tabline = "$tabline\t$nostr";
-	    next;
-	}
-	my $tocheck = $tmp[(5*$j)+0];
-	my $curs = "$allspec[$i]\_$an";
-	if($tocheck eq $curs){
-	    $tabline = "$tabline\t$tmp[(5*$j)+0]\t$tmp[(5*$j)+1]\t$tmp[(5*$j)+2]\t$tmp[(5*$j)+3]\t$tmp[(5*$j)+4]";
-	    $j++;
-	}
-	else{
-	    $tabline = "$tabline\t$nostr";
-	}
-    }
-    print $outbt "$tabline\n";
-}
-close $outbt;
-
-my %spec2file = (); #species and its sorted blockfile
-for(my $s=0;$s<scalar @allspec;$s++){
-    my $col1 = 5*$s+3;
-    my $col2 = 5*$s+4;
-    my $sortfile = "$outpath\/$allspec[$s]\_blocktable\.tab";
-    my $sortcmd = "sort -k$col1,$col1 -nk$col2,$col2 $blocktable > $sortfile";
-    readpipe("$sortcmd");
-    $spec2file{$s} = $sortfile;
-}
-
-
-##NO JOINING of blocks based on block number as they are only consecutive in the reference!
-##but the leftblocks are a first step and then, we check if all species are adjacent in the blocktable
-#sorted for each species
-#my $blockfile = "$outpath\/Leftblocks\.txt";
-#open(my $outb,">>",$blockfile);
-
-##Here, we could get parameters for reading the sorted blocktables for each species
-#leftblocks has to be created though
-
 #join cluster by hash num
 my %joinedblocks = ();
 
 my $curblock = "";
 my $curstart = -5;#a
 my $curend = -1;#a
+
+my @spezi = keys %species;
+
 foreach my $lb (sort { $a <=> $b} keys %leftblocks){
     my $curb = $leftblocks{$lb};
     my $rb = getRightBlock($curb); #this is the right block, -1 if there are several rightblocks, then it doesnt work 
-
-#    print $outb "$lb\t$rb\t$curb\n";
-    
     if($curstart == -5){
 	$curblock = $curb;
 	$curstart = $lb;
@@ -306,18 +295,22 @@ foreach my $lb (sort { $a <=> $b} keys %leftblocks){
     #change checkBlocks based on the created blocktable
     #grep for blocknum in each sorted file (for each species) and check if the blocknums are adjacent in all of them
     if($rb>0 && $curend > 0){
-	foreach my $sk (keys %spec2file){
-	    my $tmpgrep = "grep -A 1 -w $lb $spec2file{$sk}";
-	    my @outtmpgrep = readpipe("$tmpgrep"); #output should contain two lines
-	    if(scalar @outtmpgrep >= 2 && $outtmpgrep[1] =~ /^$rb/){ #the adjacent block is rb
-		$isgood = 1;
+#	my $futureblocks = "$curblock\;$curb";
+#	my @invspec = getSpecList($futureblocks);
+	for(my $sp =0;$sp < scalar @spezi;$sp++){#in this line, we could only take species that are really involved in the current clusters
+#	for(my $sp =0;$sp < scalar @invspec;$sp++){#in this line, we could only take species that are really involved in the current clusters
+	    my $curlb = "$spezi[$sp]\_$lb";
+#	    my $curlb = "$invspec[$sp]\_$lb";
+	    if(exists($neighbors{$curlb})){
+		my $spn = $neighbors{$curlb};
+		my @Q = split '_', $spn;
+		if($Q[1] eq $rb || $Q[1] == $rb){
+		    $isgood=1;
+		}
+		else{$isgood=0;last;}
 	    }
-	    else{
-		$isgood = 0;
-		last;
-	    }
-	    
-	}
+	    else{$isgood=0;last;}
+	}	
     }
     if($rb>0 && $isgood == 1 && $curend > 0){
 	#should be joinable
@@ -352,15 +345,23 @@ foreach my $lb (sort { $a <=> $b} keys %leftblocks){
 	    for(my $r=0;$r<scalar @rks;$r++){
 		my $noneighbor = 0;
 		for(my $k=$r+1;$k<scalar @rks;$k++){
-		    foreach my $sk (keys %spec2file){
-			my $tmpgrep = "grep -A 1 -w $rks[$r] $spec2file{$sk}";
-			my @outtmpgrep = readpipe("$tmpgrep"); #output should contain two lines
-			if(scalar @outtmpgrep >= 2 && $outtmpgrep[1] =~ /^$rks[$k]/){}
+		    for(my $sp =0;$sp < scalar @spezi;$sp++){
+			my $curlb = "$spezi[$sp]\_$rks[$r]";
+			if(exists($neighbors{$curlb})){
+			    my $spn = $neighbors{$curlb};
+			    my @Q = split '_', $spn;
+			    if($Q[1] eq $rb || $Q[1] == $rb){
+			    }
+			    else{
+				$neighborsum += 1;
+				last;
+			    }
+			}
 			else{
 			    $neighborsum += 1;
 			    last;
 			}
-		    }
+		    }	
 		}
 	    }
 	    
@@ -417,7 +418,6 @@ if($curstart > 0){
 	else{$joinedblocks{$newkey2}=$curblock;}
     }
 }
-    
 
 
 my $sumelemorig = 0;
@@ -425,7 +425,7 @@ my $jclusfile = "$outpath\/allClusters_original\.txt";
 open(my $outjc,">>",$jclusfile);
 my $origcount = 0;
 foreach my $bk (keys %blocks){
-    my @B = split ';', $joinedblocks{$bk};
+    my @B = split ';', $blocks{$bk};
     my $clussize = scalar @B;
     #write to allClustersList
     print $outjc ">clus$origcount $clussize\n";
@@ -622,9 +622,11 @@ foreach my $k (keys %joinedblocks){
     my $newgraphstr = $newoutgraph[0];
     
     #sort the non edges graphs
-
+    
+    my $alncmd = "perl $scriptpath\/createAlignments_fast2.pl $tmpfile1 $outpath $pathtonw $seqsim $strucsim $mode 0 $nwtree $leftanchor $rightanchor $del2check $pseudel2check";
+    #before countEvents, check for deletions with the files created here
     #create alignment
-    my $alncmd = "perl $scriptpath\/createAlignments_fast.pl $tmpfile1 $outpath $pathtonw $seqsim $strucsim $mode 0 $nwtree $inpath\/temp $leftanchor $rightanchor";
+    #my $alncmd = "perl $scriptpath\/createAlignments_fast.pl $tmpfile1 $outpath $pathtonw $seqsim $strucsim $mode 0 $nwtree $inpath\/temp $leftanchor $rightanchor";
 
 #    print STDERR "ALNCMD: $alncmd \n";
     my @outaln = readpipe("$alncmd"); #this array contains: dup mat insertion pseins pseudomatch deletion missinganchor missinanchorpseu deletionpseu
@@ -731,6 +733,120 @@ $allsinglestr = "$allsinglestr\!";
 foreach my $s (keys %pseusinglesNT){
     $allsinglestr = "$allsinglestr$s\-$pseusinglesNT{$s}\=";
 }
+
+
+###do the check for missing anchors here!
+my %tmphash;
+
+##first, open and read the tmp files
+open TF,"<$tmpfilelist" or die "can't open $tmpfilelist\n";
+while(<TF>){
+   chomp;
+   my $curtmpfile = $_;
+   my @Tmpname = split '_', $curtmpfile;
+   my $tmpspec = $Tmpname[0];
+#   open CTF,"<$curtmpfile" or die "can't open $curtmpfile\n";
+   my $CTF = IO::Uncompress::Gunzip->new( "$inpath\/temp/$curtmpfile" )
+       or die "IO::Uncompress::Gunzip failed: $GunzipError\n";
+   while(<$CTF>){
+      my $tmpline = $_;
+      my @TL = split '\t', $tmpline;
+      my @PTL = split '_', $TL[1];
+      my $tan = $PTL[1];
+      $tmphash{$tmpspec}{$tan} = 1;
+   }
+}
+
+##now, we check if anchors exist with
+open DC,"<$del2check" or die "can't open $del2check \n";
+while(<DC>){
+    my $l2c = $_;
+    my @ll2c = split '\t', $l2c;
+    my @anchors = split '_', $ll2c[0];
+    my @lspec = split ',',$ll2c[1];
+    my $mini = $ll2c[2];
+    my @missings = ();
+    my @dells = ();
+    for(my $l=0;$l< scalar @lspec;$l++){
+	if(exists($tmphash{$lspec[$l]})){
+	    if(exists($tmphash{$lspec[$l]}{$anchors[0]})
+	       && exists($tmphash{$lspec[$l]}{$anchors[1]})){
+		push @dells, $lspec[$l];
+	    }
+	    else{
+		push @missings, $lspec[$l];
+	    }
+	}
+	else{print STDERR "species should exist: $lspec[$l] \n";}
+    }
+    if(scalar @missings > 0){
+	my $misstr = join(',', @missings);
+	if(exists $misevents{$misstr}){$misevents{$misstr} += $mini;}
+	else{$misevents{$misstr} = $mini;}
+    }
+    if(scalar @dells > 0){
+	my $delstr = join(',',@dells);
+	if(exists $delevents{$delstr}){$delevents{$delstr} += $mini;}
+	else{$delevents{$delstr} = $mini;}
+    }
+   
+}
+
+
+open PC,"<$pseudel2check" or die "can't open $pseudel2check \n";
+while(<PC>){
+    my $l2c = $_;
+    my @ll2c = split '\t', $l2c;
+    my @anchors = split '_', $ll2c[0];
+    my @lspec = split ',',$ll2c[1];
+    my $mini = $ll2c[2];
+    my @missings = ();
+    my @dells = ();
+    for(my $l=0;$l< scalar @lspec;$l++){
+	if(exists($tmphash{$lspec[$l]})){
+	    if(exists($tmphash{$lspec[$l]}{$anchors[0]})
+	       && exists($tmphash{$lspec[$l]}{$anchors[1]})){
+		push @dells, $lspec[$l];
+	    }
+	    else{
+		push @missings, $lspec[$l];
+	    }
+	}
+	else{print STDERR "species should exist: $lspec[$l] \n";}
+    }
+    if(scalar @missings > 0){
+	my $misstr = join(',', @missings);
+	if(exists $psemis{$misstr}){$psemis{$misstr} += $mini;}
+	else{$psemis{$misstr} = $mini;}
+    }
+    if(scalar @dells > 0){
+	my $delstr = join(',',@dells);
+	if(exists $psedels{$delstr}){$psedels{$delstr} += $mini;}
+	else{$psedels{$delstr} = $mini;}
+    }
+   
+}
+
+#if(exists($tmphash{$species})){
+#if(exists($tmphash{$species}{$anchor})){
+##add to deletions
+#}
+#else{
+##add to missings
+#}
+
+#		if(scalar @missingtmp > 0){
+#		    my $misstr = join(',', @missingtmp);
+#		    if(exists $misevents{$misstr}){$misevents{$misstr} += $mini;}
+#		    else{$misevents{$misstr} = $mini;}
+#		}
+#		if(scalar @missingdel > 0){
+#		    my $delstr = join(',',@missingdel);
+#		    if(exists $delevents{$delstr}){$delevents{$delstr} += $mini;}
+#		    else{$delevents{$delstr} = $mini;}
+#		}
+
+
 
 
 
@@ -857,8 +973,8 @@ print "Number of clusters: $cluscount\n";
     my $avnum = $sumelems/$cluscount;
 print "Average number of elements per cluster: $avnum\n";
 
-    sub getRightBlock{
-	#get THE right block. if it is several different ones, return -1 as the cluster seems to be too diverse
+sub getRightBlock{
+    #get THE right block. if it is several different ones, return -1 as the cluster seems to be too diverse
     my @inp = @_;
     my $cluster = $inp[0];
     my @c = split ';', $cluster;
@@ -875,6 +991,20 @@ print "Average number of elements per cluster: $avnum\n";
     return $curmin;
 }
 
+sub getSpecList{
+    my @inp = @_;
+    my $cluslist = $inp[0];
+    my @C = split ';', $cluslist;
+    my %spec = ();
+    for(my $c=0;$c<scalar @C;$c++){
+	my @F = split '\t', $C[$c];
+	my @G = split '_', $F[1];
+	my $sp = $G[0];
+	if(exists($spec{$sp})){}
+	else{$spec{$sp}=1;}
+    }
+    return (keys %spec);
+}
 
 sub checkBlocks{
     my @inp = @_;

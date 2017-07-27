@@ -41,12 +41,14 @@ my $numdifftypes = shift;
 #my $delout = shift;
 #my $misout = shift;
 my $nwtree = shift;
-my $path2Temp = shift; #temp folder which contains gipped lists about anchors for each species
+#my $path2Temp = shift; #temp folder which contains gipped lists about anchors for each species
 #my $summary = shift; #usual summary after running the script
 #my $sumrems = shift;
 #my $suminrems = shift;
 my $leftanchor = shift;
 my $rightanchor = shift;
+my $del2check = shift;
+my $pseudel2check = shift;
 
 #print STDERR "createALN input tree: $nwtree\n";
 
@@ -76,13 +78,8 @@ my @inremoldings = ();
 
 my %elemcount = (); #count how many elements of which species occur during the creation of alignments
 
-
-
-
-
-#open(my $outs,">>", $summary);
-
-
+open(my $outd2c,">>", $del2check);
+open(my $outp2c,">>", $pseudel2check);
 
 ##filter which is the biggest alignment created
 #my $maxlen = 0;
@@ -213,7 +210,8 @@ my $maxCCnumaln = "";
 		    if($n1 le $n2){$remstr = "$n1\:$n2";}
 		    else{$remstr = "$n2\:$n1";}
 		    if(grep( /^$remstr$/, @remoldings)){}
-		    else{push @remoldings, $remstr;}
+		    elsif($remstr ne ""){push @remoldings, $remstr;}
+		    else{}
 		}
 		if($numdifftypes > 1 && $t1 eq $t2 && $seqsim < $seqlim && $isp1 == 0 && $isp2 == 0){
 		    ##equal types but low sequence similarity
@@ -221,7 +219,8 @@ my $maxCCnumaln = "";
 		    if($n1 le $n2){$inremstr = "$n1\:$n2";}
 		    else{$inremstr = "$n2\:$n1";}
 		    if(grep( /^$inremstr$/, @inremoldings)){}
-		    else{push @inremoldings, $inremstr;}
+		    elsif($inremstr ne ""){push @inremoldings, $inremstr;}
+		    else{}
 		    
 		}
 	    }
@@ -247,6 +246,8 @@ my $maxCCnumaln = "";
 #	else{}
 #	##the following is the else case, as we do 'next' above, this is ok
 #	##both genes are not pseudo
+
+	if($letcount>=scalar @letters){$letcount = 0;}
 	
 	if($seqsim >= $seqlim && $strsim >= $strlim){
 	    ##similarity fits, nodes get the same letter
@@ -430,7 +431,9 @@ else{
 	    my $i=0;
 #	    my $p =0;
 	    my @ref = split '',$out1[1];
+	    my @rseq = split '', $lseq1;
 	    my @oth = split '',$out1[2];
+	    my @oseq = split '', $lseq2;
 	    if(scalar @ref != scalar @oth){print STDERR "alignment does not fit!\n";}
 	    my $rcount =0;
 	    my $ocount=0;
@@ -467,8 +470,6 @@ else{
 		if($curc eq $oth[$z])
 		{
 		    ##add $z behind the nodes names to make them unique
-		    $rz++;
-		    $oz++;
 		    $v1 = "$curc\_$k\_$pe1\_$rz";
 		    $v2 = "$oth[$z]\_$k2\_$pe2\_$oz";
 		    if(none {$_ eq $v1} @vertices){push @vertices, $v1;}
@@ -476,61 +477,76 @@ else{
 		    if($v1 lt $v2){$ed = "$v1 $v2";}
 		    else{$ed = "$v2 $v1";}
 		    if(none {$_ eq $ed} @arcs){push @arcs, $ed;}
+		    $rz++;
+		    $oz++;
+
 		}
 		elsif($curc eq $tild){
 		    ##add an edge from the last letter in the current to the current letter in the other
+
+#		    my $zz = $rz;
+		    my $pe1p = $sp12pseudo[$rz-1];
+#		    print STDERR "Duplication of ref, $k: $out1[1], rz: $rz, oth, $k2: $out1[2], oz: $oz, z: $z\n ";
+		    my $smrz = $rz-1;
+		    $v1 = "$rseq[$smrz]\_$k\_$pe1p\_$smrz"; ##v1 should already exist!
+		    $v2 = "$oth[$z]\_$k2\_$pe2\_$oz";
+		    if(none {$_ eq $v1} @vertices){push @vertices, $v1; print STDERR "v1 should exist! $v1 \n";}
+		    if(none {$_ eq $v2} @vertices){push @vertices, $v2;}
+		    if($v1 lt $v2){$ed = "$v1 $v2";}
+		    else{$ed = "$v2 $v1";}
+		    if(none {$_ eq $ed} @arcs){push @arcs, $ed;}
 		    $oz++;
-		    my $zz = $z-1;
-		    while($zz >= 0){
-			if($ref[$zz] ne $tild){
-			    my $pe1p = $sp12pseudo[$zz];
-			    $v1 = "$ref[$zz]\_$k\_$pe1p\_$rz"; ##v1 should already exist!
-			    $v2 = "$oth[$z]\_$k2\_$pe2\_$oz";
-			    if(none {$_ eq $v1} @vertices){push @vertices, $v1;}
-			    if(none {$_ eq $v2} @vertices){push @vertices, $v2;}
-			    if($v1 lt $v2){$ed = "$v1 $v2";}
-			    else{$ed = "$v2 $v1";}
-			    if(none {$_ eq $ed} @arcs){push @arcs, $ed;}
-			    last;
-			}
-			$zz--;
-		    }
+
+#		    while($zz >= 0){
+#			if($ref[$zz] ne $tild){
+#			    last;
+#			}
+#			$zz--;
+#		    }
 		}
 		elsif($curc eq $mins){
-		    $oz++;
+
 		    $v2 = "$oth[$z]\_$k2\_$pe2\_$oz";
 		    if(none {$_ eq $v2} @vertices){push @vertices, $v2;}
+		    $oz++;
 		}
 		elsif($oth[$z] eq $mins){
-		    $rz++;
+
 		    $v1 = "$curc\_$k\_$pe1\_$rz";
 		    if(none {$_ eq $v1} @vertices){push @vertices, $v1;}
+		    $rz++;
 		}
 		elsif($oth[$z] eq $tild){
+
+		    #		    my $zz2 = $oz;
+		    my $pe2p = $sp22pseudo[$oz-1];
+#		    print STDERR "Duplication of oth, $k2: $out1[2]; oz: $oz, ref, $k: $out1[1], rz: $rz, z: $z\n ";
+		    $v1 = "$curc\_$k\_$pe1\_$rz";
+		    my $smoz = $oz-1;
+		    $v2 = "$oseq[$smoz]\_$k2\_$pe2p\_$smoz"; ##v2 should already exist!
+		    if(none {$_ eq $v1} @vertices){push @vertices, $v1;}
+		    if(none {$_ eq $v2} @vertices){push @vertices, $v2; print STDERR "v2 should exist! $v2 \n";}
+		    if($v1 lt $v2){$ed = "$v1 $v2"; }
+		    else{$ed = "$v2 $v1";}
+		    if(none {$_ eq $ed} @arcs){push @arcs, $ed;}
 		    $rz++;
-		    my $zz2 = $z-1;
-		    while($zz2 >= 0){
-			if($oth[$zz2] ne $tild){
-			    my $pe2p = $sp22pseudo[$zz2];
-			    $v1 = "$curc\_$k\_$pe1\_$rz"; 
-			    $v2 = "$oth[$zz2]\_$k2\_$pe2p\_$oz"; ##v2 should already exist!
-			    if(none {$_ eq $v1} @vertices){push @vertices, $v1;}
-			    if(none {$_ eq $v2} @vertices){push @vertices, $v2;}
-			    if($v1 lt $v2){$ed = "$v1 $v2"; }
-			    else{$ed = "$v2 $v1";}
-			    if(none {$_ eq $ed} @arcs){push @arcs, $ed;}
-			    last;
-			}
-			$zz2--;
-		    }
+
+#		    while($zz2 >= 0){
+#			if($oth[$zz2] ne $tild){
+#			    my $pe2p = $sp22pseudo[$zz2];
+#			    last;
+#			}
+#			$zz2--;
+#		    }
 		}
 		else{
-		    $rz++;
-		    $oz++;
 		    $v1 = "$curc\_$k\_$pe1\_$rz";
 		    $v2 = "$oth[$z]\_$k2\_$pe2\_$oz";
 		    if(none {$_ eq $v1} @vertices){push @vertices, $v1;}
 		    if(none {$_ eq $v2} @vertices){push @vertices, $v2;}
+		    $rz++;
+		    $oz++;
+
 		}
 	    }
 	}
@@ -619,6 +635,7 @@ else{
 	    
 	}
 
+
 #	my @kp = keys %pse2count;
 #	my $kplen = scalar @kp;
 #	print "size of pse2count: $kplen \n";
@@ -680,7 +697,7 @@ else{
 		if(exists $pseins{$psestr}){$pseins{$psestr} += $pseuvals[0];}
 		else{$pseins{$psestr} = $pseuvals[0];}
 	    }
-	    elsif(none {$_ != $pseuvals[0]} @pseuvals)
+	    elsif(none {$_ != $pseuvals[0]} @pseuvals)#all the same
 	    {
 		if(exists $psevents{$psestr}){$psevents{$psestr} += $pseuvals[0];}
 		else{$psevents{$psestr} = $pseuvals[0];}
@@ -692,8 +709,8 @@ else{
 		foreach my $ppp (keys %pse2count){
 		    my $pdiff = $pse2count{$ppp} - $pmin;
 		    if($pdiff > 0){
-			if(exists $psevents{$psestr}){$psevents{$psestr} += $pdiff;}
-			else{$psevents{$psestr} = $pdiff;}	    
+			if(exists $psevents{$ppp}){$psevents{$ppp} += $pdiff; }
+			else{$psevents{$ppp} = $pdiff;}	    
 		    }
 		}
 	    
@@ -719,37 +736,10 @@ else{
 	    #species: comma-separated in $spstr
 	    my @missingspecs = getMissingSpecs($spstr,$nwtree);
 	    if(scalar @missingspecs > 0){
-		my @missingtmp = ();
-		my @missingdel = ();
-		for(my $mi = 0; $mi < scalar @missingspecs;$mi++){
-		    my $specii = $missingspecs[$mi];
-		    my $grepcmdleft = "zcat $path2Temp\/$specii\_temp\_sorted\.bed\.gz \| grep -w \"$specii\_$leftanchor\" ";
-		    my $grepcmdright = "zcat $path2Temp\/$specii\_temp\_sorted\.bed\.gz \| grep -w \"$specii\_$rightanchor\" ";
-		    #print STDERR "$grepcmdleft ; $grepcmdright\n";
-		    my @outleft = readpipe("$grepcmdleft");
-		    if(scalar @outleft == 0){
-			push @missingtmp, $specii;
-			next;
-		    }
-		    my @outright = readpipe("$grepcmdright");
-		    #check if both out[0] are nonempty
-		    if(scalar @outright == 0){
-			push @missingtmp, $specii;
-			next;
-		    }
-		    push @missingdel, $specii;
-		}
+		my $missstr = join(',',@missingspecs);
+		my $d2cstr = "$leftanchor\_$rightanchor\t$missstr\t$mini\n";
+		print $outd2c $d2cstr;
 
-		if(scalar @missingtmp > 0){
-		    my $misstr = join(',', @missingtmp);
-		    if(exists $misevents{$misstr}){$misevents{$misstr} += $mini;}
-		    else{$misevents{$misstr} = $mini;}
-		}
-		if(scalar @missingdel > 0){
-		    my $delstr = join(',',@missingdel);
-		    if(exists $delevents{$delstr}){$delevents{$delstr} += $mini;}
-		    else{$delevents{$delstr} = $mini;}
-		}
 	    }
 	}
 
@@ -761,37 +751,9 @@ else{
 	    	    #species: comma-separated in $psestr
 	    my @pmissingspecs = getMissingSpecs($psestr,$nwtree);
 	    if(scalar @pmissingspecs > 0){
-		my @pmissingtmp = ();
-		my @pmissingdel = ();
-		for(my $mi = 0; $mi < scalar @pmissingspecs;$mi++){
-		    my $pspecii = $pmissingspecs[$mi];
-		    my $pgrepcmdleft = "zcat $path2Temp\/$pspecii\_temp\_sorted\.bed\.gz \| grep -w \"$pspecii\_$leftanchor\" ";
-		    my $pgrepcmdright = "zcat $path2Temp\/$pspecii\_temp\_sorted\.bed\.gz \| grep -w \"$pspecii\_$rightanchor\" ";
-		    #print STDERR "$grepcmdleft ; $grepcmdright\n";
-		    my @poutleft = readpipe("$pgrepcmdleft");
-		    if(scalar @poutleft == 0){
-			push @pmissingtmp, $pspecii;
-			next;
-		    }
-		    my @poutright = readpipe("$pgrepcmdright");
-		    #check if both out[0] are nonempty
-		    if(scalar @poutright == 0){
-			push @pmissingtmp, $pspecii;
-			next;
-		    }
-		    push @pmissingdel, $pspecii;
-		}
-
-		if(scalar @pmissingtmp > 0){
-		    my $pmisstr = join(',', @pmissingtmp);
-		    if(exists $psemis{$pmisstr}){$psemis{$pmisstr} += $pmin;}
-		    else{$psemis{$pmisstr} = $pmin;}
-		}
-		if(scalar @pmissingdel > 0){
-		    my $pdelstr = join(',',@pmissingdel);
-		    if(exists $psedels{$pdelstr}){$psedels{$pdelstr} += $pmin;}
-		    else{$psedels{$pdelstr} = $pmin;}
-		}
+		my $pmissstr = join(',',@pmissingspecs);
+		my $p2cstr = "$leftanchor\_$rightanchor\t$pmissstr\t$pmin\n";
+		print $outp2c $p2cstr;
 	    }
 	}
 	
