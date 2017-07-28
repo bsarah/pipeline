@@ -38,20 +38,20 @@ my $skipc;
 
 GetOptions(
     #all modes
-    'tool|t' => \$toolpath,
-    'out|o' => \$outpath,
-    'python' => \$pythonpath,
-    'perl' => \$perlpath,
+    'tool|t=s' => \$toolpath,
+    'out|o=s' => \$outpath,
+    'python=s' => \$pythonpath,
+    'perl=s' => \$perlpath,
 ##options for toast and bake
-    'prep|i' => \$pathtocam, #path to output of smore prep (genes folder)
+    'prep|i=s' => \$pathtocam, #path to output of smore prep (genes folder)
     'seqsim|s' => \$seqsim,
     'strucsim|p' => \$strucsim,
-    'newick' => \$newicktree,
-    'join' => \$joinmode,
+    'newick=s' => \$newicktree,
+    'join=s' => \$joinmode,
     'nograph' => \$skipg,
     'noaln' => \$skipa,
     'noclus' => \$skipc,
-    'species' => \$specieslist
+    'species=s' => \$specieslist
     ) or die "error in smoretoast";
 
 

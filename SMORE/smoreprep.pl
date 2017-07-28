@@ -30,21 +30,21 @@ my $pseudoscore;
 
 GetOptions(
 #all modes
-    'tool|t' => \$toolpath,
-    'out|o' => \$outpath,
-    'python' => \$pythonpath,
-    'perl' => \$perlpath,
+    'tool|t=s' => \$toolpath,
+    'out|o=s' => \$outpath,
+    'python=s' => \$pythonpath,
+    'perl=s' => \$perlpath,
 ##options for prep
-    'ref|r' => \$refspecies,
-    'genomes|g' => \$genomes,
-    'maf|m' => \$mafs,
-    'cm|c' => \$cmfile,
-    'genes' => \$genelist,
-    'loci' => \$locilist,
+    'ref|r=s' => \$refspecies,
+    'genomes|g=s' => \$genomes,
+    'maf|m=s' => \$mafs,
+    'cm|c=s' => \$cmfile,
+    'genes=s' => \$genelist,
+    'loci=s' => \$locilist,
     'filter' => \$perc,
     'incE' => \$evalin,
     'incT' => \$bitvalin,
-    'infernal' => \$infernalpath,
+    'infernal=s' => \$infernalpath,
     'pseudo' => \$pseudoscore,
     ) or die "Some parameter for smore prep doesn't fit! \n";
 
@@ -71,12 +71,12 @@ if ($refspecies){$refspeciesstr="--ref $refspecies ";
 		     my $n2 = "$refspecies\.fasta";
 		     my $n3 = "$refspecies\.fa\.gz";
 		     my $n4 = "$refspecies\.fasta\.gz";
-		     if(-f "$genomes\/$n1"){}
-		     elsif(-f "$genomes\/$n2"){}
-		     elsif(-f "$genomes\/$n3"){}
-		     elsif(-f "$genomes\/$n4"){}
-		     elsif(-f "$genomes\/$refspecies"){}
-		     else{print "No genome file for reference species in $genomes (option -f)\n"; exit 1;}
+		     if(-l "$genomes\/$n1"){}
+		     elsif(-l "$genomes\/$n2"){}
+		     elsif(-l "$genomes\/$n3"){}
+		     elsif(-l "$genomes\/$n4"){}
+		     elsif(-l "$genomes\/$refspecies"){}
+		     else{print "No genome file for reference species $refspecies in $genomes (option -l)\n"; exit 1;}
 		 }
 }
 else{print "No references species given! (option --ref)\n"; exit 1;}

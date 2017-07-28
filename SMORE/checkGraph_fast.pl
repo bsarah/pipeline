@@ -33,6 +33,11 @@ my $ncglist = shift;
 open(my $outcg, ">>",$cglist);
 open(my $outn,">>",$ncglist);
 
+
+my $graphheader = "graph \t nodenum \t edgenum \t corr. edgenum \t density\n";
+print $outcg $graphheader;
+print $outn $graphheader;
+
 my $seqlim = $secsim;
 my $struclim = $strucsim;
 

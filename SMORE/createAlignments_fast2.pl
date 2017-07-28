@@ -52,6 +52,8 @@ my $pseudel2check = shift;
 my $toprint = shift;
 my $alnfile = shift;
 
+if(! $toprint){$toprint = 0;}
+
 my $aout;
 if($toprint == 1){
     open($aout,">>",$alnfile);

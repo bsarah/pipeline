@@ -63,29 +63,29 @@ GetOptions(
     'contact' => \$cont,
     'helpout' => \$helpout,
 #all modes
-    'tool|t' => \$toolpath,
-    'out|o' => \$outpath,
-    'python' => \$pythonpath,
-    'perl' => \$perlpath,
+    'tool|t=s' => \$toolpath,
+    'out|o=s' => \$outpath,
+    'python=s' => \$pythonpath,
+    'perl=s' => \$perlpath,
 ##options for prep
-    'ref|r' => \$refspecies,
-    'genomes|g' => \$genomes,
-    'maf|m' => \$mafs,
-    'cm|c' => \$cmfile,
-    'genes' => \$genelist,
-    'loci' => \$locilist,
+    'ref|r=s' => \$refspecies,
+    'genomes|g=s' => \$genomes,
+    'maf|m=s' => \$mafs,
+    'cm|c=s' => \$cmfile,
+    'genes=s' => \$genelist,
+    'loci=s' => \$locilist,
     'filter' => \$perc,
     'incE' => \$evalin,
     'incT' => \$bitvalin,
-    'infernal' => \$infernalpath,
+    'infernal=s' => \$infernalpath,
     'pseudo' => \$pseudoscore,
 ##options for toast and bake
-    'prep|i' => \$pathtocam, #path to output of smore prep (genes folder)
+    'prep|i=s' => \$pathtocam, #path to output of smore prep (genes folder)
     'seqsim|s' => \$seqsim,
     'strucsim|p' => \$strucsim,
-    'newick' => \$newicktree,
-    'id' => \$ids,
-    'join' => \$joinmode,
+    'newick=s' => \$newicktree,
+    'id=s' => \$ids,
+    'join=s' => \$joinmode,
 ##options for bake
     'nograph' => \$skipg,
     'noaln' => \$skipa,
@@ -179,6 +179,7 @@ elsif($mode eq "toast" || $mode eq "Toast")
     print "toast mode started..\n";
     my $toasterrors = "$outpath\/errors_smoretoast\.txt";
     #we always need: tool, perl, python, maf, ref, (filter)
+
     if(!$toolpath){print "Please specify the path to where the tool's files are located.\n";  exit 0;}
     if(!$outpath){print "Please specify a location for the output files.\n";  exit 0;}
     #create outfolder if it doesnt exist
@@ -186,11 +187,15 @@ elsif($mode eq "toast" || $mode eq "Toast")
     else{
 	my $cmd42= "mkdir $outpath";
 	my @out42 = readpipe("$cmd42");
+	print join("",@out42);
+	print "\n";
     }
+
     if(!$perlpath){print "Please specify the path to perl.\n";  exit 0;}
     if(!$pythonpath){print "Please specify the path to python.\n";  exit 0;}
     
     if(!$pathtocam){print "Please specify the location of the output folders by smore prep.\n";  exit 0;}
+    print "Parameters set: --tool $toolpath --out $outpath --perl $perlpath --python $pythonpath --prep $pathtocam \n";
     my $specieslist = "$outpath\/specieslist";
     my $gencmd = "ls  $pathtocam\/genes \> $specieslist";
     my @outgncmd = readpipe("$gencmd");
@@ -354,7 +359,7 @@ model as input for infernal.
 
 
 Usage: 
-smore prep --tool _ --out _ --python _ --perl _  --ref _ --maf _ --filter _ 
+smore prep --tool _ --out _ --python _ --perl _  --ref _ --maf _ (--filter _) 
 
 with one of the following possibilities (a-c):
 
@@ -431,8 +436,7 @@ Toast is the fast version, omitting all output files that are not
 necessarily needed. For more output, use bake.
 
 Usage: 
-smore toast --tool _ --out _ --python _ --perl _  --ref _ --maf _ --filter _ 
-            --prep _ --newick _
+smore toast --tool _ --out _ --python _ --perl _  --prep _ --newick _
             (--seqsim _) (--strucsim _) (--id _) (--join _) 
 
     #options needed in all subcommands

@@ -35,17 +35,17 @@ my $specieslist;
 
 GetOptions(
     #all modes
-    'tool|t' => \$toolpath,
-    'out|o' => \$outpath,
-    'python' => \$pythonpath,
-    'perl' => \$perlpath,
+    'tool|t=s' => \$toolpath,
+    'out|o=s' => \$outpath,
+    'python=s' => \$pythonpath,
+    'perl=s' => \$perlpath,
 ##options for toast and bake
-    'prep|i' => \$pathtocam, #path to output of smore prep (genes folder)
+    'prep|i=s' => \$pathtocam, #path to output of smore prep (genes folder)
     'seqsim|s' => \$seqsim,
     'strucsim|p' => \$strucsim,
-    'newick' => \$newicktree,
-    'join' => \$joinmode,
-    'species' => \$specieslist
+    'newick=s' => \$newicktree,
+    'join=s' => \$joinmode,
+    'species=s' => \$specieslist
     ) or die "error in smoretoast";
 
 
@@ -641,8 +641,11 @@ foreach my $k (keys %blocks){
     readpipe("$cgcmd");
     readpipe("$ncgcmd");
 
+
     my $checkcmd = "perl $toolpath\/checkGraph_fast.pl $tmpfile1  $k $seqsim $strucsim $mode $cglist $ncglist";
 
+
+    
     ##argument list is getting too long...create a temporary file
 
     my @newoutgraph = readpipe("$checkcmd");
@@ -854,6 +857,9 @@ while(<PC>){
    
 }
 
+my $rmtmpcmd = "rm $pseudel2check $del2check $tmpfilelist";
+readpipe("$rmtmpcmd");
+
 #if(exists($tmphash{$species})){
 #if(exists($tmphash{$species}{$anchor})){
 ##add to deletions
@@ -995,8 +1001,8 @@ readpipe("$countcmd");
 
 
 
-print "Program run ended.\n";
-print "Number of clusters: $cluscount\n";
+#print "Program run ended.\n";
+#print "Number of clusters: $cluscount\n";
     my $avnum = $sumelems/$cluscount;
 print "Average number of elements per cluster: $avnum\n";
 

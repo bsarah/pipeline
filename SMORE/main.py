@@ -66,7 +66,8 @@ argList = [args.multiSeq, args.outPutDir, args.pathToRepo]
 args.multiSeq, args.outPutDir, args.pathToRepo = endSlash(argList)
 
 #Call helper functions
-args.pathToRepo = makeFullPath(args.pathToRepo)
+#full path is now already in argument
+#args.pathToRepo = makeFullPath(args.pathToRepo)
 makeOutPutDir(args.outPutDir)
 
 #Catch exceptions 
