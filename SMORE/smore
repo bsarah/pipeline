@@ -30,15 +30,15 @@ my $outpath;
 my $pythonpath;
 my $perlpath;
 ##options for prep
-my $refspecies="";
-my $genomes="";
-my $mafs="";
-my $cmfile="";
-my $genelist="";
-my $locilist="";
-my $perc="";
-my $evalin=0.01;
-my $bitvalin="";
+my $refspecies;
+my $genomes;
+my $mafs;
+my $cmfile;
+my $genelist;
+my $locilist;
+my $perc;
+my $evalin="0.01";
+my $bitvalin;
 my $infernalpath;
 my $pseudoscore;
 ##options for toast and bake
@@ -74,15 +74,15 @@ GetOptions(
     'cm|c=s' => \$cmfile,
     'genes=s' => \$genelist,
     'loci=s' => \$locilist,
-    'filter' => \$perc,
-    'incE' => \$evalin,
-    'incT' => \$bitvalin,
+    'filter=s' => \$perc,
+    'incE=s' => \$evalin,
+    'incT=s' => \$bitvalin,
     'infernal=s' => \$infernalpath,
-    'pseudo' => \$pseudoscore,
+    'pseudo=s' => \$pseudoscore,
 ##options for toast and bake
     'prep|i=s' => \$pathtocam, #path to output of smore prep (genes folder)
-    'seqsim|s' => \$seqsim,
-    'strucsim|p' => \$strucsim,
+    'seqsim|s=s' => \$seqsim,
+    'strucsim|p=s' => \$strucsim,
     'newick=s' => \$newicktree,
     'id=s' => \$ids,
     'join=s' => \$joinmode,
@@ -150,6 +150,7 @@ if($mode eq "prep" || $mode eq "Prep")
 	if(!$evalin && $bitvalin){$inft = "--incT $bitvalin";}
 	##call prep script
 	my $prepcm = "$perlpath\/perl $toolpath\/smoreprep.pl --tool $toolpath --out $outpath --python $pythonpath --perl $perlpath --maf $mafs --ref $refspecies --cm $cmfile --genomes $genomes --infernal $infernalpath $infe $inft $filstr 2>> $preperrors";
+	print STDERR "PREP: $prepcm \n";
 	my @outprepcm = readpipe("$prepcm");
 	print (join("",@outprepcm));
 	print "\n";

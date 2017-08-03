@@ -48,7 +48,7 @@ GetOptions(
     'species=s' => \$specieslist
     ) or die "error in smoretoast";
 
-
+print STDERR "toast mode startet with parameter: --tool $toolpath --out $outpath --python $pythonpath --perl $perlpath --prep $pathtocam -s $seqsim -p $strucsim --newick $newicktree --join $joinmode --species $specieslist \n";
 
 my $mode = 1;
 

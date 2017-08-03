@@ -15,15 +15,15 @@ my $outpath;
 my $pythonpath;
 my $perlpath;
 ##options for prep
-my $refspecies="";
-my $genomes="";
-my $mafs="";
-my $cmfile="";
-my $genelist="";
-my $locilist="";
-my $perc="";
-my $evalin=0.01;
-my $bitvalin="";
+my $refspecies;
+my $genomes;
+my $mafs;
+my $cmfile;
+my $genelist;
+my $locilist;
+my $perc;
+my $evalin;
+my $bitvalin;
 my $infernalpath;
 my $pseudoscore;
 
@@ -41,15 +41,17 @@ GetOptions(
     'cm|c=s' => \$cmfile,
     'genes=s' => \$genelist,
     'loci=s' => \$locilist,
-    'filter' => \$perc,
-    'incE' => \$evalin,
-    'incT' => \$bitvalin,
+    'filter=s' => \$perc,
+    'incE=s' => \$evalin,
+    'incT=s' => \$bitvalin,
     'infernal=s' => \$infernalpath,
-    'pseudo' => \$pseudoscore,
+    'pseudo=s' => \$pseudoscore
     ) or die "Some parameter for smore prep doesn't fit! \n";
 
 ##in theory, all parameters were checked in startsmore
 ##another check is probably not wrong
+
+print STDERR "prep mode with parameter (some): --tool $toolpath --out $outpath --python $pythonpath --perl $perlpath --ref $refspecies --incE $evalin \n";
 
 ##Outpath
 my $outpathstr = "";
@@ -72,24 +74,24 @@ if ($refspecies){$refspeciesstr="--ref $refspecies ";
 		     my $n3 = "$refspecies\.fa\.gz";
 		     my $n4 = "$refspecies\.fasta\.gz";
 		     if(-l "$genomes\/$n1"){}
-		     elsif(-l "$genomes\/$n2"){}
-		     elsif(-l "$genomes\/$n3"){}
-		     elsif(-l "$genomes\/$n4"){}
-		     elsif(-l "$genomes\/$refspecies"){}
-		     else{print "No genome file for reference species $refspecies in $genomes (option -l)\n"; exit 1;}
+		     elsif(-f "$genomes\/$n2"){}
+		     elsif(-f "$genomes\/$n3"){}
+		     elsif(-f "$genomes\/$n4"){}
+		     elsif(-f "$genomes\/$refspecies"){}
+		     else{print STDERR "No genome file for reference species $refspecies in $genomes (option -f)\n"; exit 1;}
 		 }
 }
-else{print "No references species given! (option --ref)\n"; exit 1;}
+else{print STDERR "No references species given! (option --ref)\n"; exit 1;}
 
 my $pystr = "";
 my $pestr = "";
 ##Python
 if ($pythonpath){$pystr = "--python $pythonpath ";}
-else{print "No path to python3 given! (option --python)\n"; exit 1;}
+else{print STDERR "No path to python3 given! (option --python)\n"; exit 1;}
 
 ##Perl
 if ($perlpath){$pestr = "--perl $perlpath ";}
-else{print "No path to perl given! (option --perl)\n"; exit 1;}
+else{print STDERR "No path to perl given! (option --perl)\n"; exit 1;}
 
 my $mode = -1;
 
@@ -107,7 +109,7 @@ if ($genomes){
     $genomesstr = "--genomes $genomes ";
     $cmoption = "$cmoption $genomes";
     #check if folder is not empty
-    if(-e $genomes){} else{print "Genomes folder is empty! (option -g)\n"; exit 1;}
+    if(-e $genomes){} else{print STDERR "Genomes folder is empty! (option -g)\n"; exit 1;}
 }
 
 #infernal
@@ -120,6 +122,7 @@ if ($infernalpath){
 ##Maf
 my $mafstr = "";
 if ($mafs){$mafstr = "--maf $mafs ";}
+
 
 
 ##infernal parameter
@@ -136,7 +139,7 @@ if ($perc){$filterstr = "--filter $perc ";}
 
 if($cmfile){
     if($genomes && $mafs && $infernalpath){}
-    else{print "Infernal mode but some required parameters are missing! See --help for more information! \n"; exit 1;}
+    else{print STDERR "Infernal mode but some required parameters are missing! See --help for more information! \n"; exit 1;}
 }
 
 
@@ -148,7 +151,7 @@ if($genelist){$cmoption = "-og $genelist"; $cmoptstr = "--genes $genelist "; $mo
 
 if($genelist){
     if($mafs){}
-    else{print "Genelist mode but --maf parameter is missing! See --help for more information! \n"; exit 1;}
+    else{print STDERR "Genelist mode but --maf parameter is missing! See --help for more information! \n"; exit 1;}
 }
 
 #my $err0 = "$outpath\/errorsPart1.txt";
@@ -156,12 +159,13 @@ if($genelist){
  #   print "analysis of maf files started (this might take a while)..\n";
  #   print STDERR "call to cam's prog:\n $pythonpath\/python3 $scripts_cam\/main.py $cmoption $inclopt $mafs $outpath $dirname $refspecies $pythonpath 2>>$err0 | \n";
 my $prepcmd = "";
-if($perc eq ""){
+if(! $perc){
     $prepcmd = "$pythonpath\/python3 $toolpath\/main.py $cmoption $inclopt $mafs $outpath $toolpath $refspecies $pythonpath";
 }
 else{
     $prepcmd = "$pythonpath\/python3 $toolpath\/main.py $perc $cmoption $inclopt $mafs $outpath $toolpath $refspecies $pythonpath";
 }
+print STDERR "PREP: $prepcmd \n";
 my @out = readpipe("$prepcmd");
 print STDERR (join("",@out));
 
