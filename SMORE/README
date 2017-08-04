@@ -100,6 +100,8 @@ Subcommands and their options:
 			current_name_in_tree name_to_translate_to
 	--join		the way of how original clusters should be joined,
 			either none, strict or relaxed; default: relaxed
+        --nomiss        do not check for missing anchors. in case of large
+                        clusters, using --nomiss will speed up the runtime
 			
 
     #options for bake
@@ -124,6 +126,8 @@ Subcommands and their options:
 	--nograph       do not print graphs
 	--noclus        do not print clusters
 	--noaln         do not print duplication alignments
+        --nomiss        do not check for missing anchors. in case of large
+                        clusters, using --nomiss will speed up the runtime
 
 
 

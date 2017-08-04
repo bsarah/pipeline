@@ -48,6 +48,7 @@ my $strucsim =0.8;
 my $newicktree;
 my $ids;
 my $joinmode = "relaxed";
+my $skipm;
 ##options for bake
 my $skipg;
 my $skipa;
@@ -86,6 +87,7 @@ GetOptions(
     'newick=s' => \$newicktree,
     'id=s' => \$ids,
     'join=s' => \$joinmode,
+    'nomiss' => \$skipm,
 ##options for bake
     'nograph' => \$skipg,
     'noaln' => \$skipa,
@@ -125,25 +127,25 @@ if($mode eq "prep" || $mode eq "Prep")
 {
     print "prep mode started..\n";
     #we always need: tool, perl, python, maf, ref, (filter)
-    if(!$toolpath){print "Please specify the path to where the tool's files are located.\n"; exit 0;}
-    if(!$outpath){print "Please specify a location for the output files.\n"; exit 0;}
+    if(!$toolpath){print STDERR "Please specify the path to where the tool's files are located.\n"; exit 0;}
+    if(!$outpath){print STDERR "Please specify a location for the output files.\n"; exit 0;}
     #create outfolder if it doesnt exist
     if(-e $outpath){}
     else{
 	my $cmd42= "mkdir $outpath";
 	my @out42 = readpipe("$cmd42");
     }
-    if(!$mafs){print "Please specify a location for the maf/MultiZ files.\n";  exit 0;}
-    if(!$refspecies){print "Please specify the name of the reference species as given in the maf/MultiZ files.\n";  exit 0;}
-    if(!$perlpath){print "Please specify the path to perl.\n";  exit 0;}
-    if(!$pythonpath){print "Please specify the path to python.\n";  exit 0;}
+    if(!$mafs){print STDERR "Please specify a location for the maf/MultiZ files.\n";  exit 0;}
+    if(!$refspecies){print STDERR "Please specify the name of the reference species as given in the maf/MultiZ files.\n";  exit 0;}
+    if(!$perlpath){print STDERR "Please specify the path to perl.\n";  exit 0;}
+    if(!$pythonpath){print STDERR "Please specify the path to python.\n";  exit 0;}
     my $filstr = "";
     if($perc){$filstr = "--filter $perc";}
     my $preperrors = "$outpath\/errors_smoreprep\.txt";
     if($cmfile){
 	#we need genomes, infernalpath, (pseudoscore), (infernaloptions)
-	if(!$genomes){print "Please specify the path to where the genomes are located.\n";  exit 0;}
-	if(!$infernalpath){print "Please specify the path to infernal.\n";  exit 0;}
+	if(!$genomes){print STDERR "Please specify the path to where the genomes are located.\n";  exit 0;}
+	if(!$infernalpath){print STDERR "Please specify the path to infernal.\n";  exit 0;}
 	my $infe = "";
 	my $inft = "";
 	if($evalin){$infe = "--incE $evalin";}
@@ -156,7 +158,7 @@ if($mode eq "prep" || $mode eq "Prep")
 	print "\n";
 	if($pseudoscore){
 	    #an extra script to change the output format of genes file
-	    print "Reminder, there is another script missing!\n";
+	    print STDERR "Reminder, there is another script missing!\n";
 	}
     }
     elsif($genelist){
@@ -167,12 +169,12 @@ if($mode eq "prep" || $mode eq "Prep")
 	print "\n";
     }
     elsif($locilist){
-	if(!$genomes){print "Please specify the path to where the genomes are located.\n";  exit 0;}
+	if(!$genomes){print STDERR "Please specify the path to where the genomes are located.\n";  exit 0;}
 	#we need: genomes
 	#an extra script to create the input file
-	print "locilist option needs a further script. afterwards, it is the same as the genelist option!\n";
+	print STDERR "locilist option needs a further script. afterwards, it is the same as the genelist option!\n";
     }
-    else{print "Please one of the following options when in prep mode: cm, genes or loci.\n";  exit 0;}
+    else{print STDERR "Please one of the following options when in prep mode: cm, genes or loci.\n";  exit 0;}
     print "prep mode done!\n";
 }
 elsif($mode eq "toast" || $mode eq "Toast")
@@ -181,8 +183,8 @@ elsif($mode eq "toast" || $mode eq "Toast")
     my $toasterrors = "$outpath\/errors_smoretoast\.txt";
     #we always need: tool, perl, python, maf, ref, (filter)
 
-    if(!$toolpath){print "Please specify the path to where the tool's files are located.\n";  exit 0;}
-    if(!$outpath){print "Please specify a location for the output files.\n";  exit 0;}
+    if(!$toolpath){print STDERR "Please specify the path to where the tool's files are located.\n";  exit 0;}
+    if(!$outpath){print STDERR "Please specify a location for the output files.\n";  exit 0;}
     #create outfolder if it doesnt exist
     if(-e $outpath){}
     else{
@@ -192,15 +194,15 @@ elsif($mode eq "toast" || $mode eq "Toast")
 	print "\n";
     }
 
-    if(!$perlpath){print "Please specify the path to perl.\n";  exit 0;}
-    if(!$pythonpath){print "Please specify the path to python.\n";  exit 0;}
+    if(!$perlpath){print STDERR "Please specify the path to perl.\n";  exit 0;}
+    if(!$pythonpath){print STDERR "Please specify the path to python.\n";  exit 0;}
     
-    if(!$pathtocam){print "Please specify the location of the output folders by smore prep.\n";  exit 0;}
+    if(!$pathtocam){print STDERR "Please specify the location of the output folders by smore prep.\n";  exit 0;}
     print "Parameters set: --tool $toolpath --out $outpath --perl $perlpath --python $pythonpath --prep $pathtocam \n";
     my $specieslist = "$outpath\/specieslist";
     my $gencmd = "ls  $pathtocam\/genes \> $specieslist";
     my @outgncmd = readpipe("$gencmd");
-    if(!$newicktree){print "Please specify a newick tree representing the species' evolutionary relationship. \n";  exit 0;}
+    if(!$newicktree){print STDERR "Please specify a newick tree representing the species' evolutionary relationship. \n";  exit 0;}
     my $formtree = "$outpath\/tree_formatted.newick";
     if($ids){
 	#only convert tree identifier if id file is given
@@ -214,11 +216,13 @@ elsif($mode eq "toast" || $mode eq "Toast")
     my $noneout = "none";
     if(index($checkout1[0],$noneout) != -1){print "Tree file consistent with genomes!\n";}
     else{
-        print "The following speciesidentifier do appear in the genomes but do not appear in the tree: $checkout1[0]\n"; exit 0;
+        print STDERR "The following speciesidentifier do appear in the genomes but do not appear in the tree: $checkout1[0]\n"; exit 0;
     }
     if($joinmode eq "relaxed" || $joinmode eq "strict" || $joinmode eq "none"){}
-    else{print "Specify a valid option for the mode of joining. \n";  exit 0;}
-    my $toastcmd = "$perlpath\/perl $toolpath\/smoretoast.pl --tool $toolpath --out $outpath --python $pythonpath --perl $perlpath --prep $pathtocam --seqsim $seqsim --strucsim $strucsim --newick $formtree --join $joinmode --species $specieslist 2>> $toasterrors";
+    else{print STDERR "Specify a valid option for the mode of joining. \n";  exit 0;}
+    my $checkformissing = "";
+    if($skipm){$checkformissing = "--nomiss";}
+    my $toastcmd = "$perlpath\/perl $toolpath\/smoretoast.pl --tool $toolpath --out $outpath --python $pythonpath --perl $perlpath --prep $pathtocam --seqsim $seqsim --strucsim $strucsim --newick $formtree --join $joinmode --species $specieslist $checkformissing 2>> $toasterrors";
     my @outtoast = readpipe("$toastcmd");
     print (join("",@outtoast));
     print "\n";
@@ -438,7 +442,7 @@ necessarily needed. For more output, use bake.
 
 Usage: 
 smore toast --tool _ --out _ --python _ --perl _  --prep _ --newick _
-            (--seqsim _) (--strucsim _) (--id _) (--join _) 
+            (--seqsim _) (--strucsim _) (--id _) (--join _) (--nomiss) 
 
     #options needed in all subcommands
         --tool|-t       path to where the smore tool is located. In this way,
@@ -462,6 +466,8 @@ smore toast --tool _ --out _ --python _ --perl _  --prep _ --newick _
 			current_name_in_tree name_to_translate_to
 	--join		the way of how original clusters should be joined,
 			either none, strict or relaxed; default: relaxed
+        --nomiss        do not check for missing anchors. in case of large
+                        clusters, using --nomiss will speed up the runtime
 							   
 ";
 }
@@ -479,7 +485,7 @@ Usage:
 smore bake --tool _ --out _ --python _ --perl _  --ref _ --maf _ --filter _ 
             --prep _ --newick _
             (--seqsim _) (--strucsim _) (--id _) (--join _) 
-            (--noclus) (--nograph) (--noaln)
+            (--noclus) (--nograph) (--noaln) (--nomiss)
 
     #options needed in all subcommands
         --tool|-t       path to where the smore tool is located. In this way,
@@ -508,6 +514,8 @@ smore bake --tool _ --out _ --python _ --perl _  --ref _ --maf _ --filter _
 			current_name_in_tree name_to_translate_to
 	--join		the way of how original clusters should be joined,
 			either none, strict or relaxed; default: relaxed
+        --nomiss        do not check for missing anchors. in case of large
+                        clusters, using --nomiss will speed up the runtime
 	--nograph       do not print graphs
 	--noclus        do not print clusters
 	--noaln         do not print duplication alignments

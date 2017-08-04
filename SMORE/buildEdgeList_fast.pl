@@ -155,3 +155,5 @@ for(my $i=0;$i<scalar @Elements;$i++){
 	}	
 }
 close $outf;
+my $endnodes = scalar @nodes;
+print $endnodes;

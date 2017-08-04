@@ -31,7 +31,7 @@ my $strucsim=0.8;
 my $newicktree;
 my $joinmode="relaxed";
 my $specieslist;
-
+my $nocheck;
 
 GetOptions(
     #all modes
@@ -41,14 +41,19 @@ GetOptions(
     'perl=s' => \$perlpath,
 ##options for toast and bake
     'prep|i=s' => \$pathtocam, #path to output of smore prep (genes folder)
-    'seqsim|s' => \$seqsim,
-    'strucsim|p' => \$strucsim,
+    'seqsim|s=s' => \$seqsim,
+    'strucsim|p=s' => \$strucsim,
     'newick=s' => \$newicktree,
     'join=s' => \$joinmode,
-    'species=s' => \$specieslist
+    'species=s' => \$specieslist,
+    'nomiss' => \$nocheck
     ) or die "error in smoretoast";
 
-print STDERR "toast mode startet with parameter: --tool $toolpath --out $outpath --python $pythonpath --perl $perlpath --prep $pathtocam -s $seqsim -p $strucsim --newick $newicktree --join $joinmode --species $specieslist \n";
+
+my $optstr = "";
+if($nocheck){$optstr = "$optstr --nomiss";}
+
+print STDERR "toast mode startet with parameter: --tool $toolpath --out $outpath --python $pythonpath --perl $perlpath --prep $pathtocam -s $seqsim -p $strucsim --newick $newicktree --join $joinmode --species $specieslist $optstr\n";
 
 my $mode = 1;
 
@@ -630,9 +635,17 @@ foreach my $k (keys %blocks){
     #build graph, tmpfile1 will contain the output
     my $graphcmd = "perl $toolpath\/buildEdgeList_fast.pl $tmpfile0 $mode $toolpath $strucsim $seqsim $tmpfile1";
 #    print "GRAPHCMD: $graphcmd \n";
-    readpipe("$graphcmd");
-    
+    my @graphout = readpipe("$graphcmd");
+    my $nodenum = $graphout[0];
+    ##print the graph if it is getting too big for debug
+    my $precluscount = $cluscount -1;
+    if($nodenum >= 500){
+	my $debugout = "$outpath\/graph$precluscount\_$nodenum\.edli";
+	my $mvdbcmd = "mv $tmpfile0 $debugout";
+	readpipe("$mvdbcmd");
+    }
 
+    
     #check graph for cograph or not and edit slightly
     my $cglist = "$outpath\/list\_cographs\.txt";
     my $ncglist = "$outpath\/list\_noncographs\.txt";
@@ -651,6 +664,10 @@ foreach my $k (keys %blocks){
     my @newoutgraph = readpipe("$checkcmd");
     my $newgraphstr = $newoutgraph[0];
     
+
+
+    
+
     #sort the non edges graphs
     
     my $alncmd = "perl $toolpath\/createAlignments_fast2.pl $tmpfile1 $outpath $toolpath $seqsim $strucsim $mode 0 $newicktree $leftanchor $rightanchor $del2check $pseudel2check";
@@ -765,28 +782,29 @@ foreach my $s (keys %pseusinglesNT){
 }
 
 
+
 ###do the check for missing anchors here!
 my %tmphash;
-
-##first, open and read the tmp files
-open TF,"<$tmpfilelist" or die "can't open $tmpfilelist\n";
-while(<TF>){
-   chomp;
-   my $curtmpfile = $_;
-   my @Tmpname = split '_', $curtmpfile;
-   my $tmpspec = $Tmpname[0];
-#   open CTF,"<$curtmpfile" or die "can't open $curtmpfile\n";
-   my $CTF = IO::Uncompress::Gunzip->new( "$pathtocam\/temp/$curtmpfile" )
-       or die "IO::Uncompress::Gunzip failed: $GunzipError\n";
-   while(<$CTF>){
-      my $tmpline = $_;
-      my @TL = split '\t', $tmpline;
-      my @PTL = split '_', $TL[1];
-      my $tan = $PTL[1];
-      $tmphash{$tmpspec}{$tan} = 1;
-   }
+if(! $nocheck){    
+    ##first, open and read the tmp files
+    open TF,"<$tmpfilelist" or die "can't open $tmpfilelist\n";
+    while(<TF>){
+	chomp;
+	my $curtmpfile = $_;
+	my @Tmpname = split '_', $curtmpfile;
+	my $tmpspec = $Tmpname[0];
+	#   open CTF,"<$curtmpfile" or die "can't open $curtmpfile\n";
+	my $CTF = IO::Uncompress::Gunzip->new( "$pathtocam\/temp/$curtmpfile" )
+	    or die "IO::Uncompress::Gunzip failed: $GunzipError\n";
+	while(<$CTF>){
+	    my $tmpline = $_;
+	    my @TL = split '\t', $tmpline;
+	    my @PTL = split '_', $TL[1];
+	    my $tan = $PTL[1];
+	    $tmphash{$tmpspec}{$tan} = 1;
+	}
+    }
 }
-
 ##now, we check if anchors exist with
 open DC,"<$del2check" or die "can't open $del2check \n";
 while(<DC>){
@@ -798,7 +816,7 @@ while(<DC>){
     my @missings = ();
     my @dells = ();
     for(my $l=0;$l< scalar @lspec;$l++){
-	if(exists($tmphash{$lspec[$l]})){
+	if(! $nocheck && exists($tmphash{$lspec[$l]})){
 	    if(exists($tmphash{$lspec[$l]}{$anchors[0]})
 	       && exists($tmphash{$lspec[$l]}{$anchors[1]})){
 		push @dells, $lspec[$l];
@@ -833,7 +851,7 @@ while(<PC>){
     my @missings = ();
     my @dells = ();
     for(my $l=0;$l< scalar @lspec;$l++){
-	if(exists($tmphash{$lspec[$l]})){
+	if(! $nocheck && exists($tmphash{$lspec[$l]})){
 	    if(exists($tmphash{$lspec[$l]}{$anchors[0]})
 	       && exists($tmphash{$lspec[$l]}{$anchors[1]})){
 		push @dells, $lspec[$l];

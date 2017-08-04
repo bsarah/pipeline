@@ -276,7 +276,7 @@ my $maxCCnumaln = "";
 		else{
 		    $node2letter{$n1} = $letters[$letcount];
 		    $node2letter{$n2} = $letters[$letcount];
-		    if($letcount > $letnum){$letcount=0;}
+		    if($letcount >= $letnum){$letcount=0;}
 		    else{$letcount++;}
 		}
 	    }
@@ -285,12 +285,12 @@ my $maxCCnumaln = "";
 	    ##similarity does not fit, nodes get different letters.
 	    if (exists $node2letter{$n1}) {}
 	    else{$node2letter{$n1} = $letters[$letcount];
-		 if($letcount > $letnum){$letcount=0;}
+		 if($letcount >= $letnum){$letcount=0;}
 		 else{$letcount++;}
 	    }
 	    if (exists $node2letter{$n2}) {}
 	    else{$node2letter{$n2} = $letters[$letcount];
-		 if($letcount > $letnum){$letcount=0;}
+		 if($letcount >= $letnum){$letcount=0;}
 		 else{$letcount++;}
 	    }
 	}
@@ -443,7 +443,7 @@ else{
 	    my @rseq = split '', $lseq1;
 	    my @oth = split '',$out1[2];
 	    my @oseq = split '', $lseq2;
-	    if(scalar @ref != scalar @oth){print STDERR "alignment does not fit!\n";}
+	    if(scalar @ref != scalar @oth){print STDERR "alignment does not fit! lseq1, lseq2: $lseq1, $lseq2 \n"; next;}
 	    my $rcount =0;
 	    my $ocount=0;
 	    for(my $r=0;$r<scalar @ref;$r++){

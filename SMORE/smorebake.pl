@@ -34,7 +34,7 @@ my $specieslist;
 my $skipg;
 my $skipa;
 my $skipc;
-
+my $nocheck;
 
 GetOptions(
     #all modes
@@ -44,16 +44,25 @@ GetOptions(
     'perl=s' => \$perlpath,
 ##options for toast and bake
     'prep|i=s' => \$pathtocam, #path to output of smore prep (genes folder)
-    'seqsim|s' => \$seqsim,
-    'strucsim|p' => \$strucsim,
+    'seqsim|s=s' => \$seqsim,
+    'strucsim|p=s' => \$strucsim,
     'newick=s' => \$newicktree,
     'join=s' => \$joinmode,
     'nograph' => \$skipg,
     'noaln' => \$skipa,
     'noclus' => \$skipc,
+    'nomiss' => \$nocheck,
     'species=s' => \$specieslist
     ) or die "error in smoretoast";
 
+
+
+my $optstr = "";
+if($skipa){$optstr = "$optstr --noaln";}
+if($skipc){$optstr = "$optstr --noclus";}
+if($skipg){$optstr = "$optstr --nograph";}
+if($nocheck){$optstr = "$optstr --nomiss";}
+print STDERR "bake mode startet with parameter: --tool $toolpath --out $outpath --python $pythonpath --perl $perlpath --prep $pathtocam -s $seqsim -p $strucsim --newick $newicktree --join $joinmode --species $specieslist $optstr\n";
 
 
 my $mode = 1;
@@ -683,7 +692,7 @@ foreach my $k (keys %blocks){
     #sort the non edges graphs
     my $toprint = 0;
     if(! $skipa){$toprint = 1;}
-    my $filetoprint = "$alnfolder\/alignment$k\.aln"
+    my $filetoprint = "$alnfolder\/alignment$k\.aln";
     my $alncmd = "perl $toolpath\/createAlignments_fast2.pl $tmpfile1 $outpath $toolpath $seqsim $strucsim $mode 0 $newicktree $leftanchor $rightanchor $del2check $pseudel2check $toprint $filetoprint";
     #before countEvents, check for deletions with the files created here
     #create alignment
@@ -800,26 +809,26 @@ foreach my $s (keys %pseusinglesNT){
 
 ###do the check for missing anchors here!
 my %tmphash;
-
-##first, open and read the tmp files
-open TF,"<$tmpfilelist" or die "can't open $tmpfilelist\n";
-while(<TF>){
-   chomp;
-   my $curtmpfile = $_;
-   my @Tmpname = split '_', $curtmpfile;
-   my $tmpspec = $Tmpname[0];
-#   open CTF,"<$curtmpfile" or die "can't open $curtmpfile\n";
-   my $CTF = IO::Uncompress::Gunzip->new( "$pathtocam\/temp/$curtmpfile" )
-       or die "IO::Uncompress::Gunzip failed: $GunzipError\n";
-   while(<$CTF>){
-      my $tmpline = $_;
-      my @TL = split '\t', $tmpline;
-      my @PTL = split '_', $TL[1];
-      my $tan = $PTL[1];
-      $tmphash{$tmpspec}{$tan} = 1;
-   }
+if(! $nocheck){    
+    ##first, open and read the tmp files
+    open TF,"<$tmpfilelist" or die "can't open $tmpfilelist\n";
+    while(<TF>){
+	chomp;
+	my $curtmpfile = $_;
+	my @Tmpname = split '_', $curtmpfile;
+	my $tmpspec = $Tmpname[0];
+	#   open CTF,"<$curtmpfile" or die "can't open $curtmpfile\n";
+	my $CTF = IO::Uncompress::Gunzip->new( "$pathtocam\/temp/$curtmpfile" )
+	    or die "IO::Uncompress::Gunzip failed: $GunzipError\n";
+	while(<$CTF>){
+	    my $tmpline = $_;
+	    my @TL = split '\t', $tmpline;
+	    my @PTL = split '_', $TL[1];
+	    my $tan = $PTL[1];
+	    $tmphash{$tmpspec}{$tan} = 1;
+	}
+    }
 }
-
 ##now, we check if anchors exist with
 open DC,"<$del2check" or die "can't open $del2check \n";
 while(<DC>){
@@ -831,7 +840,7 @@ while(<DC>){
     my @missings = ();
     my @dells = ();
     for(my $l=0;$l< scalar @lspec;$l++){
-	if(exists($tmphash{$lspec[$l]})){
+	if(! $nocheck && exists($tmphash{$lspec[$l]})){
 	    if(exists($tmphash{$lspec[$l]}{$anchors[0]})
 	       && exists($tmphash{$lspec[$l]}{$anchors[1]})){
 		push @dells, $lspec[$l];
@@ -866,7 +875,7 @@ while(<PC>){
     my @missings = ();
     my @dells = ();
     for(my $l=0;$l< scalar @lspec;$l++){
-	if(exists($tmphash{$lspec[$l]})){
+	if(! $nocheck && exists($tmphash{$lspec[$l]})){
 	    if(exists($tmphash{$lspec[$l]}{$anchors[0]})
 	       && exists($tmphash{$lspec[$l]}{$anchors[1]})){
 		push @dells, $lspec[$l];
