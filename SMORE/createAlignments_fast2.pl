@@ -77,11 +77,11 @@ my %psemis = ();
 my %pseins = ();
 
 
-my @remoldings = ();
+my %remoldings = ();
 # The pairs of elements (separated with ':') are defined 
 #as orthologs based on the similarity score but have distinct types according to the input";
 
-my @inremoldings = ();
+my %inremoldings = ();
 #The pairs of elements are defined as orthologs as they have the same types but the similarity is below the orthology threshold.
 #this is only reported IFF there are more than just one type!
 
@@ -125,7 +125,7 @@ my $maxCCnumaln = "";
     $alncount++;
     ##one letter codes needed
     ##are all the chars ok? ##no - or ~ as they appear in the alignment
-    my @letters = ('A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','0','1','2','3','4','5','6','7','8','9','!','@','#','$','%','^','&','*','(',')','=','+','>','<','?','[',']','|'); 
+    my @letters = ('A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','0','1','2','3','4','5','6','7','8','9');#,'!','#','@','$','%','^','&','*','(',')','=','+','>','<','?','[',']','|'); 
     my $letcount = 0;
     my $letnum = scalar @letters;
    
@@ -208,29 +208,32 @@ my $maxCCnumaln = "";
 		my $startvec2 = $G2[(scalar @G2) - 5] + (0.0001 * $G2[(scalar @G2) - 6]);
 		if(exists $start2node{$startvec2}){}
 		else{$start2node{$startvec2} = $n2;}
-#	    }
-	    ##check types:
-	    my $t1 = $G[(scalar @G) - 2];
-	    my $t2 = $G2[(scalar @G2) - 2];
-	    if($numdifftypes > 0){
-		if($numdifftypes > 1 && $seqsim >= $seqlim && $strsim >= $strlim && $t1 ne $t2 && $isp1 == 0 && $isp2 == 0){
+	    #	    }
+#	    print STDERR "number of different types (cA): $numdifftypes \n";
+	    if($numdifftypes > 1){
+		##check types:
+		my $t1 = $G[(scalar @G) - 2];
+		my $t2 = $G2[(scalar @G2) - 2];
+
+		if($seqsim >= $seqlim && $strsim >= $strlim && $t1 ne $t2){ 
+#&& $isp1 == 0 && $isp2 == 0){
 		    ##sequence similarity is high but types seem to be different
 		    my $remstr = "";
+#		    print STDERR "remolding case, n1 n2: $n1, $n2 \n";
 		    if($n1 le $n2){$remstr = "$n1\:$n2";}
 		    else{$remstr = "$n2\:$n1";}
-		    if(grep( /^$remstr$/, @remoldings)){}
-		    elsif($remstr ne ""){push @remoldings, $remstr;}
-		    else{}
+		    if(exists($remoldings{$remstr})){$remoldings{$remstr}++;}
+		    else{$remoldings{$remstr}=1;}
 		}
-		if($numdifftypes > 1 && $t1 eq $t2 && $seqsim < $seqlim && $isp1 == 0 && $isp2 == 0){
+		if($t1 eq $t2 && $seqsim < $seqlim){
+# && $isp1 == 0 && $isp2 == 0){
 		    ##equal types but low sequence similarity
 		    my $inremstr = "";
+#		    print STDERR "inremolding case, n1 n2: $n1, $n2 \n";
 		    if($n1 le $n2){$inremstr = "$n1\:$n2";}
 		    else{$inremstr = "$n2\:$n1";}
-		    if(grep( /^$inremstr$/, @inremoldings)){}
-		    elsif($inremstr ne ""){push @inremoldings, $inremstr;}
-		    else{}
-		    
+		    if(exists($inremoldings{$inremstr})){$inremoldings{$inremstr}++;}
+		    else{$inremoldings{$inremstr}=1;}
 		}
 	    }
 	}
@@ -453,9 +456,10 @@ else{
 		else{$ocount++;}
 	    }
 	    #compare sequence lengths with seq len in alignment
-	    if($lseq1len != $rcount){print STDERR "lengths don't fit! sequence:$lseq1len, alnseq: $rcount\n";}
-	    if($lseq2len != $ocount){print STDERR "lengths don't fit! sequence:$lseq2len, alnseq: $ocount\n";}
-
+	    if($lseq1len != $rcount){print STDERR "lengths don't fit! sequence: $lseq1, alnseq: $out1[1]\n";}
+	    if($lseq2len != $ocount){print STDERR "lengths don't fit! sequence: $lseq2, alnseq: $out1[2]\n";}
+	    if($lseq1len != $rcount || $lseq2len != $ocount){next;}
+	    
 #	    print "spec2pseudo k,k2: $spec2pseudo{$k},$spec2pseudo{$k2} \n";
 	    my @sp12pseudo = split '', $spec2pseudo{$k};  ##this is the sequence for species k for pseudogene or not
 	    my @sp22pseudo = split '', $spec2pseudo{$k2};	    
@@ -901,20 +905,24 @@ $outstring = "$outstring\n";
 
 
 
-if(scalar @remoldings > 0){
+
+my @krems = keys %remoldings;
+if(scalar @krems > 0){
 #    print $outsr "The following pairs of elements (separated with ':') are defined 
 #as orthologs based on the similarity score but have distinct types according to the input:\n";
-    for(my $i=0;$i< scalar @remoldings; $i++){
-	$outstring = "$outstring$remoldings[$i]\=";
+    for(my $i=0;$i< scalar @krems; $i++){
+	$outstring = "$outstring$krems[$i]\=";
     }
 }
 $outstring="$outstring\n";
 
-if(scalar @inremoldings > 0){
+my @kinrems = keys %inremoldings;
+
+if(scalar @kinrems > 0){
 #    print $outsi "The following pairs of elements (separated with ':') are defined 
 #as orthologs as they have the same types but they sequence similarity is below the given threshold:\n";
-    for(my $i=0;$i< scalar @inremoldings; $i++){
-	$outstring = "$outstring$inremoldings[$i]\=";
+    for(my $i=0;$i< scalar @kinrems; $i++){
+	$outstring = "$outstring$kinrems[$i]\=";
     }
 }
 

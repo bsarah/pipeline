@@ -222,7 +222,7 @@ elsif($mode eq "toast" || $mode eq "Toast")
     else{print STDERR "Specify a valid option for the mode of joining. \n";  exit 0;}
     my $checkformissing = "";
     if($skipm){$checkformissing = "--nomiss";}
-    my $toastcmd = "$perlpath\/perl $toolpath\/smoretoast.pl --tool $toolpath --out $outpath --python $pythonpath --perl $perlpath --prep $pathtocam --seqsim $seqsim --strucsim $strucsim --newick $formtree --join $joinmode --species $specieslist $checkformissing 2>> $toasterrors";
+    my $toastcmd = "$perlpath\/perl $toolpath\/smoretoast.pl --tool $toolpath --out $outpath --python $pythonpath --perl $perlpath --prep $pathtocam --seqsim $seqsim --strucsim $strucsim --newick $formtree --join $joinmode --species $specieslist $checkformissing --err $toasterrors 2>> $toasterrors";
     my @outtoast = readpipe("$toastcmd");
     print (join("",@outtoast));
     print "\n";

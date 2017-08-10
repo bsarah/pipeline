@@ -32,6 +32,7 @@ my $newicktree;
 my $joinmode="relaxed";
 my $specieslist;
 my $nocheck;
+my $errors;
 
 GetOptions(
     #all modes
@@ -46,7 +47,8 @@ GetOptions(
     'newick=s' => \$newicktree,
     'join=s' => \$joinmode,
     'species=s' => \$specieslist,
-    'nomiss' => \$nocheck
+    'nomiss' => \$nocheck,
+    'err=s' => \$errors
     ) or die "error in smoretoast";
 
 
@@ -75,9 +77,6 @@ my %pseudonones = ();
 my %nonesNT = ();
 my %pseudononesNT = ();
 
-my $eventlist = "$outpath\/allClusters_joined\.txt";
-my $listcmd = "touch $eventlist";
-readpipe("$listcmd");
 my $remlist = "$outpath\/remoldings\.txt";
 my $inremlist = "$outpath\/inremoldings\.txt";
 my $remcmd = "touch $remlist";
@@ -91,6 +90,8 @@ open(my $outsi,">>", $inremlist);
 
 my %allTypes = (); #hash with spec_type -> num
 my %pallTypes = (); #hash with spec_type -> num
+
+my %types = (); #this is only the types, not the species
 
 my %block2spec = ();
 my @allspec = ();
@@ -141,6 +142,8 @@ while(<FA>){
 	if($mode==1)
 	{
 	    my $tkey = "$spec\_$F[-3]";
+	    if(exists($types{$F[-3]})){$types{$F[-3]}++;}
+	    else{$types{$F[-3]}=1;}
 	    if($F[-2] eq "t" || $F[-2] eq "T" ||$F[-2] eq "TRUE" || $F[-2] eq "True" || $F[-2] eq "true" || $F[-2] eq "1"){
 		$pseuspecies{$spec}++;
 		##add to allTypes hash
@@ -292,8 +295,11 @@ while(<FA>){
 
 
 my $orignum = scalar (keys %blocks);
+print STDERR "ORIG CLUSNUM: $orignum \n";
 print "ORIG CLUSNUM: $orignum \n";
 
+my $typenum = scalar (keys %types);
+print STDERR "number of different types: $typenum \n";
 
 my $numspec = scalar @allspec;
 print "Number of species: $numspec \n";
@@ -310,145 +316,147 @@ my $joined = 0;
 
 if($joinmode eq "relaxed" || $joinmode eq "strict"){
     $joined = 1;
-foreach my $lb (sort { $a <=> $b} keys %leftblocks){
-    my $curb = $leftblocks{$lb};
-    my $rb = getRightBlock($curb); #this is the right block, -1 if there are several rightblocks, then it doesnt work 
-    if($curstart == -5){
-	$curblock = $curb;
-	$curstart = $lb;
-	$curend = $rb;
-	next;
-    }
-    #as keys are sorted, if the blocks are adjacent and joinable, lb should be the same as curend
-    #adjacent doesn't have to be directly adjacent but all elements in both clusters should be adjacent in all species
-    my $isgood = 1;
-    #change checkBlocks based on the created blocktable
-    #grep for blocknum in each sorted file (for each species) and check if the blocknums are adjacent in all of them
-    if($rb>0 && $curend > 0){
-	if($joinmode eq "relaxed"){
-	    my $futureblocks = "$curblock\;$curb";
-	    @spezi = getSpecList($futureblocks);
+    foreach my $lb (sort { $a <=> $b} keys %leftblocks){
+	my $curb = $leftblocks{$lb};
+	my $rb = getRightBlock($curb); #this is the right block, -1 if there are several rightblocks, then it doesnt work 
+	if($curstart == -5){
+	    $curblock = $curb;
+	    $curstart = $lb;
+	    $curend = $rb;
+	    next;
 	}
-	for(my $sp =0;$sp < scalar @spezi;$sp++){#in this line, we could only take species that are really involved in the current clusters
-	    my $curlb = "$spezi[$sp]\_$lb";
-	    if(exists($neighbors{$curlb})){
-		my $spn = $neighbors{$curlb};
-		my @Q = split '_', $spn;
-		if($Q[1] eq $rb || $Q[1] == $rb){
-		    $isgood=1;
+	#as keys are sorted, if the blocks are adjacent and joinable, lb should be the same as curend
+	#adjacent doesn't have to be directly adjacent but all elements in both clusters should be adjacent in all species
+	my $isgood = 1;
+	#change checkBlocks based on the created blocktable
+	#grep for blocknum in each sorted file (for each species) and check if the blocknums are adjacent in all of them
+	if($rb>0 && $curend > 0){
+	    if($joinmode eq "relaxed"){
+		my $futureblocks = "$curblock\;$curb";
+		@spezi = getSpecList($futureblocks);
+	    }
+	    for(my $sp =0;$sp < scalar @spezi;$sp++){#in this line, we could only take species that are really involved in the current clusters
+		my $curlb = "$spezi[$sp]\_$lb";
+		if(exists($neighbors{$curlb})){
+		    my $spn = $neighbors{$curlb};
+		    my @Q = split '_', $spn;
+		    if($Q[1] eq $rb || $Q[1] == $rb){
+			$isgood=1;
+		    }
+		    else{$isgood=0;last;}
 		}
 		else{$isgood=0;last;}
+	    }	
+	}
+	if($rb>0 && $isgood == 1 && $curend > 0){
+	    #should be joinable
+	    #	print STDERR "join a,b,c: $curstart, $curend, $rb\n";
+	    $curend = $rb;
+	    $curblock = "$curblock\;$curb";
+	    #	print STDERR "$curblock\n";
+	}
+	else{
+	    #add the old block to joined clusters
+	    if($curend == -1){
+		#check if the elements are still neighbors
+		#if not separately add each element in curblock
+		my %rb2clus = ();
+		my @F = split ';', $curblock;
+		for(my $f=0;$f<scalar @F;$f++){
+		    my @G = split '\t', $F[$f];
+		    my $rkey;
+		    if($G[5] < $G[6]){$rkey = $G[6]}
+		    else{$rkey = $G[5]}
+		    if(exists($rb2clus{$rkey})){$rb2clus{$rkey}="$rb2clus{$rkey}\;$F[$f]";}		  
+		    else{$rb2clus{$rkey} = $F[$f];}
+		}
+		#	    print STDERR "curend=-1, lb: $curstart, rb: $rb\n";
+		#	    print STDERR Dumper(\%rb2clus);
+		#	    print STDERR "\n";
+		#curstart = $lb
+		my $curclus = "";
+		my $curend = -1;
+		my $neighborsum = 0; #if this is equals scalar @rks, then we don't have neighbors
+		my @rks = sort { $a <=> $b} keys %rb2clus;
+		for(my $r=0;$r<scalar @rks;$r++){
+		    my $noneighbor = 0;
+		    for(my $k=$r+1;$k<scalar @rks;$k++){
+			for(my $sp =0;$sp < scalar @spezi;$sp++){
+			    my $curlb = "$spezi[$sp]\_$rks[$r]";
+			    if(exists($neighbors{$curlb})){
+				my $spn = $neighbors{$curlb};
+				my @Q = split '_', $spn;
+				if($Q[1] eq $rb || $Q[1] == $rb){
+				}
+				else{
+				    $neighborsum += 1;
+				    last;
+				}
+			    }
+			    else{
+				$neighborsum += 1;
+				last;
+			    }
+			}	
+		    }
+		}
+		
+		if($neighborsum < scalar @rks){ ##check again, but we first check the prints
+		    #		print STDERR "join overlapping cluster\n";
+		    my $nkey = "$lb\_$rks[-1]";
+		    $joinedblocks{$nkey} = join(';',values %rb2clus);
+		}
+		else{
+		    for(my $e=0;$e<scalar @rks;$e++){
+			my $newkey = "$lb\_$rks[$e]";
+			if(exists($joinedblocks{$newkey})){
+			    $joinedblocks{$newkey}="$joinedblocks{$newkey}\;$rb2clus{$rks[$e]}";
+			}
+			else{$joinedblocks{$newkey}="$rb2clus{$rks[$e]}";}
+		    }
+		}
 	    }
-	    else{$isgood=0;last;}
-	}	
+	    else{
+		#all elements in curblock are in one cluster
+		my $newkey2 = "$curstart\_$curend";
+		
+		if(exists($joinedblocks{$newkey2})){
+		    $joinedblocks{$newkey2}="$joinedblocks{$newkey2}\;$curblock";
+		}
+		else{$joinedblocks{$newkey2}=$curblock;}
+	    }
+	    #set the new block
+	    $curblock = $curb;
+	    $curstart = $lb;
+	    $curend = $rb;	
+	}
+	
     }
-    if($rb>0 && $isgood == 1 && $curend > 0){
-	#should be joinable
-#	print STDERR "join a,b,c: $curstart, $curend, $rb\n";
-	$curend = $rb;
-	$curblock = "$curblock\;$curb";
-#	print STDERR "$curblock\n";
-    }
-    else{
-	#add the old block to joined clusters
+    #add the last cluster to hash
+    if($curstart > 0){
 	if($curend == -1){
-	    #check if the elements are still neighbors
-	    #if not separately add each element in curblock
-	    my %rb2clus = ();
 	    my @F = split ';', $curblock;
 	    for(my $f=0;$f<scalar @F;$f++){
 		my @G = split '\t', $F[$f];
 		my $rkey;
 		if($G[5] < $G[6]){$rkey = $G[6]}
 		else{$rkey = $G[5]}
-		if(exists($rb2clus{$rkey})){$rb2clus{$rkey}="$rb2clus{$rkey}\;$F[$f]";}		  
-		else{$rb2clus{$rkey} = $F[$f];}
-	    }
-#	    print STDERR "curend=-1, lb: $curstart, rb: $rb\n";
-#	    print STDERR Dumper(\%rb2clus);
-#	    print STDERR "\n";
-	    #curstart = $lb
-	    my $curclus = "";
-	    my $curend = -1;
-	    my $neighborsum = 0; #if this is equals scalar @rks, then we don't have neighbors
-	    my @rks = sort { $a <=> $b} keys %rb2clus;
-	    for(my $r=0;$r<scalar @rks;$r++){
-		my $noneighbor = 0;
-		for(my $k=$r+1;$k<scalar @rks;$k++){
-		    for(my $sp =0;$sp < scalar @spezi;$sp++){
-			my $curlb = "$spezi[$sp]\_$rks[$r]";
-			if(exists($neighbors{$curlb})){
-			    my $spn = $neighbors{$curlb};
-			    my @Q = split '_', $spn;
-			    if($Q[1] eq $rb || $Q[1] == $rb){
-			    }
-			    else{
-				$neighborsum += 1;
-				last;
-			    }
-			}
-			else{
-			    $neighborsum += 1;
-			    last;
-			}
-		    }	
-		}
-	    }
-	    
-	    if($neighborsum < scalar @rks){ ##check again, but we first check the prints
-#		print STDERR "join overlapping cluster\n";
-		my $nkey = "$lb\_$rks[-1]";
-		$joinedblocks{$nkey} = join(';',values %rb2clus);
-	    }
-	    else{
-		for(my $e=0;$e<scalar @rks;$e++){
-		    my $newkey = "$lb\_$rks[$e]";
-		    if(exists($joinedblocks{$newkey})){
-			$joinedblocks{$newkey}="$joinedblocks{$newkey}\;$rb2clus{$rks[$e]}";
-		    }
-		    else{$joinedblocks{$newkey}="$rb2clus{$rks[$e]}";}
-		}
+		my $nowkey = "$curstart\_$rkey";
+		if(exists($joinedblocks{$nowkey})){$joinedblocks{$nowkey}="$joinedblocks{$nowkey}\;$F[$f]";}		  
+		else{$joinedblocks{$nowkey} = $F[$f];}
 	    }
 	}
 	else{
-	    #all elements in curblock are in one cluster
 	    my $newkey2 = "$curstart\_$curend";
-	    
 	    if(exists($joinedblocks{$newkey2})){
 		$joinedblocks{$newkey2}="$joinedblocks{$newkey2}\;$curblock";
 	    }
 	    else{$joinedblocks{$newkey2}=$curblock;}
 	}
-	#set the new block
-	$curblock = $curb;
-	$curstart = $lb;
-	$curend = $rb;	
-    }
-    
-}
-#add the last cluster to hash
-if($curstart > 0){
-    if($curend == -1){
-	my @F = split ';', $curblock;
-	for(my $f=0;$f<scalar @F;$f++){
-	    my @G = split '\t', $F[$f];
-	    my $rkey;
-	    if($G[5] < $G[6]){$rkey = $G[6]}
-	    else{$rkey = $G[5]}
-	    my $nowkey = "$curstart\_$rkey";
-	    if(exists($joinedblocks{$nowkey})){$joinedblocks{$nowkey}="$joinedblocks{$nowkey}\;$F[$f]";}		  
-	    else{$joinedblocks{$nowkey} = $F[$f];}
-	}
-    }
-    else{
-	my $newkey2 = "$curstart\_$curend";
-	if(exists($joinedblocks{$newkey2})){
-	    $joinedblocks{$newkey2}="$joinedblocks{$newkey2}\;$curblock";
-	}
-	else{$joinedblocks{$newkey2}=$curblock;}
     }
 }
-}
+
+##after joining or no joining
 
 my $sumelemorig = 0;
 my $jclusfile = "$outpath\/allClusters_original\.txt";
@@ -470,11 +478,12 @@ close $outjc;
 my $origavsize = $sumelemorig/$orignum;
 print "Average size of original clusters: $origavsize \n";
 
-    if($joined == 1){    
-	my $newclusnum = scalar (keys %joinedblocks);
-	print "JOINED CLUSNUM: $newclusnum \n";
-	%blocks = %joinedblocks;
-    }
+if($joined == 1){    
+    my $newclusnum = scalar (keys %joinedblocks);
+    print "JOINED CLUSNUM: $newclusnum \n";
+    print STDERR "JOINED CLUSNUM: $newclusnum \n";
+    %blocks = %joinedblocks;
+}
 
 ##print None hash to file
 my $noneout = "$outpath\/nones.txt";
@@ -552,6 +561,10 @@ my %pseusinglesNT = (); #include types
 ##sort keys of blocks and join adjacent ones?
 #my $clusnum = scalar (keys %blocks);
 #print "NUM CLUSTER: $clusnum \n";
+
+my $eventlist = "$outpath\/allClusters_joined\.txt";
+my $listcmd = "touch $eventlist";
+readpipe("$listcmd");
 open(my $outg, ">>",$eventlist);
 my $cluscount = 0;
 my $sumelems = 0;
@@ -562,11 +575,13 @@ foreach my $k (keys %blocks){
     my @B = split ';', $blocks{$k};
     my $clussize = scalar @B;
     #write to allClustersList
-    print $outg ">clus$cluscount $clussize\n";
-    $cluscount++;
-    $sumelems+=$clussize;
-    for(my $cb = 0;$cb < $clussize;$cb++){
-	print $outg "$B[$cb]\n";
+    if($joinmode eq "relaxed" || $joinmode eq "strict"){
+	print $outg ">clus$cluscount $clussize\n";
+	$cluscount++;
+	$sumelems+=$clussize;
+	for(my $cb = 0;$cb < $clussize;$cb++){
+	    print $outg "$B[$cb]\n";
+	}
     }
     if(scalar @B == 1){
 	##sort single element cluster into hash
@@ -633,7 +648,7 @@ foreach my $k (keys %blocks){
     close $outtmp0;
     my $tmpfile1 = "$outpath\/tmpdata1";
     #build graph, tmpfile1 will contain the output
-    my $graphcmd = "perl $toolpath\/buildEdgeList_fast.pl $tmpfile0 $mode $toolpath $strucsim $seqsim $tmpfile1";
+    my $graphcmd = "perl $toolpath\/buildEdgeList_fast.pl $tmpfile0 $mode $toolpath $strucsim $seqsim $tmpfile1 2>> $errors";
 #    print "GRAPHCMD: $graphcmd \n";
     my @graphout = readpipe("$graphcmd");
     my $nodenum = $graphout[0];
@@ -641,7 +656,7 @@ foreach my $k (keys %blocks){
     my $precluscount = $cluscount -1;
     if($nodenum >= 500){
 	my $debugout = "$outpath\/graph$precluscount\_$nodenum\.edli";
-	my $mvdbcmd = "mv $tmpfile0 $debugout";
+	my $mvdbcmd = "cp $tmpfile0 $debugout";
 	readpipe("$mvdbcmd");
     }
 
@@ -655,7 +670,15 @@ foreach my $k (keys %blocks){
     readpipe("$ncgcmd");
 
 
-    my $checkcmd = "perl $toolpath\/checkGraph_fast.pl $tmpfile1  $k $seqsim $strucsim $mode $cglist $ncglist";
+    open(my $outcg,">>",$cglist);
+    open(my $outn,">>",$ncglist);
+    my $graphheader = "graph \t nodenum \t edgenum \t corr. edgenum \t density\n";
+    print $outcg $graphheader;
+    print $outn $graphheader;
+    close $outcg;
+    close $outn;
+
+    my $checkcmd = "perl $toolpath\/checkGraph_fast.pl $tmpfile1  $k $seqsim $strucsim $mode $cglist $ncglist 2>> $errors";
 
 
     
@@ -670,7 +693,7 @@ foreach my $k (keys %blocks){
 
     #sort the non edges graphs
     
-    my $alncmd = "perl $toolpath\/createAlignments_fast2.pl $tmpfile1 $outpath $toolpath $seqsim $strucsim $mode 0 $newicktree $leftanchor $rightanchor $del2check $pseudel2check";
+    my $alncmd = "perl $toolpath\/createAlignments_fast2.pl $tmpfile1 $outpath $toolpath $seqsim $strucsim $mode $typenum $newicktree $leftanchor $rightanchor $del2check $pseudel2check 2>> $errors";
     #before countEvents, check for deletions with the files created here
     #create alignment
     #my $alncmd = "perl $scriptpath\/createAlignments_fast.pl $tmpfile1 $outpath $pathtonw $seqsim $strucsim $mode 0 $nwtree $inpath\/temp $leftanchor $rightanchor";
@@ -743,10 +766,12 @@ foreach my $k (keys %blocks){
     }
     my @currems = split '=', $outaln[9];
     for(my $sr =0;$sr<scalar @currems;$sr++){
+	if($currems[$sr] eq "" || $currems[$sr] eq " " || $currems[$sr] eq "\n"){next;}
 	print $outsr "$currems[$sr]\n";
     }
     my @curinrems = split '=', $outaln[10];
     for(my $ri =0;$ri<scalar @curinrems;$ri++){
+	if($curinrems[$ri] eq "" || $curinrems[$ri] eq " " || $curinrems[$ri] eq "\n"){next;}
 	print $outsi "$curinrems[$ri]\n";
     }
     
