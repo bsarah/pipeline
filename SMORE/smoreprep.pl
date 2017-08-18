@@ -26,7 +26,7 @@ my $evalin;
 my $bitvalin;
 my $infernalpath;
 my $pseudoscore;
-
+my $errors;
 
 GetOptions(
 #all modes
@@ -45,13 +45,12 @@ GetOptions(
     'incE=s' => \$evalin,
     'incT=s' => \$bitvalin,
     'infernal=s' => \$infernalpath,
-    'pseudo=s' => \$pseudoscore
+    'pseudo=s' => \$pseudoscore,
+    'err=s' => \$errors
     ) or die "Some parameter for smore prep doesn't fit! \n";
 
 ##in theory, all parameters were checked in startsmore
 ##another check is probably not wrong
-
-print STDERR "prep mode with parameter (some): --tool $toolpath --out $outpath --python $pythonpath --perl $perlpath --ref $refspecies --incE $evalin \n";
 
 ##Outpath
 my $outpathstr = "";
@@ -154,19 +153,15 @@ if($genelist){
     else{print STDERR "Genelist mode but --maf parameter is missing! See --help for more information! \n"; exit 1;}
 }
 
-#my $err0 = "$outpath\/errorsPart1.txt";
 
- #   print "analysis of maf files started (this might take a while)..\n";
- #   print STDERR "call to cam's prog:\n $pythonpath\/python3 $scripts_cam\/main.py $cmoption $inclopt $mafs $outpath $dirname $refspecies $pythonpath 2>>$err0 | \n";
 my $prepcmd = "";
 if(! $perc){
-    $prepcmd = "$pythonpath\/python3 $toolpath\/main.py $cmoption $inclopt $mafs $outpath $toolpath $refspecies $pythonpath";
+    $prepcmd = "$pythonpath\/python3 $toolpath\/main.py $cmoption $inclopt $mafs $outpath $toolpath $refspecies $pythonpath 2>> $errors";
 }
 else{
-    $prepcmd = "$pythonpath\/python3 $toolpath\/main.py $perc $cmoption $inclopt $mafs $outpath $toolpath $refspecies $pythonpath";
+    $prepcmd = "$pythonpath\/python3 $toolpath\/main.py $perc $cmoption $inclopt $mafs $outpath $toolpath $refspecies $pythonpath 2>> $errors";
 }
-print STDERR "PREP: $prepcmd \n";
+
 my @out = readpipe("$prepcmd");
 print STDERR (join("",@out));
 
-#    print "Done!\n";

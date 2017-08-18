@@ -10,12 +10,9 @@ The smore subcommands are:
 
     toast   This program will take the prep-output and calculate the numbers
             for evolutionary events at the given phylogenetic tree.
-
-    bake    This program will take the prep-output, calculate the phylogenetic
-            tree with numbers of events and give additional output.
-            This version is very verbose and might take significantly longer.
-	    It is recommended to first run toast. Then, bake can be used to get
-	    a deeper insight into the data or more details.
+            For a more detailed output, use --verbose or any combination
+            of --clus, --graph, --aln. Please note that the verbose version
+	    might take significantly longer.
 
 
 
@@ -102,32 +99,13 @@ Subcommands and their options:
 			either none, strict or relaxed; default: relaxed
         --nomiss        do not check for missing anchors. in case of large
                         clusters, using --nomiss will speed up the runtime
+        --verbose       print all intermediary files, thus clusters, graphs
+                        and duplication alignments
+        --clus          print only intermediary cluster files
+        --graph         print only intermediary graph files
+        --aln           print only intermediary duplication alignment files
 			
 
-    #options for bake
-       #this program is very verbose and will print all inbetween results
-        such as clusters, graphs and duplication alignments
-	In case of many species or many genetic elements, this might take
-	a while...
-	
-    	--prep|-i       folder with output from smore prep run
-	--seqsim|-s     percentage of sequence similarity to be considered
-	                homolog sequences, default 0.8
-	--strucsim|-p   percentage of structure similarity to be considered
-	                homolog sequences, default 0.8
-	--newick        tree in newick format containing the species included
-	                in the output of smore prep.
-	--id 		in case the species' identifier do not fit, this file
-	 		can be used to automatically translate the names
-			Format (tab separated):
-			current_name_in_tree name_to_translate_to
-	--join		the way of how original clusters should be joined,
-			either none, strict or relaxed; default: relaxed
-	--nograph       do not print graphs
-	--noclus        do not print clusters
-	--noaln         do not print duplication alignments
-        --nomiss        do not check for missing anchors. in case of large
-                        clusters, using --nomiss will speed up the runtime
 
 
 
@@ -192,7 +170,10 @@ there is listings about types and pseudogenes.
 
 
 
-Bake output: the bake subcommand will output three additional files for
-each cluster, named with left and right anchor numbers to match all three
-files. They will be in three different folders: cluster, graph and duplication_alignment. The files contain the specific structures of the cluster in
-each step of the analysis and can be used to gain a deeper insight.
+Verbose output: the verbose version of toast will output three additional
+files (if --verbose) or any combination of them (if --clus, --graph, --aln)
+for each cluster, named with left and right anchor numbers to match all three
+files. They will be in three different folders: cluster, graph and
+duplication_alignment. The files contain the specific structures of the
+cluster in each step of the analysis and can be used to gain a deeper
+insight into the data.

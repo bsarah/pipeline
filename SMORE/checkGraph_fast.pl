@@ -1,19 +1,8 @@
 #!/usr/bin/perl -w
-##fast verscion of checkGraph, only for one single graph in order to include the cograph editing
 
-## perl checkGraph.pl curgraphfile almostname secsim strucsim mode cographlist noncographlist noEdgeGraohs_list edgegraphs
-
-##outpath is for files that will be visualized with R (no weights), extra folder
-## .edli is the edgelist file with node1 node2 seqval strucval (separated with space)
-## secsim is the lower bound for the similarity of sequences, e.g. 90%, thus 0.9
-## strucsim is the lower bound for the similarity of secondary structure, e.g. 90%, thus 0.9
-## if secsim or strucsim (just one of both) is -1, do not take for this value!
-## edge is only drawn if both values are higher than lower bound
-##output R compatible edge list to draw graph (thus node1 node2 AND node2 node1)
-##cographlist and noncographlist are tables with information to fill in for each graph, depending if it is a cograph or not. tables look like:
-## clustername(filename) nodenum edgenum speclist duplications
-
-#handle pseudogenes as if they were usual homologos genes and include them in the graphs to test
+# input is a graph that will be checked if it has cograph structure or not
+# in case it is a cograph, we return the same graph
+# in case it is not a cograph, we remove or add the smallest number of edges such that it becomes a cograph and return the edited graph
 
 use Data::Dumper;
 use strict;
@@ -37,12 +26,12 @@ my $seqlim = $secsim;
 my $struclim = $strucsim;
 
 
-    my @edges = ();
-    my @nodes= ();
-    my @uniqedges =();
-    my %species = ();
-    my %seqscore = ();
-    my %strscore= ();
+my @edges = ();
+my @nodes= ();
+my @uniqedges =();
+my %species = ();
+my %seqscore = ();
+my %strscore= ();
 
 
 open FA,"<$file" or die "can't open $file\n";
@@ -160,11 +149,8 @@ while(<FA>){
 #no check necessary, if this is just one species or the similarities are so low
 #that there are no edges
     if($numn == 0 || $nume == 0 || $numsp <= 1){
-#	print STDERR "graph without nodes or edges \n";
-	#	print STDERR "graph file: $file \n";
 	print $outcg "$almostname\t$numn\t$nume\t$numenew\t$density\n";
 	#graph didn't change, keep the same file
-#	print $file;
 	exit 0;
     }
 
@@ -172,7 +158,6 @@ while(<FA>){
     my $cliquenum=(($numn-1)*$numn)/2;
     if($nume == $cliquenum || $numenew == $cliquenum){
 	print $outcg "$almostname\t$numn\t$nume\t$numenew\t$density\n";
-#	print $file;
 	exit 0;
     }
     
@@ -210,7 +195,6 @@ while(<FA>){
     if(scalar @noCGCC == 0){
 	#is a cograph
 	print $outcg "$almostname\t$numn\t$nume\t$numenew\t$density\n";
-#	print $file;
 	exit 0;
     }
     else{
@@ -288,157 +272,6 @@ while(<FA>){
 }
 
 
-
-=for
-
-    #print "nodenum: $numn, edgenum: $nume\n";
-    #my $edtmp = join(",",@uniqedges);
-    #print "edges: $edtmp \n";
-#    if($density == 0 || $density == 2){
-#	print $outcg "$almostname\t$numn\t$nume\t$density\n";
-#	$numcg++;
-	#$numcliques++;
-#	$sumnodescg = $sumnodescg + $numn;
-#	$sumedgescg = $sumedgescg + $nume;
-#	$sumdenscg = $sumdenscg + $density;
-#	if($numn > $maxncg){$maxncg = $numn;}
-#	if($numn < $minncg){$minncg = $numn;}
-#	if($nume > $maxecg){$maxecg = $nume;}
-#	if($nume < $minecg){$minecg = $nume;}
-#    }
-#    else{
-
-	my $cg = IsCograph(join(' ',@nodes),@uniqedges);
-	if($cg ==1){
-	    print $outcg "$almostname\t$numn\t$nume\t$numenew\t$density\n";
-	    $numcg++;
-	    $sumnodescg = $sumnodescg + $numn;
-	    $sumedgescg = $sumedgescg + $numenew;
-	    $sumdenscg = $sumdenscg + $density;
-	    if($numn > $maxncg){$maxncg = $numn;}
-	    if($numn < $minncg){$minncg = $numn;}
-	    if($numenew > $maxecg){$maxecg = $numenew;}
-	    if($numenew < $minecg){$minecg = $numenew;}
-	}
-	else{
-
-	    $numng++;
-	    $sumnodesng = $sumnodesng + $numn;
-	    $sumedgesng = $sumedgesng + $numenew;
-	    $sumdensng = $sumdensng + $density;
-	    if($numn > $maxnng){$maxnng = $numn;}
-	    if($numn < $minnng){$minnng = $numn;}
-	    if($numenew > $maxeng){$maxeng = $numenew;}
-	    if($numenew < $mineng){$mineng = $numenew;}
-	    my $ediff = $numn*($numn-1)/2 - $numenew;
-	    print $outn "$almostname\t$numn\t$nume\t$numenew\t$density\t$ediff\n";
-	    #implement a cograph editing with weighted edges
-	    #thus hand over the file name
-	    #read the file
-	    #build graph and its connected components
-	    #check for each connected component
-	    #delete edge with smallest score (or random?)
-	    #check again for connected components and if cograph
-	    #iterate until cograph
-	    #write the new graph and replace the old file
-	    my $strkeys = join('=',keys %strscore);
-	    my $strvals = join('=',values %strscore);
-	    my $seqkeys = join('=',keys %seqscore);
-	    my $seqvals = join('=',values %seqscore);
-	    my (@newnodes,@newedges) = cographEditing(join('=',@nodes),join('=',@uniqedges),$strkeys,$strvals,$seqkeys,$seqvals);
-	    my $newnodesstr = join(';',@newnodes);
-	    my $newedgesstr = join(';',@newedges);
-	    print STDERR "changed graph: nodes $newnodesstr\n edges:$newedgesstr\n";
-	    #delete the old file and write this into a new one,
-	    #thus write a complete graph with score 0 for nonedges and 1 for edges
-	    my $newcurfile = "$curfile\_old";
-	    my $mvcmd = "mv $curfile $newcurfile";
-	    #print STDERR "mvcommand: $mvcmd\n";
-	    readpipe("$mvcmd");
-	    push @changedGraphs, $curfile;
-	    open(my $outc, ">>",$curfile);
-	    for(my $i=0;$i<(scalar @newnodes)-1; $i++){
-		for(my $j=$i+1;$j<scalar @newnodes;$j++){
-		    my $ed0;
-		    my $ed1;
-		    if($newnodes[$i] lt $newnodes[$j]){
-			$ed0 = "$newnodes[$i] $newnodes[$j]";
-			$ed1 = "$newnodes[$j] $newnodes[$i]";
-		    }
-		    else{
-			$ed0 = "$newnodes[$j] $newnodes[$i]";
-			$ed1 = "$newnodes[$i] $newnodes[$j]";
-		    }
-		    my $found = 0;
-		    for(my $k=0;$k<scalar @newedges;$k++){
-			if($newedges[$k] eq $ed0){
-			    print $outc "$ed0 1 1\n";
-			    print $outc "$ed1 1 1\n";
-			    $found = 1;
-			    last;
-			}
-		    }
-		    
-		    if($found == 0){
-			print $outc "$ed0 0 0\n";
-			print $outc "$ed1 0 0\n";
-		    }
-		}
-	    }
-	    
-	}
-    #    }
-
-}    
-
-
-
-my $avnumncg = 0;
-my $avnumecg = 0;
-my $avdenscg = 0;
-
-if($numcg > 0){
-    $avnumncg = sprintf("%.2f",$sumnodescg/$numcg);
-    $avnumecg = sprintf("%.2f",$sumedgescg/$numcg);
-    $avdenscg = sprintf("%.2f",$sumdenscg/$numcg);
-}
-my $avnumnng = 0;
-my $avnumeng = 0;
-my $avdensng = 0;
-
-if($numng > 0){
-    $avnumnng = sprintf("%.2f",$sumnodesng/$numng);
-    $avnumeng = sprintf("%.2f",$sumedgesng/$numng);
-    $avdensng = sprintf("%.2f",$sumdensng/$numng);
-}
-
-print $outs "===============Graph analysis\===============\n";
-print $outs "Number of cographs: $numcg \n";
-print $outs "Number of cliques (included in cographs): $numcliques \n";
-print $outs "Number of noncographs: $numng \n";
-print $outs "Cographs: 
-  average node number: $avnumncg;
-  average edge number: $avnumecg; 
-  Max\/min number of nodes: $maxncg\/$minncg; 
-  Max\/min number of edges: $maxecg\/$minecg; 
-  average density:  $avdenscg \n";
-print $outs "Noncographs: 
-  average node number: $avnumnng; 
-  average edge number: $avnumeng; 
-  Max\/min number of nodes: $maxnng\/$minnng; 
-  Max\/min number of edges: $maxeng\/$mineng; 
-  average density:  $avdensng \n";
-print $outs "\n";
-if(scalar @changedGraphs > 0){
-    print $outs "The following graphs were edited in order to obtain a cograph structure:\n";
-    my $changedstr = join("\n",@changedGraphs);
-    print $outs "$changedstr\n";
-    print $outs "\n";
-}
-
-=cut
-
-
 sub getInducedSubgraph{
     my @inp = @_;
     my @N = split '=', $inp[0]; #nodes of CC
@@ -473,28 +306,17 @@ sub cographEditing{#($outpath, $struclim, $seqlim, $curfile);
     my @seqkeys = split '=', $input[4];
     my @seqvals = split '=', $input[5];
 
-#    my $outpath = $input[0];
-#    my $struclim = $input[1];
-#    my $seqlim = $input[2];
-#    my $curfile = $input[3];
-
-#    my @newgraph = ();
     my @newnodes = ();
     my @newedges = ();
 
-#    my $grapheditlist = "$outpath\/list\_edited\_graphs";
-#    open(my $oute, ">>", $grapheditlist);
-
-
     my $vertices = join(',',@nodes);
-#    print STDERR "vertices: $vertices\n";
     my $arcs = join(',',@uniqedges);
 
     my @CCs = connectedComponents($vertices,$arcs);
     
-       	#CCnodes = connectedComponents(nodes,uniqedges)
-	#separated with ','; edges n1 n2 with n1 < n2
-	#CCnodes also one string per CC, separated with ','
+    #CCnodes = connectedComponents(nodes,uniqedges)
+    #separated with ','; edges n1 n2 with n1 < n2
+    #CCnodes also one string per CC, separated with ','
     for(my $i=0;$i<scalar @CCs; $i++){
 	my @V = split ' ', $CCs[$i];
 	if(scalar @V == 1){
@@ -522,7 +344,6 @@ sub cographEditing{#($outpath, $struclim, $seqlim, $curfile);
 			$curstr{$ed}=$seqvals[$so];
 		    }
 		}
-		#print STDERR "edge: $ed\n";
 		#edges are all correct
 		push @edges, $ed;
 	    }
@@ -563,7 +384,6 @@ sub cographEditing{#($outpath, $struclim, $seqlim, $curfile);
 		    }
 		}
 	    }
-	    print STDERR "edge to delete: $ed2del\n";
 	    #delete ed2del
 	    my @nextedges = ();
 	    my @nextstrvals = ();
@@ -587,7 +407,6 @@ sub cographEditing{#($outpath, $struclim, $seqlim, $curfile);
 	    #do cographediting again
 	    my $vstr = join('=',@V);
 	    my $edstr = join('=',@nextedges);
-	    print STDERR "cograph editing: vertex:$vstr\n edges:$edstr\n";
 	    
 	    my (@tmpnodes,@tmpedges) = cographEditing(join('=',@V),join('=',@nextedges),join('=',@nextstrkeys),join('=',@nextstrvals),join('=',@nextseqkeys),join('=',@nextseqvals));
 	    #add to return arrays
@@ -604,12 +423,13 @@ sub cographEditing{#($outpath, $struclim, $seqlim, $curfile);
     return (@newnodes,@newedges);
 
 }
+
+
+
 ##check if it is a cograph
-    
 sub IsCograph{ #arguments is nodestring, uniqedgelist, input is a connected graph
     
     #first: get complement
-
     my @edges = @_;
     my @nodes = split ' ', $edges[0];
     $edges[0]="";
@@ -617,8 +437,6 @@ sub IsCograph{ #arguments is nodestring, uniqedgelist, input is a connected grap
     
     my @uniqedges=(); #unique edges from complement
     if(scalar @nodes <4){return 1;}
-
-#    print "getComplement \n";
 
     for(my $a=0;$a<scalar @nodes;$a++){
 	for(my $b=0;$b<scalar @nodes;$b++){
@@ -638,32 +456,19 @@ sub IsCograph{ #arguments is nodestring, uniqedgelist, input is a connected grap
 	}
 
     }
-#    my $ednum = scalar @uniqedges;
-#    print "complement edge num: $ednum \n";
-#    my $edtmp = join(",",@uniqedges);
-#    print "complement edges: $edtmp \n";
-
-    
     #check if we can find more than one cc
     
     my @permnodes1 = @nodes;
     my @permnodes2=();
-
-#    my $nodstr = join(',',@permnodes1);
-#    print "nodes: $nodstr\n";
     
     for(my $i=0;$i<scalar @uniqedges;$i++){
 	my @E = split ' ', $uniqedges[$i];
 	my $n1 = $E[0];
 	my $n2 = $E[1];
-#	print "n1,n2: $n1, $n2\n";
 	my $id1 =-1;
 	my $id2 =-1;
-#	print "curedge: $uniqedges[$i]\n";
 	for(my $j=0;$j<scalar @permnodes1;$j++)
 	{
-#	    print "curnode: $permnodes1[$j]\n";
-	    
 	    if(index($permnodes1[$j],$n1)!= -1) #remember current position of node
 	    {
 		$id1 = $j;
@@ -673,7 +478,6 @@ sub IsCograph{ #arguments is nodestring, uniqedgelist, input is a connected grap
 		$id2 = $j;
 	    }
 	}
-#	print "id1,id2: $id1, $id2\n";
 	for(my $k=0;$k<scalar @permnodes1;$k++)
 	{
 	    if($k != $id1 && $k != $id2)
@@ -692,9 +496,6 @@ sub IsCograph{ #arguments is nodestring, uniqedgelist, input is a connected grap
 	@permnodes1=();
 	@permnodes1 = @permnodes2;
 	@permnodes2=();
-
-#	my $permnodestr = join(',',@permnodes1);
-#	print "curr conn comp: $permnodestr\n";
     }
    
     
@@ -745,14 +546,10 @@ sub connectedComponents{
 	my @E = split ' ', $uniqedges[$i];
 	my $n1 = $E[0];
 	my $n2 = $E[1];
-#	print "n1,n2: $n1, $n2\n";
 	my $id1 =-1;
 	my $id2 =-1;
-#	print "curedge: $uniqedges[$i]\n";
 	for(my $j=0;$j<scalar @permnodes1;$j++)
 	{
-#	    print "curnode: $permnodes1[$j]\n";
-	    
 	    if(index($permnodes1[$j],$n1)!= -1) #remember current position of node
 	    {
 		$id1 = $j;
@@ -762,7 +559,6 @@ sub connectedComponents{
 		$id2 = $j;
 	    }
 	}
-	#	print "id1,id2: $id1, $id2\n";
 	for(my $k=0;$k<scalar @permnodes1;$k++)
 	{
 	    if($k != $id1 && $k != $id2)#node is not in this edge

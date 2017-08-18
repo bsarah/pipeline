@@ -1,20 +1,14 @@
 #!/usr/bin/perl -w
 
-##coutEvents.pl newickTree(with correct identifiers) singletoncount matches dupl insertions pseudo pseumis pseudels pseuins deletions missing treeout summary totelelemstr nonestr iTOLfolder
-##get temporary files containing the genetic events and the corresponding numbers
-##species,species... number
-##output: new geneticEvents file including deletions, new newick tree including numbers at nodes
-
+# countEvents will receive counts of events happening in different numbers and combinations of species
+# the events will be added at the tree by adding an event at the lca of all species and add deletions in missing species
+# deletions will be collected in a list in order to later check if they are real deletions or based on missing data
 
 use Data::Dumper;
 use strict;
 use warnings;
 use List::Util qw(any none first);
-#use Getopt::Std;
 use POSIX qw(strftime);
-#use File::Basename;
-#use File::Find;
-
 
 
 my $treefile = shift;
@@ -32,8 +26,6 @@ my $treeout = shift;
 my $summary = shift;
 my $totelemstr = shift; ##for later, printing iTOL files, includes the total number of pseudogenes
 my $nonestr = shift; ##for later, printing iTOL filesincludes the total number of pseudogenes
-#pseudogenes are now included in the categories
-#my $totpseudostr = shift; ##for later, printing iTOL files, if = then nothing, this is the string for singleton pseudogenes, the others are listed in the input file pseudo.txt
 my $iTOLout = shift; ##for later, printing iTOL files
 
 open(my $outt,">>",$treeout);
@@ -81,7 +73,6 @@ for(my $i = 0; $i < scalar @tr; $i++)
 	    $duplications{$tmp} = 0;
 	    $insertions{$tmp} = 0;
 	    $pseudos{$tmp} = 0;
-#	    print "leaves? $T[(scalar @T) -2] \n";
 	    if($T[(scalar @T) -2] ne ")"){ #leaves
 		push @L, $tmp;
 	    }
@@ -108,14 +99,6 @@ if($rootid == -1){
     print STDERR "countEvents: no root in the tree!\n"; exit;
 }
 
-#print join(" ",@T);
-#print "\n";
-#print join(" ",@N);
-#print "\n";
-#print join(" ",@L);
-#print "\n";
-
-
 ##pseudogenes
 
 open PS,"<$pseudo" or die "can't open $pseudo\n";
@@ -135,8 +118,6 @@ while(<PS>){
     else{
 	my $Tstr = join('=', @T);
 	my $Sstr = join('=',@SS);
-#	print $outs "findParentOfAll($Tstr,$Sstr)\n";
-#	my @pslcas = findParentOfAll($Tstr,$Sstr);
 	my @pslcas = findLCA($Tstr,$Sstr);
 	for(my $i=0;$i<scalar @pslcas;$i++){
 	    if(exists($pseudos{$T[$pslcas[$i]]})){$pseudos{$T[$pslcas[$i]]} += $psnum;}
@@ -170,8 +151,6 @@ while(<FA>){
 	else{$totcounts{$S[$s]}=$num;}
     }
     
-    
- #   print "species: $F[0] \n";
     my $maxbracket = 0;
     
     ##Find lowest common ancestor (lca) for the species    
@@ -184,17 +163,11 @@ while(<FA>){
 		last;
 	    }
 	}
-#	print "index of $S[$j] : $idx \n";
 	if($N[$idx] > $maxbracket){$maxbracket = $N[$idx];}
 	push @ids, $idx;
 	push @nums, $N[$idx];
     }
     
-#    print join(" ",@ids);
-#    print "\n";
-#    print join(" ",@nums);
-#    print "\n";
-
     my $Treestr = join('=', @T);
     my $speciestr = join('=',@S);
 
@@ -207,188 +180,7 @@ while(<FA>){
 	if(exists($plusnodes{$T[$leafsToAdd[$i]]})){$plusnodes{$T[$leafsToAdd[$i]]} += $num;}
 	else{$plusnodes{$T[$leafsToAdd[$i]]} = $num;}
     }
-    
-    
-
-###old way of counting#################################
-    
-#    my $lca = findLCA($Treestr,$speciestr);
-#    $plusnodes{$T[$lca]} += $num;
-    #find leafs to delete
-    ##find all nodes under curlca and check if it is leaves
-#    my @leaves = (); #indices of leaves
-#    my @lili = (); #names of leaves
-#    for(my $m = $curlca -1; $m >=0; $m--){
-#	if($N[$m] == $N[$curlca]){last;}
-#	if($N[$m] > $N[$curlca]){
-	    #check if the current element is in L and not in S
-#	    for(my $l = 0; $l<scalar @L;$l++){
-#		if($T[$m] eq $L[$l]){
-		    #it is a leaf
-#		    my $isSpec = 0;
-#		    for(my $s = 0; $s < scalar @S;$s++){
-			#check if it is in the current species, then not in leaves to delete
-#			if($T[$m] eq $S[$s]){$isSpec=1;last;}
-#		    }
-#		    if($isSpec == 1){last;}
-#		    else{push @leaves, $m; push @lili, $T[$m];}
-#		}
-#	    }
-#	}
-#    }
-
-    #lili and leaves are no the names and indices of leaves to delete
-#    if(scalar @lili == 1){
-#	$minusnodes{$lili[0]} += $num;
-#    }
-#    elsif(scalar @lili == 0){next;}
-#    else{
-#	my $Treestr = join('=', @T);
-#	my $Leafstr = join('=',@lili);
-#	my @leafsToDel = findParentOfAll($Treestr,$Leafstr);
-#	if(scalar @leafsToDel == 0){
-#	    next;
-#	}
-#	my $leafstodelstr = join("=",@leafsToDel);
-#	for(my $ltd=0;$ltd < scalar @leafsToDel;$ltd++){
-#	    $minusnodes{$leafsToDel[$ltd]} += $num;
-#	}
-#    }
-
-
-
-
-#####################only adding leaves#######################
-    
-
-
-=for comment
-   
-#    print "diff: \n";
-#    print join (" ", @diff);
-#     print "\n";
-    ##todo: summarize the deleted leaves such that the number appears at common ancestors if all children are deleted
-    ##easiest way: take all leaves that have a higher brackets count, find their lca and write number there. all other leaves, use as singleton deletions.
-    my @leaf = (); ##take leaves that have a higher bracket count
-    my @leafidx = ();
-    my @singledels = ();
-
-
-    for(my $d = 0;$d < scalar @diff; $d++){
-	my $idx2;
-	for(my $dd = 0; $dd < scalar @T; $dd++){
-	    if($T[$dd] eq $diff[$d]){
-		$idx2 = $dd;
-		last;
-	    }
-	}
-	if($N[$idx2] > $maxbracket)
-	{push @leaf, $diff[$d];
-	 push @leafidx, $idx2;}
-	else{push @singledels, $diff[$d];
-	     $minusnodes{$T[$idx2]}= $num;
-	}
-    }
-    
-#    print "leaf: \n";
-#    print join (" ", @leaf);
-#    print "\n";
-
-    if(scalar @leaf > 0){
-    ##find lca of leaves in leaf
-        ##find lca
-    my $llca = $leafidx[0]; #start with species at $S[0]
-    for(my $k2=1; $k2 < scalar @leaf; $k2++){
-	my $startidx2;
-	my $startnum2;
-	my $otheridx2;
-	my $othernum2;
-	if($N[$llca] >= $N[$k2]){
-	    $startidx2 = $llca;
-	    $startnum2 = $N[$llca];
-	    $otheridx2 = $leafidx[$k2];
-	    $othernum2 = $N[$leafidx[$k2]]
-	}
-	else{	    
-	    $startidx2 = $leafidx[$k2];
-	    $startnum2 = $N[$leafidx[$k2]];
-	    $otheridx2 = $llca;
-	    $othernum2 = $N[$llca]
-	}
-	if($startnum2 == 0 && $othernum2 == 0)##both are the root
-	{
-	    $llca = $startidx2;
-	    next;
-	}
-	my $pnum2 = $startnum2;
-	my $pidx2 = $startidx2;
-#	print "in between pidx2: $pidx2, otheridx2: $otheridx2, pnum2: $pnum2 \n";
-	while($pnum2 != $startnum2-1 && $pidx2++ < scalar @N){
-	    $pidx2++;
-	    $pnum2 = $N[$pidx2];
-	}
-#	print "in between pidx2: $pidx2, otheridx2: $otheridx2, llca: $llca \n";
-	if($pidx2 == $otheridx2){$llca = $pidx2;}
-	else{
-	    my $go3 = 1;
-	    while($go3){
-#		last;
-		my $minidx2; ##smaller in the tree but higher number
-		my $minnum2;
-		my $maxidx2;
-		my $maxnum2;
-		if($pnum2 >= $othernum2){
-		    $minnum2 = $pnum2;
-		    $minidx2 = $pidx2;
-		    $maxnum2 = $othernum2;
-		    $maxidx2 = $otheridx2;
-		}
-		else{
-		    $maxnum2 = $pnum2;
-		    $maxidx2 = $pidx2;
-		    $minnum2 = $othernum2;
-		    $minidx2 = $otheridx2;
-		}
-#		print "min2 idx2 num2: $minidx2, $minnum2; max idx2 num2: $maxidx2, $maxnum2 \n ";
-		if($minnum2 == 0 && $maxnum2==0){
-		    $llca = $minidx2;
-		    $go3 = 0;
-		    next;
-		}
-		$pidx2 = $minidx2;
-		$pnum2 = $N[$pidx2];#==$minnum
-#		print "in between pidx2: $pidx2, pnum2: $pnum2 \n";
-		while($pnum2 != $minnum2-1 && $pidx2 < scalar @N){ 
-#		    last;
-		    $pidx2++;
-		    $pnum2 = $N[$pidx2];
-#		    print "in between2 pidx2: $pidx2, pnum2: $pnum2 \n";
-		}
-		if($pidx2 == $maxidx2){$llca = $pidx2; $go3 = 0;}
-		$otheridx2 = $maxidx2;
-		$othernum2 = $maxnum2;
-	    }
-	}
-    }
-    ###################
-    ##llca for all is now defined, = $T[$llca]
-
-=cut
-
-
-#    print "LLCA: $T[$llca] \n";
 }
-
-
-#print Dumper(\%plusnodes);
-#print "\n";
-#print Dumper(\%minusnodes);
-#print "\n";
-
-#other events:
-#only one species per entry, thus easy
-#might be changed later
-
 
 #deletions
 ############only deleting leaves############################
@@ -403,7 +195,6 @@ while(<FD>){
     my @S = split ',', $F[0]; ##species
     my $num = $F[1];
 
-
     if(scalar @S == 1){
 	if(exists($minusnodes{$S[0]})){$minusnodes{$S[0]} += $num;}
 	else{$minusnodes{$S[0]} = $num;}
@@ -412,8 +203,6 @@ while(<FD>){
     
     my $Treestr = join('=', @T);
     my $speciestr = join('=',@S);
-
-
     my @leafsToDel = findParentOfAll($Treestr,$speciestr);
     for(my $i=0;$i<scalar @leafsToDel; $i++){
 	if(exists($minusnodes{$leafsToDel[$i]})){$minusnodes{$leafsToDel[$i]} += $num;}
@@ -696,7 +485,6 @@ for(my $ll=0;$ll<scalar @L;$ll++){
 		$elemsum += substr($curnum,1);
 		$pseudosum += $psnum;
 	    }#single	    
-#	    if($curnum =~ /^p/){$elemsum += substr($curnum,1);}#pseudo
 	    if($curnum =~ /^n/){
 		$elemsum += substr($curnum,1);
 		$pseudosum += $psnum;
@@ -713,11 +501,7 @@ for(my $ll=0;$ll<scalar @L;$ll++){
     $pnumdiffs{$L[$ll]} = $pdiff;
 }
 
-#add the diff numbers to the tree?
-
 my $tstr = join ("", @newT);
-#print "final tree:\n";
-#print "$tstr \n";
 
 print $outt "Newick tree with numbers specifying event counts at its nodes.
 Each node name contains the following numbers in event specification:
@@ -751,9 +535,6 @@ close $outt;
 
 #write summary file
 
-#my $now_string = strftime "%a %b %e %H:%M:%S %Y", localtime;
-
-#print $outs "File created on $now_string\n";
 print $outs "The following output shows the number of events that occur at the specified node in the tree.\n";
 print $outs "Thus, summary for each event is a tab separated table with: tree_node number_of_events\n";
 print $outs "Events are Insertion, Deletion, Duplication, Pseudogenization if chosen at the beginning.\n";
@@ -781,13 +562,6 @@ foreach my $in2 (sort keys %pseudos) {
     if(exists($allpseins{$in2})){$allpseins{$in2} += $pseudos{$in2};}
     else{$allpseins{$in2} = $pseudos{$in2};}
 }
-
-#print $outs "Check: filecounts (match, dupl, insertions)\n";
-#foreach my $tc (sort keys %totcounts) {
-#    print $outs "$tc\t$totcounts{$tc}\n";
-#}
-#print $outs "\n\n";
-
 
 
 print $outs "EVENT: Insertion\n";
@@ -854,7 +628,7 @@ foreach my $md (sort keys %missing_data) {
 print $outs "\n\n";
 
 
-print $outs "EVENT: Others\n";
+print $outs "CHECK: Differences between total numbers and sum of events\n";
 foreach my $oi (sort keys %numdiffs) {
     my $tmp="\(0\)";
     if(exists($pnumdiffs{$oi})){
@@ -887,7 +661,6 @@ open(my $outi,">>",$insout);
 open(my $outz,">>",$sinout);
 open(my $outd,">>",$delout);
 open(my $outu,">>",$dupout);
-#open(my $outp,">>",$pseout);
 open(my $outo,">>",$nonout);
 open(my $outm,">>",$misout);
 
@@ -930,20 +703,11 @@ SEPARATOR COMMA
 DATASET_LABEL,Duplications
 COLOR,#0000ff\n";
 
-#my $header_pse =
-#"DATASET_TEXT
-#SEPARATOR COMMA
-#DATASET_LABEL,Pseudogenizations
-#COLOR,#551a8b\n";
-
 my $header_non =
 "DATASET_TEXT
 SEPARATOR COMMA
 DATASET_LABEL,Excluded
 COLOR,#551a8b\n";
-
-#COLOR,#00ffff\n";
-
 
 my $header_mis =
 "DATASET_TEXT
@@ -1021,9 +785,6 @@ print $outd "\n\nDATA\n";
 print $outu "$header_dup$inbetweentext";
 print $outu "\n\nDATA\n";
 
-#print $outp "$header_pse$inbetweentext";
-#print $outp "\n\nDATA\n";
-
 print $outo "$header_non$inbetweentext";
 print $outo "\n\nDATA\n";
 
@@ -1052,7 +813,6 @@ for(my $tt=0;$tt < scalar @T;$tt++){
 	    print $outz "$T[$tt],$singletons{$T[$tt]}\($pseusingles{$T[$tt]}\),-1,#ffa500,normal,1,0\n";
 	    print $outd "$T[$tt],$minusnodes{$T[$tt]}\($psdels{$T[$tt]}\),-1,#ff0000,normal,1,0\n";
 	    print $outu "$T[$tt],$duplications{$T[$tt]},-1,#0000ff,normal,1,0\n";
-#	    print $outp "$T[$tt],$pseudos{$T[$tt]},-1,#551a8b,normal,1,0\n";
 	    print $outo "$T[$tt],$nonenums{$T[$tt]}\($pseunons{$T[$tt]}\),-1,#551a8b,normal,1,0\n";
 	    print $outm "$T[$tt],$missing_data{$T[$tt]}\($psemis{$T[$tt]}\),-1,#A9A9A9,normal,1,0\n";		
 	}
@@ -1064,8 +824,6 @@ for(my $tt=0;$tt < scalar @T;$tt++){
 	    print $outi "$T[$tt],$sumi2\($psumi2\),0.6,#00ff00,normal,1,0\n";
 	    print $outd "$T[$tt],$minusnodes{$T[$tt]}\($psdels{$T[$tt]}\),0.8,#ff0000,normal,1,0\n";
 	    #duplications do not occur at inner nodes
-	    #print $outu "$T[$tt],$duplications{$T[$tt]},0.8,#0000ff,normal,1,0\n";
-#	    print $outp "$T[$tt],$pseudos{$T[$tt]},0.95,#551a8b,normal,1,0\n";		
 	}
     }
 }
@@ -1123,13 +881,6 @@ sub findLCA{
     }
 
     if($rootid == -1){return @output;}
-    
-    #print join(" ",@T);
-    #print "\n";
-    #print join(" ",@N);
-    #print "\n";
-    #print join(" ",@allleaves);
-    #print "\n";
     my @Lids = (); #ids of the leaves in T and N
     for(my $l=0;$l<scalar @L;$l++){
 	for(my $t=0;$t<scalar @T;$t++){
@@ -1173,22 +924,13 @@ sub findLCA{
 	    push @path2, $t5;
 	}
 
-	if(scalar @path1 == 0){
-#	    print $outs "path1 zero: $F[0]\n";
-	}
+	if(scalar @path1 == 0){}
 	else{$pstr1 = join("=",@path1);}
-
-	if(scalar @path2 == 0){
-#	    print $outs "path2 zero: $F[0]\n";
-	}
-
+	if(scalar @path2 == 0){}
+	else{$pstr2 = join("=",@path2);}
 	if(scalar @path1 == 0 || scalar @path2 == 0){
 	    next;
 	}
-	else{$pstr2 = join("=",@path2);}
-
-	
-
 
 	#do the intersection of both
 	##as we go from leaves to root, we take the first element that we have in common
@@ -1204,8 +946,7 @@ sub findLCA{
 	}
 
 	if(scalar @pdiff == 0){
-	    print STDERR "son mist pathes: $pstr1; $pstr2\n";
-	    #	    print $outs "son mist pathes: $pstr1; $pstr2\n";
+	    print STDERR "Error in countEvents, findLCA; pathes: $pstr1; $pstr2\n";
 	}
 	elsif(scalar @pdiff == 1){
 	    $curlca = $pdiff[0];
@@ -1225,16 +966,10 @@ sub findLCA{
     }
 
     if($N[$curlca] < 0){
-	print STDERR "strange curlca\n";
+	print STDERR "Error in countEvents, findLCA: strange curLCA\n";
     }
 
-
-
     return $curlca;
-
-    
-
-
 }
 
 
@@ -1281,13 +1016,6 @@ sub findParentOfAll{
     }
 
     if($rootid == -1){return @output;}
-    
-    #print join(" ",@T);
-    #print "\n";
-    #print join(" ",@N);
-    #print "\n";
-    #print join(" ",@allleaves);
-    #print "\n";
     my @Lids = (); #ids of the leaves in T and N
     for(my $l=0;$l<scalar @L;$l++){
 	for(my $t=0;$t<scalar @T;$t++){
@@ -1423,245 +1151,6 @@ sub findParentOfAll{
 	@Ltmpids = @L2tmpids;
     }
 
-    return @output;
-    
-} 
-
-__END__
-  
-#####################old version
-    
-    
-    while(scalar @Ltmp > 0){
-	
-	for(my $j = 0; $j<scalar @Ltmp; $j++){
-	    my $id = 0; ##index of leaf in T and N
-	    for(my $l=0;$l < scalar @T;$l++){
-		if($T[$l] eq $Ltmp[$j]){
-		    $id = $l;
-		    last;
-		}
-	    }
-	    
-	    my $nullLtmp = $Ltmp[0];
-	    ##find brothers in tree
-	    my @bros = (); ##ids of brothers in T, N
-	    my $curnum = $N[$id];
-	    push @bros, $id;
-	    my $down=$id-1;
-	    while($down >=0){
-		if($N[$down] == -2){$down--;next;}
-		if($N[$down] < $curnum){last;}#break
-		elsif($N[$down] > $curnum){}#do nothing
-		else{#equality, this is a bro!
-		    push @bros, $down;
-		}
-		$down--;
-	    }
-	    my $up = $id+1;
-	    while($up < scalar @N){
-		if($N[$up]==-2){$up++;next;}
-		if($N[$up] < $curnum){last;}#break
-		elsif($N[$up] > $curnum){}#do nothing
-		else{#equality, this is a bro!
-		    push @bros, $up;
-		}
-		$up++;
-	    }
-	    
-	    ##check, if all bros are in L
-	    ##if yes, get their father and remove them from L
-	    ##if not, check if they are leaves
-	    ##if yes, break, no parent of all
-	    ##if no, find the children
-	    my $allL = 1;
-	    for(my $b = 0; $b<scalar @bros; $b++){
-		if(none {$_ eq $T[$bros[$b]]} @L){
-		    $allL = 0;
-		    last;
-		}
-	    }
-	    
-	    if($allL){
-		##find parent and delete bros from input Ltmp, add parent to L and Ltmp
-		my $parent = 0;
-		my $bronum = $N[$bros[0]];
-		my $up = $bros[0];
-		while($up < scalar @N){
-		    if($N[$up] == $bronum -1 ){
-			$parent = $up;
-			last;
-		    }#break
-		    $up++;
-		}
-		#delete entries in Ltmp
-		for(my $b = 0; $b<scalar @bros; $b++){
-		    my $index = -1;
-		    for(my $ii=0;$ii < scalar @Ltmp; $ii++){
-			if($Ltmp[$ii] eq $T[$bros[$b]]){$index = $ii;last;}
-		    }
-		    if($index>=0){
-			splice(@Ltmp,$index,1);
-		    }
-		}
-		push @Ltmp, $T[$parent];
-		push @L, $T[$parent];
-		
-	    }
-	    else{
-		##check if they are leaves
-		my @noleaves = ();
-		for(my $b = 0; $b<scalar @bros; $b++){
-		    if(none {$_ eq $T[$bros[$b]]} @allleaves){
-			push @noleaves, $bros[$b];
-		    }
-		    #check if leaves are in L, if they are not in L, delete them from Ltmp
-		    else{
-			my $index1 = -1;
-			my $index2 = -1;
-			for(my $i1 = 0; $i1 < scalar @L;$i1++){
-			    if($L[$i1] eq $T[$bros[$b]]){$index1 = $i1;last;}
-			} 
-			if($index1 < 0){
-			    for(my $i2 = 0; $i2 < scalar @Ltmp;$i2++){
-				if($Ltmp[$i2] eq $T[$bros[$b]]){$index2 = $i2;last;}
-			    }
-			    if($index2 >0){
-				splice(@Ltmp,$index2,1);
-			    }
-			}
-			
-		    }
-		}
-		
-		
-		if(scalar @noleaves == 0){##all in L are leaves
-		    print "case noleaves\n";
-		    ##there is no parent of all, put the bros that were in input L into output list and delete from input list Ltmp
-		    for(my $b = 0; $b<scalar @bros; $b++){
-			my $index1 = -1;
-			my $index2 = -1;
-			for(my $i1 = 0; $i1 < scalar @L;$i1++){
-			    if($L[$i1] eq $T[$bros[$b]]){$index1 = $i1;last;}
-			} 
-			if($index1 >= 0){
-			    for(my $i2 = 0; $i2 < scalar @Ltmp;$i2++){
-				if($Ltmp[$i2] eq $T[$bros[$b]]){$index2 = $i2;last;}
-			    }
-			    if($index2 >= 0){
-				splice(@Ltmp,$index2,1);
-			    }
-			    if(none {$_ eq $T[$bros[$b]]} @output){
-				push @output, $T[$bros[$b]];
-			    }
-			}
-			else{
-			    my $index3 = -1;
-			    for(my $i3 = 0; $i3 < scalar @Ltmp;$i3++){
-				if($Ltmp[$i3] eq $T[$bros[$b]]){$index3 = $i3;last;}
-			    }
-			    if($index3 >= 0){
-				splice(@Ltmp,$index3,1);
-			    }
-			    
-			    
-			}
-		    }
-		}
-		else{
-		    ##find the children of the ones which are not leaves
-		    #if the children are all leaves and are all in L, push their parent in to output and delete from Ltmp, if the children are not leaves, push them into Ltmp
-		    for(my $k = 0; $k < scalar @noleaves; $k++){
-			for(my $llk=0;$llk<scalar @Ltmp; $llk++){
-			    if($Ltmp[$llk] eq $noleaves[$k]){
-				splice(@Ltmp,$llk,1);
-				last;
-			    }
-			}
-			
-			
-			my $curnum2 = $N[$noleaves[$k]];
-			my $down=$noleaves[$k]-1;
-			my $notall = 0;
-			my @leafchildrentoout = ();
-			while($down >=0){
-			    if($N[$down] == -2){$down--;next;}
-			    if($N[$down] <= $curnum2){last;}#break
-			    elsif($N[$down] = $curnum2 + 1){
-				if(none {$_ eq $T[$down]} @allleaves){#check if children are leaves
-				    if(none {$_ eq $T[$down]} @L){
-					push @Ltmp, $T[$down];
-				    }
-				}
-				elsif(none {$_ eq $T[$down]} @L){#check if leafchild is not in L
-				    $notall = 1;
-				}
-				else{#leaf child is in L, thats good
-				    push @leafchildrentoout, $T[$down];
-				}
-			    }#that's the child!
-			    else{ ##bigger than +1, nothing
-			    }
-			    $down--;
-			}
-			
-			
-			if($notall == 0){#push current notleaf to output, delete from Ltmp
-			    if(none {$_ eq $T[$noleaves[$k]]} @L){}
-			    else{
-				if(none {$_ eq $T[$noleaves[$k]]} @output){
-				    push @output, $T[$noleaves[$k]];
-				}
-				my $index15 = -1;
-				for(my $i15 = 0; $i15 < scalar @Ltmp; $i15++){
-				    if($Ltmp[$i15] eq $T[$noleaves[$k]]){$index15 = $i15;last;}
-				}
-				if($index15 >= 0){
-				    splice(@Ltmp,$index15,1);
-				}
-			    }
-			}
-			else{#push all children in @leafchildrentoout in output and delete from Ltmp
-			    if(scalar @leafchildrentoout == 0){next;}
-			    for(my $lcto = 0;$lcto < scalar @leafchildrentoout;$lcto++){
-				if(none {$_ eq $leafchildrentoout[$lcto]} @output){
-				    push @output, $leafchildrentoout[$lcto];
-				}
-				my $index16 = -1;
-				for(my $i16 = 0; $i16 < scalar @Ltmp; $i16++){
-				    if($Ltmp[$i16] eq $leafchildrentoout[$lcto]){$index16 = $i16;last;}
-				}
-				if($index16 >= 0){
-				    splice(@Ltmp,$index16,1);
-				}
-				
-				
-			    }
-			}
-			
-		    }
-		    
-		}
-		##what happens if all runs through and curnum is still in Ltmp?
-		
-		if(scalar @Ltmp > 0 && $nullLtmp eq $Ltmp[0]){##put Ltmp0 in output and delete it from Ltmp
-		    if(none {$_ eq $Ltmp[0]} @output){
-			if(none {$_ eq $Ltmp[0]} @L){}
-			else{
-			    push @output, $Ltmp[0];
-			}
-		    }
-		    splice(@Ltmp,0,1);
-		}
-	    }
-	    
-	}
-    }
-    
-    
-    
-    
-    
     return @output;
     
 } 

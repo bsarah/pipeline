@@ -2,11 +2,9 @@
 #call: extendTree.pl treefile ids outtree
 #return treefile with extended tree
 
-#this program extends the tree file in case that inner node identifier are
+#this program extends the tree file in case that inner node identifiers are
 #missing. We need dummy identifier for the inner nodes in order to be
 #able to draw the tree with iTOL.
-
-
 
 
 use Data::Dumper;
@@ -66,18 +64,6 @@ my $tmp = "";
 if($T[-1] eq $semco){}
 else{print "tree format doesn't fit! No \';\' at the end! \n"; exit 1;}
 
-#my $subtree = "";
-#if($preT[0] eq $obrac && $preT[-2] eq $cbrac){
-#    #eliminate useless brackets
-#    $preT[0] = $semco;
-#    $preT[-2] = $semco;
-#    $tmptree = join('',@preT);
-#    my $len = length($tmptree);
-#    $subtree = substr($tmptree,1,$len-2);
-#}
-#else{$subtree = $tree;}
-
-#my @T = split "", $subtree;
 push @Tnew, $T[0];
 for(my $i  = 1; $i < scalar @T; $i++){
     if($T[$i] eq $obrac || $T[$i] eq $com || $T[$i] eq $semco || $T[$i] eq $cbrac){ 

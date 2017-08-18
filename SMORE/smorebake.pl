@@ -1,15 +1,8 @@
 #!/usr/bin/perl -w
 
-#this should be a faster version of the pipeline, with almost no output files
-
-#Input:
-#path to camerons output
-#path to output folder
-#mode: if mode == 1, include types ad pseudogenes
-#path to needleman wunsch
-#similarity thresholds for edges
-#newicktree
-#path to temp folder of cameron
+# smorebake does the same as smoretoast
+# but additionally prints all intermediary output files,
+# e.g. cluster, graphs, duplication alignments
 
 
 use IO::Uncompress::Gunzip qw($GunzipError);
@@ -35,6 +28,7 @@ my $skipg;
 my $skipa;
 my $skipc;
 my $nocheck;
+my $errors;
 
 GetOptions(
     #all modes
@@ -52,7 +46,8 @@ GetOptions(
     'noaln' => \$skipa,
     'noclus' => \$skipc,
     'nomiss' => \$nocheck,
-    'species=s' => \$specieslist
+    'species=s' => \$specieslist,
+    'err=s' => \$errors
     ) or die "error in smoretoast";
 
 
@@ -62,8 +57,6 @@ if($skipa){$optstr = "$optstr --noaln";}
 if($skipc){$optstr = "$optstr --noclus";}
 if($skipg){$optstr = "$optstr --nograph";}
 if($nocheck){$optstr = "$optstr --nomiss";}
-print STDERR "bake mode startet with parameter: --tool $toolpath --out $outpath --python $pythonpath --perl $perlpath --prep $pathtocam -s $seqsim -p $strucsim --newick $newicktree --join $joinmode --species $specieslist $optstr\n";
-
 
 my $mode = 1;
 
@@ -74,7 +67,6 @@ my @outlscmd = readpipe("$tmplscmd");
 
 my $del2check = "$outpath\/tmpfile\_deletionsCheck\.txt";
 my $pseudel2check = "$outpath\/tmpfile\_pseudeletionsCheck\.txt";
-
 
 my %blocks = ();
 my %leftblocks = ();

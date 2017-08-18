@@ -1,12 +1,8 @@
 #!/usr/bin/perl -w
 #call: checkTree.pl treefile specieslist
 #return 1 or 0
-
 #this program checks if the species identifier in specieslist also appear in
-#the tree file. if this is not the case, the program stops
-
-
-
+#the tree file. if this is not the case, the program stops and returns an error message
 
 use Data::Dumper;
 use strict;
@@ -14,7 +10,6 @@ use warnings;
 
 my $treefile = shift;
 my $specieslist = shift;
-
 
 my $tree="";
 

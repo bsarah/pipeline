@@ -1,15 +1,8 @@
 #!/usr/bin/perl -w
 
-#this should be a faster version of the pipeline, with almost no output files
-
-#Input:
-#path to camerons output
-#path to output folder
-#mode: if mode == 1, include types ad pseudogenes
-#path to needleman wunsch
-#similarity thresholds for edges
-#newicktree
-#path to temp folder of cameron
+#smoretoast takes smoreprep output, generates cluster, joins them, created graphs, checks the graphs for cograph structure, creates alignments and counts events
+#intermediary files are not printed but some statistics will be included in the summary
+#
 
 
 use IO::Uncompress::Gunzip qw($GunzipError);
@@ -33,6 +26,12 @@ my $joinmode="relaxed";
 my $specieslist;
 my $nocheck;
 my $errors;
+##options for verbose
+my $printall;
+my $printg;
+my $printa;
+my $printc;
+
 
 GetOptions(
     #all modes
@@ -48,17 +47,16 @@ GetOptions(
     'join=s' => \$joinmode,
     'species=s' => \$specieslist,
     'nomiss' => \$nocheck,
-    'err=s' => \$errors
+    'err=s' => \$errors,
+##options for verbose
+    'verbose' => \$printall,
+    'graph' => \$printg,
+    'aln' => \$printa,
+    'clus' => \$printc 
     ) or die "error in smoretoast";
 
 
-my $optstr = "";
-if($nocheck){$optstr = "$optstr --nomiss";}
-
-print STDERR "toast mode startet with parameter: --tool $toolpath --out $outpath --python $pythonpath --perl $perlpath --prep $pathtocam -s $seqsim -p $strucsim --newick $newicktree --join $joinmode --species $specieslist $optstr\n";
-
 my $mode = 1;
-
 
 my $tmpfilelist = "$outpath\/tmpfiles";
 my $tmplscmd = "ls $pathtocam\/temp \> $tmpfilelist";
@@ -121,7 +119,6 @@ while(<FA>){
     my $col4 = 4;
     my $coln = "n";
     my $cmdsort = "sort -k$col1,$col1 -k$col3,$col3$coln -k$col4,$col4$coln $curfile_nb \> $curfile_sorted";
-#    print STDERR "SORT: $cmdsort \n";
     readpipe("$cmdnoblanks");
     readpipe("$cmdsort");
 
@@ -292,17 +289,31 @@ while(<FA>){
 	}
     }
 }
-
-
-my $orignum = scalar (keys %blocks);
-print STDERR "ORIG CLUSNUM: $orignum \n";
-print "ORIG CLUSNUM: $orignum \n";
-
-my $typenum = scalar (keys %types);
-print STDERR "number of different types: $typenum \n";
-
 my $numspec = scalar @allspec;
 print "Number of species: $numspec \n";
+
+my $typenum = scalar (keys %types);
+print "Number of different element types: $typenum \n";
+
+my $orignum = scalar (keys %blocks);
+print "Number of original clusters: $orignum \n";
+
+##analyse original blocks for distances between elements
+my $maxdist = 0;
+my $mindist = -1;
+my $sumdist = 0;
+foreach my $block (keys %blocks){
+    my $dist = getMaxDist($blocks{$block});
+    if($dist > $maxdist){$maxdist = $dist;}
+    if($dist < $mindist || $mindist == -1){$mindist = $dist;}
+    $sumdist += $dist;
+}
+my $avdist = $sumdist/$orignum;
+
+print "The largest distance between the most distant elements 
+in a cluster is $maxdist nt, the smallest is $mindist nt. On average,
+the most distant elements in original clusters have a distance of $avdist nt.\n";
+
 
 #join cluster by hash num
 my %joinedblocks = ();
@@ -350,10 +361,8 @@ if($joinmode eq "relaxed" || $joinmode eq "strict"){
 	}
 	if($rb>0 && $isgood == 1 && $curend > 0){
 	    #should be joinable
-	    #	print STDERR "join a,b,c: $curstart, $curend, $rb\n";
 	    $curend = $rb;
 	    $curblock = "$curblock\;$curb";
-	    #	print STDERR "$curblock\n";
 	}
 	else{
 	    #add the old block to joined clusters
@@ -370,9 +379,6 @@ if($joinmode eq "relaxed" || $joinmode eq "strict"){
 		    if(exists($rb2clus{$rkey})){$rb2clus{$rkey}="$rb2clus{$rkey}\;$F[$f]";}		  
 		    else{$rb2clus{$rkey} = $F[$f];}
 		}
-		#	    print STDERR "curend=-1, lb: $curstart, rb: $rb\n";
-		#	    print STDERR Dumper(\%rb2clus);
-		#	    print STDERR "\n";
 		#curstart = $lb
 		my $curclus = "";
 		my $curend = -1;
@@ -402,7 +408,6 @@ if($joinmode eq "relaxed" || $joinmode eq "strict"){
 		}
 		
 		if($neighborsum < scalar @rks){ ##check again, but we first check the prints
-		    #		print STDERR "join overlapping cluster\n";
 		    my $nkey = "$lb\_$rks[-1]";
 		    $joinedblocks{$nkey} = join(';',values %rb2clus);
 		}
@@ -476,13 +481,28 @@ foreach my $bk (keys %blocks){
 close $outjc;
 
 my $origavsize = $sumelemorig/$orignum;
-print "Average size of original clusters: $origavsize \n";
+print "Average number of elements of original clusters: $origavsize \n";
 
 if($joined == 1){    
     my $newclusnum = scalar (keys %joinedblocks);
-    print "JOINED CLUSNUM: $newclusnum \n";
-    print STDERR "JOINED CLUSNUM: $newclusnum \n";
+    print "Number of joined clusters: $newclusnum \n";
     %blocks = %joinedblocks;
+
+    ##analyse original blocks for distances between elements
+    my $jmaxdist = 0;
+    my $jmindist = -1;
+    my $jsumdist = 0;
+    foreach my $block (keys %blocks){
+	my $jdist = getMaxDist($blocks{$block});
+	if($jdist > $jmaxdist){$jmaxdist = $jdist;}
+	if($jdist < $jmindist || $jmindist == -1){$jmindist = $jdist;}
+	$jsumdist += $jdist;
+    }
+    my $javdist = $jsumdist/$newclusnum;
+    
+    print "Joined clusters: The largest distance between the most distant elements 
+in a cluster is $jmaxdist nt, the smallest is $jmindist nt. On average,
+the most distant elements in joined clusters have a distance of $javdist nt.\n";
 }
 
 ##print None hash to file
@@ -536,7 +556,32 @@ foreach my $t (keys %pseuspecies){
     $allspecstr = "$allspecstr$t\-$pseuspecies{$t}\=";
 }
 
-#print "totelemnum: $allspecstr \n";
+
+##verbose options
+my $clusfolder = "$outpath\/cluster";
+if($printc || $printall){
+    if(!(-e $clusfolder)){
+	my $mkcmd = "mkdir $clusfolder";
+	readpipe("$mkcmd");
+    }
+}
+my $graphfolder = "$outpath\/graph";
+if($printg || $printall){
+    if(!(-e $graphfolder)){
+	my $mkcmd2 = "mkdir $graphfolder";
+	readpipe("$mkcmd2");
+    }
+}
+my $alnfolder = "$outpath\/duplication_alignments";
+if($printa || $printall){
+    if(!(-e $alnfolder)){
+	my $mkcmd3 = "mkdir $alnfolder";
+	readpipe("$mkcmd3");
+    }
+}
+
+
+
 
 my %dupevents =();
 my %matevents =();
@@ -547,20 +592,13 @@ my %psevents = (); #insertions of pseudogenes
 my %psedels = ();
 my %psemis = ();
 my %pseins = ();
-
-
-
-
 my %singletons = (); #hash species -> number
 my %pseusingles = (); #include types
 my %singletonsNT = (); #hash species -> number
 my %pseusinglesNT = (); #include types
 
 ##go on with cluster hash
-
 ##sort keys of blocks and join adjacent ones?
-#my $clusnum = scalar (keys %blocks);
-#print "NUM CLUSTER: $clusnum \n";
 
 my $eventlist = "$outpath\/allClusters_joined\.txt";
 my $listcmd = "touch $eventlist";
@@ -574,6 +612,12 @@ foreach my $k (keys %blocks){
     my $rightanchor = $A[1];
     my @B = split ';', $blocks{$k};
     my $clussize = scalar @B;
+    #verbose option for cluster
+    my $outcf;
+    if($printc || $printall){
+	my $clusfile = "$clusfolder\/cluster$leftanchor\_$rightanchor\.clus";
+	open($outcf, ">>", $clusfile);
+    }
     #write to allClustersList
     if($joinmode eq "relaxed" || $joinmode eq "strict"){
 	print $outg ">clus$cluscount $clussize\n";
@@ -581,6 +625,7 @@ foreach my $k (keys %blocks){
 	$sumelems+=$clussize;
 	for(my $cb = 0;$cb < $clussize;$cb++){
 	    print $outg "$B[$cb]\n";
+	    if($printc || $printall){print $outcf "$B[$cb]\n";}
 	}
     }
     if(scalar @B == 1){
@@ -646,20 +691,14 @@ foreach my $k (keys %blocks){
     open(my $outtmp0, ">>", $tmpfile0);
     print $outtmp0 $blocks{$k};
     close $outtmp0;
-    my $tmpfile1 = "$outpath\/tmpdata1";
+    my $tmpfile1;
+    if($printg || $printall){$tmpfile1 = "$graphfolder\/graph$k\.gr";}
+    else{$tmpfile1 = "$outpath\/tmpdata1";}
+
     #build graph, tmpfile1 will contain the output
     my $graphcmd = "perl $toolpath\/buildEdgeList_fast.pl $tmpfile0 $mode $toolpath $strucsim $seqsim $tmpfile1 2>> $errors";
-#    print "GRAPHCMD: $graphcmd \n";
     my @graphout = readpipe("$graphcmd");
     my $nodenum = $graphout[0];
-    ##print the graph if it is getting too big for debug
-    my $precluscount = $cluscount -1;
-    if($nodenum >= 500){
-	my $debugout = "$outpath\/graph$precluscount\_$nodenum\.edli";
-	my $mvdbcmd = "cp $tmpfile0 $debugout";
-	readpipe("$mvdbcmd");
-    }
-
     
     #check graph for cograph or not and edit slightly
     my $cglist = "$outpath\/list\_cographs\.txt";
@@ -679,33 +718,24 @@ foreach my $k (keys %blocks){
     close $outn;
 
     my $checkcmd = "perl $toolpath\/checkGraph_fast.pl $tmpfile1  $k $seqsim $strucsim $mode $cglist $ncglist 2>> $errors";
-
-
     
     ##argument list is getting too long...create a temporary file
 
     my @newoutgraph = readpipe("$checkcmd");
     my $newgraphstr = $newoutgraph[0];
-    
 
+    my $toprint = 0;
+    if($printa || $printall){$toprint = 1;}
+    my $filetoprint = "$alnfolder\/alignment$k\.aln";
 
-    
+    #create alignment    
+    my $alncmd = "perl $toolpath\/createAlignments_fast2.pl $tmpfile1 $outpath $toolpath $seqsim $strucsim $mode $typenum $newicktree $leftanchor $rightanchor $del2check $pseudel2check $toprint $filetoprint 2>> $errors";
 
-    #sort the non edges graphs
-    
-    my $alncmd = "perl $toolpath\/createAlignments_fast2.pl $tmpfile1 $outpath $toolpath $seqsim $strucsim $mode $typenum $newicktree $leftanchor $rightanchor $del2check $pseudel2check 2>> $errors";
-    #before countEvents, check for deletions with the files created here
-    #create alignment
-    #my $alncmd = "perl $scriptpath\/createAlignments_fast.pl $tmpfile1 $outpath $pathtonw $seqsim $strucsim $mode 0 $nwtree $inpath\/temp $leftanchor $rightanchor";
-
-#    print STDERR "ALNCMD: $alncmd \n";
-    my @outaln = readpipe("$alncmd"); #this array contains: dup mat insertion pseins pseudomatch deletion missinganchor missinanchorpseu deletionpseu
-    my $rmcmd = "rm $tmpfile1 $tmpfile0";
+    my @outaln = readpipe("$alncmd"); #this array contains: dup mat insertion pseins pseudomatch deletion missinganchor missinanchorpseu deletionpseu rems inrems
+    my $rmcmd;
+    if($printg || $printall){$rmcmd = "rm $tmpfile0";}
+    else{$rmcmd = "rm $tmpfile1 $tmpfile0";}
     readpipe("$rmcmd");
-    my $alen = scalar @outaln;
-#    print "OUTALN: $alen\n";
-    my $alnput = join('_',@outaln);
-#    print "ALNOUT: $alnput \n";
     #the elements in each pos are separated by = and key and value are separated by -
     #starting with =!
     #if there are no counts, the string only consists of =, thats why, we start with 1 in the loops
@@ -818,7 +848,6 @@ if(! $nocheck){
 	my $curtmpfile = $_;
 	my @Tmpname = split '_', $curtmpfile;
 	my $tmpspec = $Tmpname[0];
-	#   open CTF,"<$curtmpfile" or die "can't open $curtmpfile\n";
 	my $CTF = IO::Uncompress::Gunzip->new( "$pathtocam\/temp/$curtmpfile" )
 	    or die "IO::Uncompress::Gunzip failed: $GunzipError\n";
 	while(<$CTF>){
@@ -902,28 +931,6 @@ while(<PC>){
 
 my $rmtmpcmd = "rm $pseudel2check $del2check $tmpfilelist";
 readpipe("$rmtmpcmd");
-
-#if(exists($tmphash{$species})){
-#if(exists($tmphash{$species}{$anchor})){
-##add to deletions
-#}
-#else{
-##add to missings
-#}
-
-#		if(scalar @missingtmp > 0){
-#		    my $misstr = join(',', @missingtmp);
-#		    if(exists $misevents{$misstr}){$misevents{$misstr} += $mini;}
-#		    else{$misevents{$misstr} = $mini;}
-#		}
-#		if(scalar @missingdel > 0){
-#		    my $delstr = join(',',@missingdel);
-#		    if(exists $delevents{$delstr}){$delevents{$delstr} += $mini;}
-#		    else{$delevents{$delstr} = $mini;}
-#		}
-
-
-
 
 
 #get output files which are the input to countEvents
@@ -1027,10 +1034,6 @@ close $outpd;
 ##singletoncount = spec-num=spec-num...!spec-pnum=spec-pnum=...
 ##totelem and nonestr as singleton
 
-my $err = "$outpath\/errors";
-my $cmderr = "touch $err";
-readpipe("$cmderr");
-
 ##create summarypath and itolout
 my $cmditol = "mkdir $outpath\/data_iTOL";
 readpipe("$cmditol");
@@ -1038,16 +1041,14 @@ my $cmdsum = "touch $outpath\/geneticEvents\.txt";
 readpipe("$cmdsum");
 my $cmdtree = "touch $outpath\/OutTree\.txt";
 readpipe("$cmdtree");
-my $countcmd = "perl $toolpath\/countEvents.pl $newicktree $allsinglestr $matchout $duplout $insout $pseout $psemisout $psedelout $pseinsout $delout $misout $outpath\/OutTree\.txt $outpath\/geneticEvents\.txt $allspecstr $allnonestr $outpath\/data_iTOL 2>> $err";
-#print "COUNTING: $countcmd\n";
+my $countcmd = "perl $toolpath\/countEvents.pl $newicktree $allsinglestr $matchout $duplout $insout $pseout $psemisout $psedelout $pseinsout $delout $misout $outpath\/OutTree\.txt $outpath\/geneticEvents\.txt $allspecstr $allnonestr $outpath\/data_iTOL 2>> $errors";
 readpipe("$countcmd");
 
 
+my $avnum = $sumelems/$cluscount;
+print "Average number of elements per cluster in joined cluster: $avnum\n";
 
-#print "Program run ended.\n";
-#print "Number of clusters: $cluscount\n";
-    my $avnum = $sumelems/$cluscount;
-print "Average number of elements per cluster: $avnum\n";
+
 
 sub getRightBlock{
     #get THE right block. if it is several different ones, return -1 as the cluster seems to be too diverse
@@ -1101,4 +1102,29 @@ sub checkBlocks{
 	if(exists($spec1{$spec2})){return 1;}
     }
     return 0;
+}
+
+sub getMaxDist{
+    #input is separated by ; and then by tab
+    my @inp = @_;
+    my @F = split ';', $inp[0];
+    my $minpos = -1;
+    my $maxpos = 0;
+    for(my $i=0;$i<scalar @F;$i++){
+	my @G = split '\t', $F[$i];
+	my $start;
+	my $end;
+	if($G[2] < $G[3]){
+	    $start = $G[2];
+	    $end = $G[3];
+	}
+	else{
+	    $start = $G[3];
+	    $end = $G[2];
+	}
+	if($minpos == -1 || $start < $minpos){$minpos = $start;}
+	if($end > $maxpos){$maxpos = $end;}
+    }
+    my $dist = $maxpos - $minpos;
+    return $dist;
 }
