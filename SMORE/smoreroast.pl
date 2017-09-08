@@ -243,7 +243,6 @@ foreach my $k (keys %blocks){
     #create alignment
     #my $alncmd = "perl $scriptpath\/createAlignments_fast.pl $tmpfile1 $outpath $pathtonw $seqsim $strucsim $mode 0 $nwtree $inpath\/temp $leftanchor $rightanchor";
 
-#    print STDERR "ALNCMD: $alncmd \n";
     my @outaln = readpipe("$alncmd"); #this array contains: dup mat insertion pseins pseudomatch deletion missinganchor missinanchorpseu deletionpseu
     my $rmcmd;
     if($printg || $printall){$rmcmd = "rm $tmpfile0";}

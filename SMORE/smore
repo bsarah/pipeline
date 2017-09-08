@@ -33,6 +33,7 @@ my $perlpath;
 my $refspecies;
 my $genomes;
 my $mafs;
+my $trnas;
 my $cmfile;
 my $genelist;
 my $locilist;
@@ -40,6 +41,7 @@ my $perc;
 my $evalin="0.01";
 my $bitvalin;
 my $infernalpath;
+my $trnaspath;
 my $pseudoscore;
 ##options for toast and bake
 my $pathtocam; #path to output of smore prep (genes folder)
@@ -54,8 +56,13 @@ my $printall;
 my $printg;
 my $printa;
 my $printc;
-
-
+#option for mix
+my $maxclusnum=50000;
+#options for roast
+my $specieslist;
+my $cluslistpath;
+my $mixout;
+my $roastout;
 
 GetOptions(
 #general
@@ -73,6 +80,8 @@ GetOptions(
     'ref|r=s' => \$refspecies,
     'genomes|g=s' => \$genomes,
     'maf|m=s' => \$mafs,
+    'trna' => \$trnas,
+    'trnascan=s' => \$trnaspath,
     'cm|c=s' => \$cmfile,
     'genes=s' => \$genelist,
     'loci=s' => \$locilist,
@@ -93,7 +102,15 @@ GetOptions(
     'verbose' => \$printall,
     'graph' => \$printg,
     'aln' => \$printa,
-    'clus' => \$printc
+    'clus' => \$printc,
+##for mix
+    'max=s' => \$maxclusnum,
+#for roast
+    'species=s' => \$specieslist,
+    'in|i=s' => \$cluslistpath,
+#for eat
+    'mix=s' => \$mixout,
+    'roast=s' => \$roastout
     ) or die HelpShort();
 
 
@@ -129,40 +146,80 @@ my $start_string = strftime "%a %b %e %H:%M:%S %Y", localtime;
 print $outs "$start_string -- Program started \n";
 
 my $parastr = "";
+##parameters always needed
+##tool
+if(!$toolpath){
+    my $tpcmd = "pwd";
+    my @tpcmdout = readpipe("$tpcmd");
+    $toolpath = $tpcmdout[0];
+}
+if(-e $toolpath){}
+else{print STDERR "Please specify the path to where the tool's files are located.\n"; exit 0;}
+$parastr = "$parastr --tool $toolpath";
+##outfolder
+if(!$outpath){print STDERR "Please specify a location for the output files.\n"; exit 0;}
+else{$parastr = "$parastr --out $outpath";}
+#create outfolder if it doesnt exist
+if(-e $outpath){}
+else{
+    my $cmd42= "mkdir $outpath";
+    my @out42 = readpipe("$cmd42");
+}
+##perl
+if(!$perlpath){
+    my $pepcmd = "which perl";
+    my @pepcmdout = readpipe("$pepcmd");
+    $perlpath = $pepcmdout[0];
+}
+if(-e $perlpath){}
+else{print STDERR "Please specify the path to perl.\n";  exit 0;}
+$parastr = "$parastr --perl $perlpath";
+##python
+if(!$pythonpath){
+    my $pypcmd = "which python3";
+    my @pypcmdout = readpipe("$pypcmd");
+    $pythonpath = $pypcmdout[0];
+}
+if(-e $pythonpath){}
+else{print STDERR "Please specify the path to python.\n";  exit 0;}
+$parastr = "$parastr --perl $perlpath";
+##refspecies
+if(!$refspecies){print STDERR "Please specify the name of the reference species as given in the maf/MultiZ files.\n";  exit 0;}
+else{$parastr = "$parastr --ref $refspecies";}
 
-if($mode eq "prep" || $mode eq "Prep")
+######################################bake mode###############################
+if($mode eq "bake" || $mode eq "Bake"){
+##call prep and toast
+
+
+}
+
+######################################prep mode###############################
+elsif($mode eq "prep" || $mode eq "Prep")
 {
     print $outs "in prep mode.\n";
-    #we always need: tool, perl, python, maf, ref, (filter)
-    if(!$toolpath){print STDERR "Please specify the path to where the tool's files are located.\n"; exit 0;}
-    else{$parastr = "$parastr --tool $toolpath";}
-    if(!$outpath){print STDERR "Please specify a location for the output files.\n"; exit 0;}
-    else{$parastr = "$parastr --out $outpath";}
-    #create outfolder if it doesnt exist
-    if(-e $outpath){}
-    else{
-	my $cmd42= "mkdir $outpath";
-	my @out42 = readpipe("$cmd42");
-    }
+    ##maf
     if(!$mafs){print STDERR "Please specify a location for the maf/MultiZ files.\n";  exit 0;}
     else{$parastr = "$parastr --maf $mafs";}
-    if(!$refspecies){print STDERR "Please specify the name of the reference species as given in the maf/MultiZ files.\n";  exit 0;}
-    else{$parastr = "$parastr --ref $refspecies";}
-    if(!$perlpath){print STDERR "Please specify the path to perl.\n";  exit 0;}
-    else{$parastr = "$parastr --perl $perlpath";}
-    if(!$pythonpath){print STDERR "Please specify the path to python.\n";  exit 0;}
-    else{$parastr = "$parastr --perl $perlpath";}
     my $filstr = "";
+    ##filter
     if($perc){$filstr = " --filter $perc";}
     $parastr = "$parastr$filstr";
     my $preperrors = "$outpath\/errors_smoreprep\.txt";
+    ##cm
     if($cmfile){
 	$parastr = "$parastr --cm $cmfile";
 	#we need genomes, infernalpath, (pseudoscore), (infernaloptions)
 	if(!$genomes){print STDERR "Please specify the path to where the genomes are located.\n";  exit 0;}
 	else{$parastr = "$parastr --genomes $genomes";}
-	if(!$infernalpath){print STDERR "Please specify the path to infernal.\n";  exit 0;}
-	else{$parastr = "$parastr --infernal $infernalpath";}
+	if(!$infernalpath){
+            my $cmscmd = "which cmsearch";
+            my @cmscmdout = readpipe("$cmscmd");
+            my $infernalpath = $cmscmdout[0];
+        }
+        if(-e $infernalpath){}
+        else{print STDERR "Please specify the path to infernal.\n";  exit 0;}
+	$parastr = "$parastr --infernal $infernalpath";
 	my $infe = "";
 	my $inft = "";
 	if($evalin){$infe = " --incE $evalin";}
@@ -180,6 +237,7 @@ if($mode eq "prep" || $mode eq "Prep")
 	}
     }
     elsif($genelist){
+        #genelist
 	$parastr = "$parastr --genes $genelist";
 	print $outs "using a genelist with parameter: $parastr\n";
 	#nothing more needed
@@ -189,6 +247,7 @@ if($mode eq "prep" || $mode eq "Prep")
 	print $outs "\n";
     }
     elsif($locilist){
+        #locilist
 	$parastr = "$parastr --loci $locilist";
 	if(!$genomes){print STDERR "Please specify the path to where the genomes are located.\n";  exit 0;}
 	else{$parastr = "$parastr --genomes $genomes";}
@@ -196,6 +255,18 @@ if($mode eq "prep" || $mode eq "Prep")
 	#we need: genomes
 	#an extra script to create the input file
 	print STDERR "locilist option needs a further script. afterwards, it is the same as the genelist option!\n";
+    }
+    elsif($trnas){
+        #trnascan
+	if(!$trnaspath){
+            my $trnascmd = "which tRNAscan-SE";
+            my @trnascmdout = readpipe("$trnascmd");
+            my $trnaspath = $trnascmdout[0];
+        }
+        if(-e $trnaspath){}
+        else{print STDERR "Please specify the path to tRNAscan-SE.\n";  exit 0;}
+	$parastr = "$parastr --trna --trnascan $trnaspath";
+        print STDERR "trnascan option needs to be added!\n";
     }
     else{print STDERR "Please one of the following options when in prep mode: cm, genes or loci.\n";  exit 0;}
 
@@ -205,33 +276,19 @@ if($mode eq "prep" || $mode eq "Prep")
     my $stop_prep = strftime "%a %b %e %H:%M:%S %Y", localtime;
     print $outs "$stop_prep -- Program finished \n";
 }
+
+######################################toast mode###############################
 elsif($mode eq "toast" || $mode eq "Toast")
 {
     print $outs "in toast mode.\n";
     my $toasterrors = "$outpath\/errors_smoretoast\.txt";
-    #we always need: tool, perl, python, maf, ref, (filter)
-    if(!$toolpath){print STDERR "Please specify the path to where the tool's files are located.\n";  exit 0;}
-    else{$parastr = "$parastr --tool $toolpath";}
-    if(!$outpath){print STDERR "Please specify a location for the output files.\n";  exit 0;}
-    else{$parastr = "$parastr --out $outpath";}
-    #create outfolder if it doesnt exist
-    if(-e $outpath){}
-    else{
-	my $cmd42= "mkdir $outpath";
-	my @out42 = readpipe("$cmd42");
-	print join("",@out42);
-	print "\n";
-    }
-
-    if(!$perlpath){print STDERR "Please specify the path to perl.\n";  exit 0;}
-    else{$parastr = "$parastr --perl $perlpath";}
-    if(!$pythonpath){print STDERR "Please specify the path to python.\n";  exit 0;}
-    else{$parastr = "$parastr --python $pythonpath";}
+    #prep output
     if(!$pathtocam){print STDERR "Please specify the location of the output folders by smore prep.\n";  exit 0;}
     else{$parastr = "$parastr --prep $pathtocam";}
     my $specieslist = "$outpath\/specieslist";
     my $gencmd = "ls  $pathtocam\/genes \> $specieslist";
     my @outgncmd = readpipe("$gencmd");
+    #tree
     if(!$newicktree){print STDERR "Please specify a newick tree representing the species' evolutionary relationship. \n";  exit 0;}
     else{$parastr = "$parastr --newick $newicktree";}
     my $formtree = "$outpath\/tree_formatted.newick";
@@ -249,8 +306,10 @@ elsif($mode eq "toast" || $mode eq "Toast")
     else{
         print STDERR "The following speciesidentifier do appear in the genomes but do not appear in the tree: $checkout1[0]\n"; exit 0;
     }
+    #join
     if($joinmode eq "relaxed" || $joinmode eq "strict" || $joinmode eq "none"){$parastr = "$parastr --join $joinmode";}
     else{print STDERR "Specify a valid option for the mode of joining. \n";  exit 0;}
+    #output prints
     my $checkformissing = "";
     if($skipm){$checkformissing = " --nomiss";}
     $parastr = "$parastr$checkformissing";
@@ -273,6 +332,151 @@ elsif($mode eq "toast" || $mode eq "Toast")
     my $stop_toast = strftime "%a %b %e %H:%M:%S %Y", localtime;
     print $outs "$stop_toast -- Program finished \n";
 }
+######################################mix mode###############################
+elsif($mode eq "mix" || $mode eq "Mix"){
+    print $outs "in mix mode.\n";
+    ##mix parameter: 
+    my $mixerrors = "$outpath\/errors_smoremix\.txt";
+    #prep output
+    if(!$pathtocam){print STDERR "Please specify the location of the output folders by smore prep.\n";  exit 0;}
+    else{$parastr = "$parastr --prep $pathtocam";}
+    my $specieslist = "$outpath\/specieslist";
+    my $gencmd = "ls  $pathtocam\/genes \> $specieslist";
+    my @outgncmd = readpipe("$gencmd");
+    #join
+    if($joinmode eq "relaxed" || $joinmode eq "strict" || $joinmode eq "none"){$parastr = "$parastr --join $joinmode";}
+    else{print STDERR "Specify a valid option for the mode of joining. \n";  exit 0;}
+    #output prints
+    my $checkformissing = "";
+    if($skipm){$checkformissing = " --nomiss";}
+    $parastr = "$parastr$checkformissing";
+    my $verbstr="";
+    if($printc || $printall){$verbstr = "$verbstr --clus";}
+    #tree
+    if(!$newicktree){print STDERR "Please specify a newick tree representing the species' evolutionary relationship. \n";  exit 0;}
+    else{$parastr = "$parastr --newick $newicktree";}
+    my $formtree = "$outpath\/tree_formatted.newick";
+    if($ids){
+	#only convert tree identifier if id file is given
+	my $formcmd = "$perlpath\/perl $toolpath\/extendTree.pl $newicktree $ids $formtree 2>> $mixerrors";
+	my @formout = readpipe("$formcmd");
+    }
+    else{$formtree = $newicktree;}
+    #check tree
+    my $checkcmd1 = "$perlpath\/perl $toolpath\/checkTree.pl $formtree $specieslist 2>> $mixerrors";
+    my @checkout1 = readpipe("$checkcmd1");
+    my $noneout = "none";
+    if(index($checkout1[0],$noneout) != -1){print $outs "Tree file consistent with genomes!\n";}
+    else{
+        print STDERR "The following speciesidentifier do appear in the genomes but do not appear in the tree: $checkout1[0]\n"; exit 0;
+    }
+##change to mix mode
+    print $outs "with parameter: $parastr\n";
+    my $mixcmd = "$perlpath\/perl $toolpath\/smoremix.pl --tool $toolpath --out $outpath --python $pythonpath --perl $perlpath --prep $pathtocam --seqsim $seqsim --strucsim $strucsim --newick $formtree --join $joinmode --species $specieslist$checkformissing --err $mixerrors $verbstr --max $maxclusnum 2>> $mixerrors";
+    my @outmix = readpipe("$mixcmd");
+    print $outs (join("",@outmix));
+    print $outs "\n";
+    print $outs "Output files of smoremix can be found here: $outpath \n";
+    print $outs "List of commands to further process smoremix output can be found in $outpath\/commandlist.txt.\n";
+    print $outs "For more information on smoremix output, use 'smore --helpout' or 'smore --help' or check the manual.\n";
+    my $stop_mix = strftime "%a %b %e %H:%M:%S %Y", localtime;
+    print $outs "$stop_mix -- Program finished \n";
+}
+######################################roast mode###############################
+elsif($mode eq "roast" || $mode eq "Roast"){
+
+    print $outs "in roast mode.\n";
+    #prep output
+    if(! $cluslistpath){print STDERR "Please specify the list of clusters to be analysed with smoreroast.\n"; exit 0;}
+    else{$parastr = "$parastr --in $cluslistpath";}
+    #species
+    if(! $specieslist){print STDERR "Please specify the list of species.\n"; exit 0;}
+    else{$parastr = "$parastr --species $specieslist";}
+    #tree
+    if(!$newicktree){print STDERR "Please specify a newick tree representing the species' evolutionary relationship. \n";  exit 0;}
+    else{$parastr = "$parastr --newick $newicktree";}
+    my $formtree = "$outpath\/tree_formatted.newick";
+    if($ids){
+	#only convert tree identifier if id file is given
+	my $formcmd = "$perlpath\/perl $toolpath\/extendTree.pl $newicktree $ids $formtree";
+	my @formout = readpipe("$formcmd");
+    }
+    else{$formtree = $newicktree;}
+    #check tree
+    my $checkcmd1 = "$perlpath\/perl $toolpath\/checkTree.pl $formtree $specieslist";
+    my @checkout1 = readpipe("$checkcmd1");
+    my $noneout = "none";
+    if(index($checkout1[0],$noneout) != -1){print $outs "Tree file consistent with genomes!\n";}
+    else{
+        print STDERR "The following speciesidentifier do appear in the genomes but do not appear in the tree: $checkout1[0]\n"; exit 0;
+    }
+    #output prints
+    my $checkformissing = "";
+    if($skipm){$checkformissing = " --nomiss";}
+    $parastr = "$parastr$checkformissing";
+    my $verbstr = "";
+    if($printall){$verbstr = " --verbose";}
+    else{
+	if($printg){$verbstr = "$verbstr --graph";}
+	if($printa){$verbstr = "$verbstr --aln";}
+    }
+    $parastr = "$parastr$verbstr";
+    print $outs "with parameter: $parastr\n";
+    my $roastcmd = "$perlpath\/perl $toolpath\/smoreroast.pl --tool $toolpath --out $outpath --python $pythonpath --perl $perlpath --in $cluslistpath --seqsim $seqsim --strucsim $strucsim --newick $formtree --species $specieslist$checkformissing $verbstr";
+    my @outroast = readpipe("$roastcmd");
+    print $outs (join("",@outroast));
+    print $outs "\n";
+    print $outs "Output files of smoreroast can be found here: $outpath \n";
+    print $outs "To summarize all output files and finish the analysis, please use 'smore eat'.\n";
+    print $outs "For more information on smoreroast and smoreeat, use 'smore --help' or 'smore --helpout' or check the manual.\n";
+    my $stop_roast = strftime "%a %b %e %H:%M:%S %Y", localtime;
+    print $outs "$stop_roast -- Program finished \n";
+}
+######################################eat mode###############################
+elsif($mode eq "eat" || $mode eq "Eat"){
+    my $eaterrors = "$outpath\/errors_smoreeat\.txt";
+    if(!$pathtocam){print STDERR "Please specify the location of the output folders by smore prep.\n";  exit 0;}
+    else{$parastr = "$parastr --prep $pathtocam";}
+    if(!$mixout){print STDERR "Please specify the location of the output folders by smore mix.\n";  exit 0;}
+    else{$parastr = "$parastr --mix $mixout";}
+    if(!$roastout){print STDERR "Please specify the location of the output folders by smore roast.\n";  exit 0;}
+    else{$parastr = "$parastr --roast $roastout";}
+    if(!$newicktree){print STDERR "Please specify a newick tree representing the species' evolutionary relationship. \n";  exit 0;}
+    else{$parastr = "$parastr --newick $newicktree";}
+    my $formtree = "$outpath\/tree_formatted.newick";
+    if($ids){
+	#only convert tree identifier if id file is given
+	my $formcmd = "$perlpath\/perl $toolpath\/extendTree.pl $newicktree $ids $formtree 2>> $eaterrors";
+	my @formout = readpipe("$formcmd");
+    }
+    else{$formtree = $newicktree;}
+    #check tree
+    my $checkcmd1 = "$perlpath\/perl $toolpath\/checkTree.pl $formtree $specieslist 2>> $eaterrors";
+    my @checkout1 = readpipe("$checkcmd1");
+    my $noneout = "none";
+    if(index($checkout1[0],$noneout) != -1){print $outs "Tree file consistent with genomes!\n";}
+    else{
+        print STDERR "The following speciesidentifier do appear in the genomes but do not appear in the tree: $checkout1[0]\n"; exit 0;
+    }
+    #output prints
+    my $checkformissing = "";
+    if($skipm){$checkformissing = " --nomiss";}
+    $parastr = "$parastr$checkformissing";
+
+    print $outs "with parameter: $parastr\n";
+    my $eatcmd = "$perlpath\/perl $toolpath\/smoreeat.pl --tool $toolpath --out $outpath --python $pythonpath --perl $perlpath --prep $pathtocam --mix $mixout --roast $roastout --newick $formtree$checkformissing 2> $eaterrors";
+    my @outeat = readpipe("$eatcmd");
+    print $outs (join("",@outeat));
+    print $outs "\n";
+    print $outs "Output files of smore eat can be found here: $outpath \n";
+    print $outs "The final tree can be visualized using the online tool iTOL. Files to be uploaded on the iTOL page are located in $outpath\/data_iTOL\n";
+    print $outs "For more information on smore eat, use 'smore --help' or 'smore --helpout' or check the manual.\n";
+    my $stop_eat = strftime "%a %b %e %H:%M:%S %Y", localtime;
+    print $outs "$stop_eat -- Program finished \n";
+
+
+}
+######################################invalid mode###############################
 else{print "\'$mode\' is not a valid option! \n";  exit 0;}
 
 

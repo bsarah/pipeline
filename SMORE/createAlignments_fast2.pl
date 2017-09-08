@@ -298,7 +298,41 @@ else{
 	    if($k eq $k2) {next;}
 	    my $lseq2 = $species{$k2};
 	    my $lseq2len = length($lseq2);
-	    my $cmd1 = "$pathtonw/altNW 1 1 \"$lseq1\" \"$lseq2\"";
+            my $newls1;
+            my $newls2;
+            my $remls1;
+            my $remls2;
+            my $altnwtwice = 0;
+            if($lseq1len >= 900 && $lseq2len < 900){
+                $newls1 = substr($lseq1,0,900);
+                $newls2 = $lseq2;
+                $remls1 = substr($lseq1,900);
+                $remls2 = "-" x (length($remls1));
+            }
+            elsif($lseq2len >= 900 && $lseq1len < 900){
+                $newls2 = substr($lseq2,0,900);
+                $newls1 = $lseq1;
+                $remls2 = substr($lseq2,900);
+                $remls1 = "-" x (length($remls2));
+            }
+            elsif($lseq2len < 900 && $lseq1len < 900){
+                $newls2 = $lseq2;
+                $newls1 = $lseq1;
+                $remls2 = "";
+                $remls1 = "";
+            }
+            else{ ##both longer than 900...
+                print STDERR "both altNW seqs are longer than 900: lseq1: $lseq1len, lseq2: $lseq2len \n";
+                $altnwtwice = 1;
+                $newls2 = substr($lseq2,0,900);
+                $newls1 = substr($lseq1,0,900);
+                $remls2 = substr($lseq2,900);
+                $remls1 = substr($lseq1,900);
+            }
+            ###ALTNW DOES !NOT! WORK WITH SEQUENCES LONGER THAN 1000!!!
+            ##split the long sequences as it is unprobable that the first of seq1 and the
+            ##last of seq 2 align
+	    my $cmd1 = "$pathtonw/altNW 1 1 \"$newls1\" \"$newls2\"";
 	    my @out1 = readpipe("$cmd1");
 	    if($toprint == 1){print $aout ">$k2\t";}
 	    if($toprint == 1){print $aout "@out1";}
@@ -309,9 +343,21 @@ else{
 	    my $l=0;
 	    my $s=0;
 	    my $i=0;
-	    my @ref = split '',$out1[1];
+            my $l1out = "";
+            my $l2out = "";
+            if($altnwtwice == 0){
+                $l1out = "$out1[1]$remls1";
+                $l2out = "$out1[2]$remls2";
+            }
+            else{
+                my $cmd2 = "$pathtonw/altNW 1 1 \"$remls1\" \"$remls2\"";
+                my @out2 = readpipe("$cmd2");
+                $l1out = "$out1[1]$out2[1]";
+                $l2out = "$out1[2]$out2[2]";
+            }
+	    my @ref = split '',$l1out;
 	    my @rseq = split '', $lseq1;
-	    my @oth = split '',$out1[2];
+	    my @oth = split '',$l2out;
 	    my @oseq = split '', $lseq2;
 	    if(scalar @ref != scalar @oth){
 		print STDERR "alignment does not fit! lseq1, lseq2: $lseq1, $lseq2 \n";
