@@ -12,7 +12,10 @@ use File::Find;
 ##general information
 my $toolname = "SMORE : Synteny Modulator Of Repetitive Elements";
 my $version = "1.0";
-my $citation = "Beerinformatics Leipzig";
+my $citation ="
+SMORE: Synteny Modulator Of Repetitive Elements. 
+Berkemer, S.J. and Hoffmann, A. and Murray, C.R. and Stadler, P.F.
+MDPI Life, 2017 (submitted)";
 my $contact = "bsarah at bioinf dot uni-leipzig dot de or anneh at bioinf dot uni-leipzig dot de";
 
 my $mode = "";
@@ -91,7 +94,7 @@ GetOptions(
     'infernal=s' => \$infernalpath,
     'pseudo=s' => \$pseudoscore,
 ##options for toast and bake
-    'prep|i=s' => \$pathtocam, #path to output of smore prep (genes folder)
+    'prep=s' => \$pathtocam, #path to output of smore prep (genes folder)
     'seqsim|s=s' => \$seqsim,
     'strucsim|p=s' => \$strucsim,
     'newick=s' => \$newicktree,
@@ -548,7 +551,9 @@ The smore subcommands are:
 
 sub HelpComplete{
 print "
-This is the help page of the SMORE pipeline, a Synteny Modulator Of Repetitive Elements.
+This is the help page of the SMORE pipeline,
+Synteny Modulator Of Repetitive Elements.
+
 usage: ./smore <subcommand> [options]
 
 or ./smore [general_options]
@@ -600,8 +605,9 @@ The smore subcommands are:
 
     eat     This subcommand is used after SMORE roast and will take list(s) of
             evolutionary events and output a phylogenetic tree with event and
-	    element counts. SMORE eat is able to summarize the outputs of parallelized
-	    runs such that all data is recombined at the phylogenetic tree.
+	    element counts. SMORE eat is able to summarize the outputs of
+            parallelized runs such that all data is recombined at the
+            phylogenetic tree.
 ";
 #HelpPrep();
 #HelpToast();
@@ -636,7 +642,8 @@ smore bake --out PATH --ref REFSPECIES --maf PATH
 
 with one of the following possibilities (a-d):
 
-a)       [--cm FILE --genomes PATH (--infernal PATH) (--incE NUM |--incT NUM) (--pseudo NUM)]
+a)       [--cm FILE --genomes PATH (--infernal PATH) 
+         (--incE NUM |--incT NUM) (--pseudo NUM)]
 b)       [--genes FILE ]
 c)       [--genomes PATH --loci FILE ]
 d)       [--trna (--trnascan PATH)]
@@ -663,7 +670,8 @@ smore prep --out PATH --ref REFSPECIES --maf PATH
 
 with one of the following possibilities (a-d):
 
-a)       [--cm FILE --genomes PATH (--infernal PATH) (--incE NUM |--incT NUM) (--pseudo NUM)]
+a)       [--cm FILE --genomes PATH (--infernal PATH) 
+          (--incE NUM |--incT NUM) (--pseudo NUM)]
 b)       [--genes FILE ]
 c)       [--genomes PATH --loci FILE ]
 d)       [--trna (--trnascan PATH)]
@@ -741,8 +749,8 @@ Legend:
                         if the tool is located in a very specific location
     --python PATH       path to python, onlz needed if python3 is not installed
                         within the environment path variable
-    --perl PATH         path to perl, only needed if perl is not installed within
-                        the environment path variable
+    --perl PATH         path to perl, only needed if perl is not installed
+                        within the environment path variable
 
 
 ";
@@ -801,8 +809,8 @@ Legend:
                         if the tool is located in a very specific location
     --python PATH       path to python, onlz needed if python3 is not installed
                         within the environment path variable
-    --perl PATH         path to perl, only needed if perl is not installed within
-                        the environment path variable
+    --perl PATH         path to perl, only needed if perl is not installed
+                        within the environment path variable
 ";
 }
 
@@ -866,8 +874,8 @@ Legend:
                         if the tool is located in a very specific location
     --python PATH       path to python, onlz needed if python3 is not installed
                         within the environment path variable
-    --perl PATH         path to perl, only needed if perl is not installed within
-                        the environment path variable
+    --perl PATH         path to perl, only needed if perl is not installed
+                        within the environment path variable
 ";
 }
 
@@ -921,8 +929,8 @@ Legend:
                         if the tool is located in a very specific location
     --python PATH       path to python, onlz needed if python3 is not installed
                         within the environment path variable
-    --perl PATH         path to perl, only needed if perl is not installed within
-                        the environment path variable
+    --perl PATH         path to perl, only needed if perl is not installed
+                        within the environment path variable
 ";
 }
 
@@ -967,8 +975,8 @@ Legend:
                         if the tool is located in a very specific location
     --python PATH       path to python, onlz needed if python3 is not installed
                         within the environment path variable
-    --perl PATH         path to perl, only needed if perl is not installed within
-                        the environment path variable
+    --perl PATH         path to perl, only needed if perl is not installed
+                        within the environment path variable
 ";
 }
 

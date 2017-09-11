@@ -40,7 +40,7 @@ GetOptions(
     'python=s' => \$pythonpath,
     'perl=s' => \$perlpath,
 ##options for toast and bake
-    'prep|i=s' => \$pathtocam, #path to output of smore prep (genes folder)
+    'prep=s' => \$pathtocam, #path to output of smore prep (genes folder)
     'seqsim|s=s' => \$seqsim,
     'strucsim|p=s' => \$strucsim,
     'newick=s' => \$newicktree,
