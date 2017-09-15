@@ -156,9 +156,13 @@ my $parastr = "";
 ##parameters always needed
 ##tool
 if(!$toolpath){
-    my $tpcmd = "pwd";
-    my @tpcmdout = readpipe("$tpcmd");
-    $toolpath = $tpcmdout[0];
+    $toolpath = dirname(__FILE__);
+#    my $tpcmd = "pwd";
+#    my @tpcmdout = readpipe("$tpcmd");
+#    $toolpath = $tpcmdout[0];
+#    my $toolpath0 = $0;
+#    my $toolpath1 = dirname(__FILE__);
+#    print STDERR "toolpath: $toolpath, toolpath0: $toolpath0, toolpath1: $toolpath1 \n";
 }
 if(-e $toolpath){}
 else{print STDERR "Please specify the path to where the tool's files are located.\n"; exit 0;}
@@ -176,7 +180,9 @@ else{
 if(!$perlpath){
     my $pepcmd = "which perl";
     my @pepcmdout = readpipe("$pepcmd");
-    $perlpath = $pepcmdout[0];
+    my $preperlpath = $pepcmdout[0];
+    chomp($preperlpath);
+    $perlpath = dirname($preperlpath);
 }
 if(-e $perlpath){}
 else{print STDERR "Please specify the path to perl.\n";  exit 0;}
@@ -185,7 +191,9 @@ $parastr = "$parastr --perl $perlpath";
 if(!$pythonpath){
     my $pypcmd = "which python3";
     my @pypcmdout = readpipe("$pypcmd");
-    $pythonpath = $pypcmdout[0];
+    my $prepythonpath = $pypcmdout[0];
+    chomp($prepythonpath);
+    $pythonpath = dirname($prepythonpath);
 }
 if(-e $pythonpath){}
 else{print STDERR "Please specify the path to python.\n";  exit 0;}
@@ -222,7 +230,9 @@ elsif($mode eq "prep" || $mode eq "Prep")
 	if(!$infernalpath){
             my $cmscmd = "which cmsearch";
             my @cmscmdout = readpipe("$cmscmd");
-            my $infernalpath = $cmscmdout[0];
+            my $preinfernalpath = $cmscmdout[0];
+	    chomp($preinfernalpath);
+	    $infernalpath = dirname($preinfernalpath);
         }
         if(-e $infernalpath){}
         else{print STDERR "Please specify the path to infernal.\n";  exit 0;}
@@ -248,7 +258,7 @@ elsif($mode eq "prep" || $mode eq "Prep")
 	$parastr = "$parastr --genes $genelist";
 	print $outs "using a genelist with parameter: $parastr\n";
 	#nothing more needed
-	my $prepgl = "$perlpath\/perl $toolpath\/smoreprep.pl --tool $toolpath --out $outpath --python $pythonpath --perl $perlpath --maf $mafs --ref $refspecies --genes $genelist $filstr 2>> $preperrors";
+	my $prepgl = "$perlpath\/perl $toolpath\/smoreprep.pl --tool $toolpath --out $outpath --python $pythonpath --perl $perlpath --maf $mafs --ref $refspecies --genes $genelist $filstr --err $preperrors 2>> $preperrors";
 	my @outprepgl = readpipe("$prepgl");
 	print $outs (join("",@outprepgl));
 	print $outs "\n";
@@ -268,19 +278,21 @@ elsif($mode eq "prep" || $mode eq "Prep")
 	if(!$trnaspath){
             my $trnascmd = "which tRNAscan-SE";
             my @trnascmdout = readpipe("$trnascmd");
-            my $trnaspath = $trnascmdout[0];
+            my $pretrnaspath = $trnascmdout[0];
+	    chomp($pretrnaspath);
+	    $trnaspath = dirname($pretrnaspath);
         }
         if(-e $trnaspath){}
         else{print STDERR "Please specify the path to tRNAscan-SE.\n";  exit 0;}
 	$parastr = "$parastr --trna --trnascan $trnaspath";
 	if(!$genomes){print STDERR "Please specify the path to where the genomes are located.\n";  exit 0;}
 	else{$parastr = "$parastr --genomes $genomes";}
-	print $outs "using a tRNAscan-SE with parameter: $parastr\n";
+	print $outs "using tRNAscan-SE with parameter: $parastr\n";
 	
 	#trnascan
 	my $tsgenelist = getTRNAs($trnaspath,$genomes,$outpath,$toolpath,$perlpath,$preperrors);
 	
-	my $prepts = "$perlpath\/perl $toolpath\/smoreprep.pl --tool $toolpath --out $outpath --python $pythonpath --perl $perlpath --maf $mafs --ref $refspecies --genes $tsgenelist $filstr 2>> $preperrors";
+	my $prepts = "$perlpath\/perl $toolpath\/smoreprep.pl --tool $toolpath --out $outpath --python $pythonpath --perl $perlpath --maf $mafs --ref $refspecies --genes $tsgenelist $filstr --err $preperrors 2>> $preperrors";
 	my @outprepts = readpipe("$prepts");
 	print $outs (join("",@outprepts));
 	print $outs "\n";
@@ -1080,6 +1092,8 @@ and produce the output on the summarized counts.
 
 sub getTRNAs{#  ($trnaspath,$genomes,outpath,toolpath,perlpath,$preperrors)
     my @inp = @_;
+#    my $pathes = join('\n',@inp);
+#    print STDERR "$pathes\n";
     my $trnaspath = $inp[0];
     my $genomes = $inp[1];
     my $outpath = $inp[2];
@@ -1090,11 +1104,20 @@ sub getTRNAs{#  ($trnaspath,$genomes,outpath,toolpath,perlpath,$preperrors)
     my $listcmd = "ls $genomes";
     my @genomeslist = readpipe("$listcmd");
     for(my $i = 0;$i< scalar @genomeslist; $i++){
-	my @splitgen = split '\.', $genomeslist[$i];
-	my $curgen = $splitgen[-2];
-	my $tscmd = "$trnaspath\/tRNAscan-SE -f $outpath\/$curgen\.sec $genomeslist[$i] 2>> $preperrors";
+	my $curgenome = $genomeslist[$i];
+	chomp($curgenome);	
+	my @splitgen = split '\.', $curgenome;
+	my $curgen = $splitgen[0];
+	print STDERR "current genome: $curgenome, current species: $curgen \n";
+	my $tscmd;
+	if($splitgen[-1] eq "gz"){
+	    $tscmd = "zcat $genomes/$curgenome | $trnaspath\/tRNAscan-SE -q -f $outpath\/$curgen\.sec - 2>> $preperrors";
+	}
+	else{
+	    $tscmd = "$trnaspath\/tRNAscan-SE -q -f $outpath\/$curgen\.sec $genomes/$curgenome 2>> $preperrors";
+	}
 	my @outts = readpipe("$tscmd");
-	my $parsecmd = "perl $toolpath\/getGenlist_tRNAs.pl $outpath\/$curgen\.sec $curgen $outpath\/tmpparse.bed 2>> $preperrors";
+	my $parsecmd = "$perlpath\/perl $toolpath\/getGenlist_tRNAs.pl $outpath\/$curgen\.sec $curgen $outpath\/tmpparse.bed 2>> $preperrors";
 	my @outparse = readpipe("$parsecmd");
 	my $catcmd = "cat $outpath\/tmpparse.bed >> $outfile";
 	my @outcat = readpipe("$catcmd");
