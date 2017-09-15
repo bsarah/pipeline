@@ -273,7 +273,17 @@ elsif($mode eq "prep" || $mode eq "Prep")
         if(-e $trnaspath){}
         else{print STDERR "Please specify the path to tRNAscan-SE.\n";  exit 0;}
 	$parastr = "$parastr --trna --trnascan $trnaspath";
-        print STDERR "trnascan option needs to be added!\n";
+	if(!$genomes){print STDERR "Please specify the path to where the genomes are located.\n";  exit 0;}
+	else{$parastr = "$parastr --genomes $genomes";}
+	print $outs "using a tRNAscan-SE with parameter: $parastr\n";
+	
+	#trnascan
+	my $tsgenelist = getTRNAs($trnaspath,$genomes,$outpath,$toolpath,$perlpath,$preperrors);
+	
+	my $prepts = "$perlpath\/perl $toolpath\/smoreprep.pl --tool $toolpath --out $outpath --python $pythonpath --perl $perlpath --maf $mafs --ref $refspecies --genes $tsgenelist $filstr 2>> $preperrors";
+	my @outprepts = readpipe("$prepts");
+	print $outs (join("",@outprepts));
+	print $outs "\n";
     }
     else{print STDERR "Please one of the following options when in prep mode: cm, genes or loci.\n";  exit 0;}
 
@@ -1061,4 +1071,36 @@ and produce the output on the summarized counts.
 
 	    
 ";
+}
+
+
+
+
+
+
+sub getTRNAs{#  ($trnaspath,$genomes,outpath,toolpath,perlpath,$preperrors)
+    my @inp = @_;
+    my $trnaspath = $inp[0];
+    my $genomes = $inp[1];
+    my $outpath = $inp[2];
+    my $toolpath = $inp[3];
+    my $perlpath = $inp[4];
+    my $preperrors = $inp[5];
+    my $outfile = "$outpath\/genelist.bed";
+    my $listcmd = "ls $genomes";
+    my @genomeslist = readpipe("$listcmd");
+    for(my $i = 0;$i< scalar @genomeslist; $i++){
+	my @splitgen = split '\.', $genomeslist[$i];
+	my $curgen = $splitgen[-2];
+	my $tscmd = "$trnaspath\/tRNAscan-SE -f $outpath\/$curgen\.sec $genomeslist[$i] 2>> $preperrors";
+	my @outts = readpipe("$tscmd");
+	my $parsecmd = "perl $toolpath\/getGenlist_tRNAs.pl $outpath\/$curgen\.sec $curgen $outpath\/tmpparse.bed 2>> $preperrors";
+	my @outparse = readpipe("$parsecmd");
+	my $catcmd = "cat $outpath\/tmpparse.bed >> $outfile";
+	my @outcat = readpipe("$catcmd");
+	my $rmcmd = "rm $outpath\/tmpparse.bed";
+	my @outrm = readpipe("$rmcmd");
+    }
+
+    return $outfile;
 }
