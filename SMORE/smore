@@ -1110,8 +1110,13 @@ sub getTRNAs{#  ($trnaspath,$genomes,outpath,toolpath,perlpath,$preperrors)
 	my $curgen = $splitgen[0];
 	print STDERR "current genome: $curgenome, current species: $curgen \n";
 	my $tscmd;
+	my $zipd = 0;
+	##tRNAscan-SE does not work with zcat!!! unzip files before!
 	if($splitgen[-1] eq "gz"){
-	    $tscmd = "zcat $genomes/$curgenome | $trnaspath\/tRNAscan-SE -q -f $outpath\/$curgen\.sec - 2>> $preperrors";
+	    my $unzcmd = "gunzip -c -k $genomes/$curgenome > $outpath\/$curgen\.fa 2>> $preperrors";
+	    readpipe("$unzcmd");
+	    $tscmd = "$trnaspath\/tRNAscan-SE -q -f $outpath\/$curgen\.sec $outpath\/$curgen\.fa 2>> $preperrors";
+	    $zipd=1;
 	}
 	else{
 	    $tscmd = "$trnaspath\/tRNAscan-SE -q -f $outpath\/$curgen\.sec $genomes/$curgenome 2>> $preperrors";
@@ -1123,6 +1128,10 @@ sub getTRNAs{#  ($trnaspath,$genomes,outpath,toolpath,perlpath,$preperrors)
 	my @outcat = readpipe("$catcmd");
 	my $rmcmd = "rm $outpath\/tmpparse.bed";
 	my @outrm = readpipe("$rmcmd");
+	if($zipd == 1){
+	    my $rmcmd2 = "rm $outpath\/$curgen\.fa 2>> $preperrors";
+	    readpipe("$rmcmd2");
+	}
     }
 
     return $outfile;
