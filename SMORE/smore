@@ -8,6 +8,7 @@ use Getopt::Long qw(GetOptions);
 use POSIX qw(strftime);
 use File::Basename;
 use File::Find;
+use IO::Uncompress::Gunzip qw($GunzipError);
 
 ##general information
 my $toolname = "SMORE : Synteny Modulator Of Repetitive Elements";
@@ -93,7 +94,7 @@ GetOptions(
     'incT=s' => \$bitvalin,
     'infernal=s' => \$infernalpath,
     'pseudo=s' => \$pseudoscore,
-##options for toast and bake
+##options for toast
     'prep=s' => \$pathtocam, #path to output of smore prep (genes folder)
     'seqsim|s=s' => \$seqsim,
     'strucsim|p=s' => \$strucsim,
@@ -205,14 +206,19 @@ else{$parastr = "$parastr --ref $refspecies";}
 ######################################bake mode###############################
 if($mode eq "bake" || $mode eq "Bake"){
 ##call prep and toast
-
-
+    print $outs "in bake mode.\n";
+    print $outs "smore bake will call smore prep and smore toast consecutively./n";
 }
 
 ######################################prep mode###############################
-elsif($mode eq "prep" || $mode eq "Prep")
+if($mode eq "prep" || $mode eq "Prep" || $mode eq "bake" || $mode eq "Bake")
 {
-    print $outs "in prep mode.\n";
+    if($mode eq "bake" || $mode eq "Bake"){
+	print $outs "prep mode started.\n";
+    }
+    else{
+	print $outs "in prep mode.\n";
+    }
     ##maf
     if(!$mafs){print STDERR "Please specify a location for the maf/MultiZ files.\n";  exit 0;}
     else{$parastr = "$parastr --maf $mafs";}
@@ -271,7 +277,16 @@ elsif($mode eq "prep" || $mode eq "Prep")
 	print $outs "using a locilist with parameter: $parastr\n";
 	#we need: genomes
 	#an extra script to create the input file
-	print STDERR "locilist option needs a further script. afterwards, it is the same as the genelist option!\n";
+	my $locigenelist = getSeqs($genomes,$outpath,$toolpath,$perlpath,$preperrors,$locilist);
+	##script:
+	#unzip files
+	#grep for species in locilist and have separate files
+	#look for chr and coordinates and get sequence (take complement for - strand)
+	#create format for genelist and add to genelist (secondary structure:NA)
+	my $prepll = "$perlpath\/perl $toolpath\/smoreprep.pl --tool $toolpath --out $outpath --python $pythonpath --perl $perlpath --maf $mafs --ref $refspecies --genes $locigenelist $filstr --err $preperrors 2>> $preperrors";
+	my @outprepll = readpipe("$prepll");
+	print $outs (join("",@outprepll));
+	print $outs "\n";
     }
     elsif($trnas){
         #trnascan
@@ -288,9 +303,13 @@ elsif($mode eq "prep" || $mode eq "Prep")
 	if(!$genomes){print STDERR "Please specify the path to where the genomes are located.\n";  exit 0;}
 	else{$parastr = "$parastr --genomes $genomes";}
 	print $outs "using tRNAscan-SE with parameter: $parastr\n";
-	
+
+	my $start_trnas = strftime "%a %b %e %H:%M:%S %Y", localtime;
+	print $outs "start tRNAscan-SE at $start_trnas\n";
 	#trnascan
 	my $tsgenelist = getTRNAs($trnaspath,$genomes,$outpath,$toolpath,$perlpath,$preperrors);
+	my $end_trnas = strftime "%a %b %e %H:%M:%S %Y", localtime;
+	print $outs "finish tRNAscan-SE at $end_trnas\n";
 	
 	my $prepts = "$perlpath\/perl $toolpath\/smoreprep.pl --tool $toolpath --out $outpath --python $pythonpath --perl $perlpath --maf $mafs --ref $refspecies --genes $tsgenelist $filstr --err $preperrors 2>> $preperrors";
 	my @outprepts = readpipe("$prepts");
@@ -307,9 +326,14 @@ elsif($mode eq "prep" || $mode eq "Prep")
 }
 
 ######################################toast mode###############################
-elsif($mode eq "toast" || $mode eq "Toast")
+if($mode eq "toast" || $mode eq "Toast" || $mode eq "bake" || $mode eq "Bake")
 {
-    print $outs "in toast mode.\n";
+    if($mode eq "bake" || $mode eq "Bake"){
+	print $outs "prep mode started.\n";
+    }
+    else{
+	print $outs "in toast mode.\n";
+    }
     my $toasterrors = "$outpath\/errors_smoretoast\.txt";
     #prep output
     if(!$pathtocam){print STDERR "Please specify the location of the output folders by smore prep.\n";  exit 0;}
@@ -362,7 +386,7 @@ elsif($mode eq "toast" || $mode eq "Toast")
     print $outs "$stop_toast -- Program finished \n";
 }
 ######################################mix mode###############################
-elsif($mode eq "mix" || $mode eq "Mix"){
+if($mode eq "mix" || $mode eq "Mix"){
     print $outs "in mix mode.\n";
     ##mix parameter: 
     my $mixerrors = "$outpath\/errors_smoremix\.txt";
@@ -412,7 +436,7 @@ elsif($mode eq "mix" || $mode eq "Mix"){
     print $outs "$stop_mix -- Program finished \n";
 }
 ######################################roast mode###############################
-elsif($mode eq "roast" || $mode eq "Roast"){
+if($mode eq "roast" || $mode eq "Roast"){
 
     print $outs "in roast mode.\n";
     #prep output
@@ -462,7 +486,7 @@ elsif($mode eq "roast" || $mode eq "Roast"){
     print $outs "$stop_roast -- Program finished \n";
 }
 ######################################eat mode###############################
-elsif($mode eq "eat" || $mode eq "Eat"){
+if($mode eq "eat" || $mode eq "Eat"){
     my $eaterrors = "$outpath\/errors_smoreeat\.txt";
     if(!$pathtocam){print STDERR "Please specify the location of the output folders by smore prep.\n";  exit 0;}
     else{$parastr = "$parastr --prep $pathtocam";}
@@ -506,7 +530,8 @@ elsif($mode eq "eat" || $mode eq "Eat"){
 
 }
 ######################################invalid mode###############################
-else{print "\'$mode\' is not a valid option! \n";  exit 0;}
+if($mode ne "eat" && $mode ne "Eat" && $mode ne "roast" && $mode ne "Roast" && $mode ne "mix" && $mode ne "Mix" && $mode ne "toast" && $mode ne "Toast" && $mode ne "bake" && $mode ne "Bake" && $mode ne "prep" && $mode ne "Prep")
+{print "\'$mode\' is not a valid option! \n";  exit 0;}
 
 
 sub HelpShort{
@@ -1093,7 +1118,10 @@ and produce the output on the summarized counts.
 sub getTRNAs{#  ($trnaspath,$genomes,outpath,toolpath,perlpath,$preperrors)
     my @inp = @_;
 #    my $pathes = join('\n',@inp);
-#    print STDERR "$pathes\n";
+    #    print STDERR "$pathes\n";
+    my $tspath = "$outpath\/temp\_trnascan";
+    my $folcmd = "mkdir $tspath";
+    readpipe("$folcmd");
     my $trnaspath = $inp[0];
     my $genomes = $inp[1];
     my $outpath = $inp[2];
@@ -1103,36 +1131,170 @@ sub getTRNAs{#  ($trnaspath,$genomes,outpath,toolpath,perlpath,$preperrors)
     my $outfile = "$outpath\/genelist.bed";
     my $listcmd = "ls $genomes";
     my @genomeslist = readpipe("$listcmd");
+    my @scripts = ();
+    my $checkfile = "$tspath\/DoneList.txt";
+    my $cfcmd = "touch $checkfile";
+    readpipe("$cfcmd");
     for(my $i = 0;$i< scalar @genomeslist; $i++){
 	my $curgenome = $genomeslist[$i];
 	chomp($curgenome);	
 	my @splitgen = split '\.', $curgenome;
 	my $curgen = $splitgen[0];
-	print STDERR "current genome: $curgenome, current species: $curgen \n";
+#	print STDERR "current genome: $curgenome, current species: $curgen \n";
 	my $tscmd;
 	my $zipd = 0;
 	##tRNAscan-SE does not work with zcat!!! unzip files before!
+	##create shell scripts for each of the species including unzip,trnascan and rm files
+	my $curscript = "$tspath\/$curgen\_ts\.sh";
+	open(my $curs,">>", $curscript);
+	print $curs "#!/bin/sh\n";
 	if($splitgen[-1] eq "gz"){
-	    my $unzcmd = "gunzip -c -k $genomes/$curgenome > $outpath\/$curgen\.fa 2>> $preperrors";
-	    readpipe("$unzcmd");
-	    $tscmd = "$trnaspath\/tRNAscan-SE -q -f $outpath\/$curgen\.sec $outpath\/$curgen\.fa 2>> $preperrors";
-	    $zipd=1;
+	    print $curs "gunzip -c -k $genomes/$curgenome > $tspath\/$curgen\.fa 2>> $preperrors\n";
+	    #readpipe("$unzcmd");
+	    print $curs "$trnaspath\/tRNAscan-SE -q -f $tspath\/$curgen\.sec $tspath\/$curgen\.fa 2>> $preperrors\n";
+	    print $curs "$perlpath\/perl $toolpath\/getGenlist_tRNAs.pl $tspath\/$curgen\.sec $curgen $tspath\/tmpparse$curgen\.bed 2>> $preperrors\n";
+	    print $curs "cat $tspath\/tmpparse$curgen\.bed >> $outfile\n";
+	    print $curs "rm $tspath\/tmpparse$curgen\.bed $tspath\/$curgen\.fa $tspath\/$curgen\.sec\n";
+	    print $curs "echo \"$curgen\" >> $checkfile\n";
 	}
 	else{
-	    $tscmd = "$trnaspath\/tRNAscan-SE -q -f $outpath\/$curgen\.sec $genomes/$curgenome 2>> $preperrors";
+	    print $curs "$trnaspath\/tRNAscan-SE -q -f $tspath\/$curgen\.sec $genomes/$curgenome 2>> $preperrors\n";
+	    print $curs "$perlpath\/perl $toolpath\/getGenlist_tRNAs.pl $tspath\/$curgen\.sec $curgen $tspath\/tmpparse$curgen\.bed 2>> $preperrors\n";
+	    print $curs "cat $tspath\/tmpparse$curgen\.bed >> $outfile\n";
+	    print $curs "rm $tspath\/tmpparse$curgen\.bed $tspath\/$curgen\.sec\n";
+	    print $curs "echo \"$curgen\" >> $checkfile\n";
 	}
-	my @outts = readpipe("$tscmd");
-	my $parsecmd = "$perlpath\/perl $toolpath\/getGenlist_tRNAs.pl $outpath\/$curgen\.sec $curgen $outpath\/tmpparse.bed 2>> $preperrors";
-	my @outparse = readpipe("$parsecmd");
-	my $catcmd = "cat $outpath\/tmpparse.bed >> $outfile";
-	my @outcat = readpipe("$catcmd");
-	my $rmcmd = "rm $outpath\/tmpparse.bed";
-	my @outrm = readpipe("$rmcmd");
-	if($zipd == 1){
-	    my $rmcmd2 = "rm $outpath\/$curgen\.fa 2>> $preperrors";
-	    readpipe("$rmcmd2");
-	}
+	close $curs;
+	push @scripts, $curscript;
     }
 
+    my $allscript = "$tspath\/runTS.sh";
+    open(my $as,">>",$allscript);
+    print $as "#!/bin/sh\n";
+    my $emp = "&";
+    for(my $i=0;$i<scalar @scripts;$i++){
+	print $as "/bin/bash $scripts[$i] $emp\n";
+	if($emp eq "&"){$emp = "";}
+	else{$emp="&";}
+    }
+    my $ascmd = "/bin/bash $allscript 2>> $preperrors";
+    readpipe("$ascmd");
+    
     return $outfile;
+}
+
+
+sub getSeqs{
+    my @inp=@_;
+    my $genomes = $inp[0];
+    my $outpath = $inp[1];
+    my $toolpath = $inp[2];
+    my $perlpath = $inp[3];
+    my $preperrors = $inp[4];
+    my $locilist = $inp[5];
+    my $outfile = "$outpath\/genelist.bed";
+    open(my $outf,">>",$outfile);
+    my $listcmd = "ls $genomes";
+    my @genomeslist = readpipe("$listcmd");
+    for(my $i = 0;$i< scalar @genomeslist; $i++){
+	my $curgenome = $genomeslist[$i];
+	chomp($curgenome);	
+	my @splitgen = split '\.', $curgenome;
+	my $curgen = $splitgen[0];
+	my %chrs = (); #hash with chromosome and sequence
+	if($splitgen[-1] eq "gz"){
+	    my $CTF = IO::Uncompress::Gunzip->new( "$genomes\/$curgenome" )
+		or die "IO::Uncompress::Gunzip failed: $GunzipError\n";
+	    my $curstr = "";
+	    my $curkey = "";
+	    while(<$CTF>){
+		chomp;
+		my $tmpline = $_;
+		if($tmpline =~ /^>/){
+		    if($curstr ne ""){
+			$chrs{$curkey} = $curstr;
+		    }
+		    $curstr = "";
+		    $curkey = substr($tmpline,1);
+		}
+		else{
+		    $curstr = "$curstr$tmpline";
+		}
+	    }
+	}
+	else{
+	    my $curstr = "";
+	    my $curkey = "";
+	    open FA,"$genomes\/$curgenome" or die "can't open $genomes\/$curgenome\n";
+	    while(<FA>){
+		chomp;
+		my $tmpline = $_;
+		if($tmpline =~ /^>/){
+		    if($curstr ne ""){
+			$chrs{$curkey} = $curstr;
+		    }
+		    $curstr = "";
+		    $curkey = substr($tmpline,1);
+		}
+		else{
+		    $curstr = "$curstr$tmpline";
+		}
+	    }
+	}
+	open FB,"$locilist" or die "can't open $locilist\n";
+	while(<FB>){
+	    chomp;
+	    my $line = $_;
+	    my @F = split '\t', $line;
+	    my $lenf = scalar @F;
+	    if(scalar @F != 7){print STDERR "locilist has $lenf entries instead of 7!\n";}
+	    if($curgen ne $F[3]){next;}
+	    my $s;
+	    my $e;
+	    if($F[1] < $F[2]){
+		$s = $F[1];
+		$e = $F[2];
+	    }
+	    else{
+		$s = $F[2];
+		$e = $F[1];
+	    }
+	    my $preseq;
+	    if(exists($chrs{$F[0]})){
+		my $len = $e-$s;
+		$preseq = substr($chrs{$F[0]},$s,$len);
+	    }
+	    else{print STDERR "ERROR: chromosome $F[0] of species $F[3] does not exist!\n";next;}
+	    my $finalseq;
+	    if($F[4] eq '+'){$finalseq = $preseq;}
+	    else{$finalseq = getComplement(lc($preseq));}
+	    my $outline = "$line\t$finalseq\tNA\tNA";
+	    print $outf "$outline\n";
+	}
+    } #end for genomeslist
+    close $outf;
+    return $outfile;
+}
+
+
+sub getComplement{
+    my @inp = @_;
+    my $str = $inp[0];
+#    print "getComplement in str: $str\n";
+#    my $str = uc($instr);
+    my $newstr = "";
+    my $a = "a";
+    my $c = "c";
+    my $g = "g";
+    my $t = "t";
+    my $n = "n";
+    my @tmpstr = split "", $str;
+    for(my $i = (scalar @tmpstr)-1; $i>=0;$i--) {
+	if($tmpstr[$i] eq $a)   {$newstr = "$newstr$t";}
+	elsif($tmpstr[$i] eq $t){$newstr = "$newstr$a";}
+	elsif($tmpstr[$i] eq $g){$newstr = "$newstr$c";}
+	elsif($tmpstr[$i] eq $c){$newstr = "$newstr$g";}
+	else{$newstr = "$newstr$n";}
+    }
+    return $newstr;
 }

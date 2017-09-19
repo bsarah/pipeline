@@ -81,6 +81,7 @@ if(! $nocheck){
 	my $CTF = IO::Uncompress::Gunzip->new( "$pathtocam\/temp/$curtmpfile" )
 	    or die "IO::Uncompress::Gunzip failed: $GunzipError\n";
 	while(<$CTF>){
+	    chomp;
 	    my $tmpline = $_;
 	    my @TL = split '\t', $tmpline;
 	    my @PTL = split '_', $TL[1];
