@@ -38,7 +38,7 @@ while(<IN>){
 	}
 	elsif($_=~m/Type:\s(\S+)\s*Anticodon:\s(\S+).+\(\d*-\d*\)/){
 		$array[$index][4] = $1; #tRNA type
-		$array[$index][5] = $2; #antocodon
+		$array[$index][5] = $2; #anticodon
 	}
 	elsif($_=~m/pseudo/){
 		$array[$index][6] = "TRUE";  #pseudogene
@@ -56,7 +56,7 @@ for(my $i = 0; $i <= $index; $i++){
 	#with anticodon and type
 	#print OUT "$array[$i][0]\t$array[$i][1]\t$array[$i][2]\t$species\t$array[$i][3]\t$array[$i][4]_$array[$i][5]\t$array[$i][6]\t$array[$i][7]\t$array[$i][8]\tNA\n";
 	#without anticodon, with type
-	print OUT "$array[$i][0]\t$array[$i][1]\t$array[$i][2]\t$species\t$array[$i][3]\t$array[$i][4]\t$array[$i][6]\t$array[$i][7]\t$array[$i][8]\tNA\n";
+	print OUT "$array[$i][0]\t$array[$i][1]\t$array[$i][2]\t$species\t$array[$i][3]\t$array[$i][4]\t$array[$i][6]\t$array[$i][8]\t$array[$i][7]\tNA\n";
 	#type is just tRNA
 	#print OUT "$array[$i][0]\t$array[$i][1]\t$array[$i][2]\t$species\t$array[$i][3]\ttRNA\t$array[$i][6]\t$array[$i][7]\t$array[$i][8]\tNA\n";
 
