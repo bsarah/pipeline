@@ -1144,7 +1144,7 @@ sub checkInfernalOut{
 	chomp;
 	#move current file to other name such that the original name can be used for the edited files
 	my $curfile = $_;
-	my @C = split "\.", $curfile;
+	my @C = split '\.', $curfile;
 	my $curspec = $C[0];
 	my $newfile = "$curspec\_old\.bed";
 	my $mvcmd = "mv $outpath\/genes/$curfile $outpath\/genes/$newfile";
@@ -1155,7 +1155,7 @@ sub checkInfernalOut{
 	$spec2sum{$curspec} = 0;	
 	$spec2num{$curspec} = 0;
 	my $pseucount = 0;
-	open FA,"$newfile" or die "can't open $newfile\n";
+	open FA,"$outpath\/genes/$newfile" or die "can't open $outpath\/genes/$newfile\n";
 	while(<FA>){
 	    chomp;
 	    my $line = $_;
