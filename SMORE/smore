@@ -1146,16 +1146,14 @@ sub checkInfernalOut{
 	my $curfile = $_;
 	my @C = split '\.', $curfile;
 	my $curspec = $C[0];
-	my $newfile = "$curspec\_old\.bed";
-	my $mvcmd = "mv $outpath\/genes/$curfile $outpath\/genes/$newfile";
-	readpipe("$mvcmd");
-	open(my $outf, ">>", $curfile);
+	my $newfile = "$outpath\/genes/$curspec\_new\.bed";
+	open(my $outf, ">>", $newfile);
 	$spec2min{$curspec} = 1000000;
 	$spec2max{$curspec} = 0;
 	$spec2sum{$curspec} = 0;	
 	$spec2num{$curspec} = 0;
 	my $pseucount = 0;
-	open FA,"$outpath\/genes/$newfile" or die "can't open $outpath\/genes/$newfile\n";
+	open FA,"$outpath\/genes/$curfile" or die "can't open $outpath\/genes/$curfile\n";
 	while(<FA>){
 	    chomp;
 	    my $line = $_;
@@ -1175,16 +1173,20 @@ sub checkInfernalOut{
 	    my $outstr = join("\t",@F);
 	    print $outf "$outstr\n";
 	}
-	my $rmcmd = "rm $outpath\/genes/$newfile";
+	my $rmcmd = "rm $outpath\/genes/$curfile";
 	readpipe("$rmcmd");
+	my $mvcmd = "mv $newfile $outpath\/genes/$curfile";
+	readpipe("$mvcmd");
 	close $outf;
 	my $avscore = sprintf "%.2f",$spec2sum{$curspec}/$spec2num{$curspec};
 	$res = "$res Genes belonging to $curspec have an average infernal score of $avscore
 with $spec2num{$curspec} genes in total. The maximum score is $spec2max{$curspec} and
 the minimal score is $spec2min{$curspec}.";
-	if($pseudoscore > -1){$res = "$res The threshold splitting pseudogenes and functional genes is $pseudoscore.
+	if($pseudoscore > -1){$res = "$res The threshold
+splitting pseudogenes and functional genes is $pseudoscore.
 This results in $pseucount pseudogenes.";}
-	else{$res = "$res No threshold splitting pseudogenes and functional genes was given (option --pseudo).";}
+	else{$res = "$res No threshold splitting pseudogenes and
+functional genes was given (option --pseudo).";}
 	$res = "$res\n";
     }
     return $res;
