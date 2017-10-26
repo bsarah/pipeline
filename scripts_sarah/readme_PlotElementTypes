@@ -24,5 +24,7 @@ Steps to create a plot about the element types that are given as a list in summa
 > x3 = apply(x,2,as.numeric)
 > rownames(x3) = tmp_rows
 > pdf("barplot_elementTypesPerSpecies_tRNA10ps.pdf")
-> barplot(log(p3), main = "Number of Elements per Species", col = c("grey","darkgreen","green","pink","orange","red","blue","cyan","black","white"), legend = rownames(p3),las=2, xlab = "Pseudo-tRNA Types", ylab = "Log(Number of Elements)",ylim=c(0,50))
+> barplot(x3, main = "Number of Elements per Species", col = c("grey","darkgreen","green","pink","orange","red","blue","cyan","black","white"), legend = rownames(x3),las=2, xlab = "Pseudo-tRNA Types", ylab = "Number of Elements",ylim=c(0,50))
 > dev.off()
+
+#do not use log!!! the numbers cannot be added on top of each other!
