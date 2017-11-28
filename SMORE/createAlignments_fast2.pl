@@ -42,6 +42,11 @@ my %psedels = ();
 my %psemis = ();
 my %pseins = ();
 
+#the following are hashes with key = combination of species and value is a string with leftanchor_rightanchor,leftanchor_rightanchor,.. that tells which clusters occurs within this species comb
+my %matfiles = ();
+my %insfiles = ();
+my %dupfiles = ();
+my %delfiles = ();
 
 my %remoldings = ();
 # The pairs of elements (separated with ':') are defined 
@@ -513,6 +518,9 @@ else{
 	##counting: only matches and dup (and pseudogenes?), losses later when adding to the tree
 	##add elements from the singleton clusters that were sorted
 	##and specify the number of elements per species for the None cluster
+
+	##add the corresponding cluster anchors (left,right) to each match/ins/dup
+	
 	my $spstr = join(',',sort (keys %spe2count));
 	my $spnum = scalar (keys %spe2count);	
 	my @vals = values %spe2count;
@@ -522,20 +530,29 @@ else{
 	elsif(scalar @vals == 1){##singleton/insertion
 	    if(exists $insevents{$spstr}){$insevents{$spstr} += $vals[0];}
 	    else{$insevents{$spstr} = $vals[0];}
+	    if(exists $insfiles{$spstr}){$insfiles{$spstr} = "$insfiles{$spstr}\,$leftanchor\_$rightanchor";}
+	    else{$insfiles{$spstr} = "$leftanchor\_$rightanchor";}
+
 	}
 	elsif(none {$_ != $vals[0]} @vals)#check if all values are equal
 	{
 	    if(exists $matevents{$spstr}){$matevents{$spstr} += $vals[0];}
 	    else{$matevents{$spstr} = $vals[0];}
+	    if(exists $matfiles{$spstr}){$matfiles{$spstr} = "$matfiles{$spstr}\,$leftanchor\_$rightanchor";}
+	    else{$matfiles{$spstr} = "$leftanchor\_$rightanchor";}
 	}
 	else{##count duplications
 	    if(exists $matevents{$spstr}){$matevents{$spstr} += $mini;}
 	    else{$matevents{$spstr} = $mini;}
+	    if(exists $matfiles{$spstr}){$matfiles{$spstr} = "$matfiles{$spstr}\,$leftanchor\_$rightanchor";}
+	    else{$matfiles{$spstr} = "$leftanchor\_$rightanchor";}
 	    foreach my $kk (keys %spe2count){
 		my $diff = $spe2count{$kk} - $mini; 
 		if($diff > 0){
 		    if(exists $dupevents{$kk}){$dupevents{$kk} += $diff;}
 		    else{$dupevents{$kk} = $diff;}
+		    if(exists $dupfiles{$kk}){$dupfiles{$kk} ="$dupfiles{$kk}\,$leftanchor\_$rightanchor";}
+		    else{$dupfiles{$kk} = "$leftanchor\_$rightanchor";}
 		}
 	    }
 	}
@@ -625,6 +642,16 @@ my $outstring = "";
 #instead of writing to files, we put all information in a string and return it
 #there is not too much information as its only the counts for one graph
 
+my $outdupfile = "$outpath\/duplications_clusnames.txt";
+open(my $outdupfil,">>",$outdupfile);
+
+my $outmatfile = "$outpath\/matches_clusnames.txt";
+open(my $outmatfil,">>",$outmatfile);
+
+my $outinsfile = "$outpath\/insertions_clusnames.txt";
+open(my $outinsfil,">>",$outinsfile);
+
+
 foreach my $du (sort keys %dupevents) {
     my @devs = split ',', $du;
     @devs = sort @devs;
@@ -632,6 +659,14 @@ foreach my $du (sort keys %dupevents) {
     $outstring = "$outstring\=$dustr\-$dupevents{$du}";
 }
 $outstring = "$outstring\n";
+
+foreach my $duf (sort keys %dupfiles) {
+    my @devs = split ',', $duf;
+    @devs = sort @devs;
+    my $dustr = join(',',@devs);
+    print $outdupfil ">$dustr\n$dupfiles{$duf}\n";
+}
+close $outdupfil;
 
 foreach my $ma (sort keys %matevents) {
     my @mevs = split ',', $ma;
@@ -641,6 +676,13 @@ foreach my $ma (sort keys %matevents) {
 }
 $outstring = "$outstring\n";
 
+foreach my $maf (sort keys %matfiles) {
+    my @maffs = split ',', $maf;
+    @maffs = sort @maffs;
+    my $mastr = join(',',@maffs);
+    print $outmatfil ">$mastr\n$matfiles{$maf}\n";
+}
+close $outmatfil;
 
 foreach my $in (sort keys %insevents) {
     my @ievs = split ',', $in;
@@ -649,6 +691,14 @@ foreach my $in (sort keys %insevents) {
     $outstring = "$outstring\=$instr\-$insevents{$in}";
 }
 $outstring = "$outstring\n";
+
+foreach my $inf (sort keys %insfiles) {
+    my @inffs = split ',', $inf;
+    @inffs = sort @inffs;
+    my $instr = join(',',@inffs);
+    print $outinsfil ">$instr\n$insfiles{$inf}\n";
+}
+close $outinsfil;
 
 
 foreach my $pin (sort keys %pseins) {

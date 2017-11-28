@@ -453,7 +453,7 @@ my $cmdsum = "touch $outfolder\/geneticEvents\.txt";
 readpipe("$cmdsum");
 my $cmdtree = "touch $outfolder\/OutTree\.txt";
 readpipe("$cmdtree");
-my $countcmd = "perl $toolpath\/countEvents.pl $newicktree $allsinglestr $matchout $duplout $insout $pseout $psemisout $psedelout $pseinsout $delout $misout $outfolder\/OutTree\.txt $outfolder\/geneticEvents\.txt $allspecstr $allnonestr $outfolder\/data_iTOL 2>> $err";
+my $countcmd = "perl $toolpath\/countEvents.pl $newicktree $allsinglestr $matchout $duplout $insout $pseout $psemisout $psedelout $pseinsout $delout $misout $outfolder\/OutTree\.txt $outfolder\/geneticEvents\.txt $allspecstr $allnonestr $outfolder 2>> $err";
 
 readpipe("$countcmd");
 

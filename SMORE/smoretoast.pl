@@ -986,8 +986,8 @@ while(<PC>){
    
 }
 
-my $rmtmpcmd = "rm $pseudel2check $del2check $tmpfilelist";
-readpipe("$rmtmpcmd");
+#my $rmtmpcmd = "rm $pseudel2check $del2check $tmpfilelist";
+#readpipe("$rmtmpcmd");
 
 
 #get output files which are the input to countEvents
@@ -1098,7 +1098,8 @@ my $cmdsum = "touch $outpath\/geneticEvents\.txt";
 readpipe("$cmdsum");
 my $cmdtree = "touch $outpath\/OutTree\.txt";
 readpipe("$cmdtree");
-my $countcmd = "perl $toolpath\/countEvents.pl $newicktree $allsinglestr $matchout $duplout $insout $pseout $psemisout $psedelout $pseinsout $delout $misout $outpath\/OutTree\.txt $outpath\/geneticEvents\.txt $allspecstr $allnonestr $outpath\/data_iTOL 2>> $errors";
+my $countcmd = "perl $toolpath\/countEvents.pl
+ $newicktree $allsinglestr $matchout $duplout $insout $pseout $psemisout $psedelout $pseinsout $delout $misout $outpath\/OutTree\.txt $outpath\/geneticEvents\.txt $allspecstr $allnonestr $outpath 2>> $errors";
 readpipe("$countcmd");
 
 my $avnum=0;

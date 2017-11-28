@@ -12,7 +12,7 @@ use File::Basename;
 
 
 my $file = shift;
-my $almostname = shift;
+my $almostname = shift; ##species
 my $secsim = shift;
 my $strucsim = shift;
 my $mode = shift; ##0 is cmmode, 1 is genelist

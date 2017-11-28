@@ -26,7 +26,7 @@ my $treeout = shift;
 my $summary = shift;
 my $totelemstr = shift; ##for later, printing iTOL files, includes the total number of pseudogenes
 my $nonestr = shift; ##for later, printing iTOL filesincludes the total number of pseudogenes
-my $iTOLout = shift; ##for later, printing iTOL files
+my $outpath = shift; ##for later, printing iTOL files
 
 open(my $outt,">>",$treeout);
 open(my $outs,">>",$summary);
@@ -41,6 +41,17 @@ my %pseudos = (); #matches
 my %singletons = ();
 my %missing_data = ();
 
+
+my $matfile = "$outpath\/matches_clusnames.txt";
+my $newmatfile = "$outpath\/matches_clusnames_summary.txt";
+my $insfile = "$outpath\/insertions_clusnames.txt";
+my $newinsfile = "$outpath\/insertions_clusnames_summary.txt";
+my $dupfile = "$outpath\/duplications_clusnames.txt";
+my $newdupfile = "$outpath\/duplications_clusnames_summary.txt";
+
+
+my $iTOLout = "$outpath\/data_iTOL";
+    
 open TF,"<$treefile" or die "can't open $treefile\n";
 
 my $tree="";
@@ -129,10 +140,67 @@ while(<PS>){
 
 my %totcounts = (); #only for debugging if numbers in input files (matches...) fit
 
+##Insertions and duplications: summarize clusnames files
+
+my %dupfiles = ();
+my $dcurkey = "";
+open DAF,"<$dupfile" or die "can't open $dupfile\n";
+while(<DAF>){
+    chomp;
+    my $line = $_;
+    if($line =~ /^>/){$dcurkey = substr($line,1);}
+    else{
+	if(exists($dupfiles{$dcurkey})){$dupfiles{$dcurkey} = "$dupfiles{$dcurkey}\,$line";}
+	else{$dupfiles{$dcurkey} = "$line";}
+    }
+}
+open(my $outdupfil,">>",$newdupfile);
+foreach my $dupkey (keys %dupfiles){
+    print $outdupfil ">$dupkey\n$dupfiles{$dupkey}\n";
+}
+close $outdupfil;
+
+
+
+my %insfiles = ();
+my $icurkey = "";
+open IAF,"<$insfile" or die "can't open $insfile\n";
+while(<IAF>){
+    chomp;
+    my $line = $_;
+    if($line =~ /^>/){$icurkey = substr($line,1);}
+    else{
+	if(exists($insfiles{$icurkey})){$insfiles{$icurkey} = "$insfiles{$icurkey}\,$line";}
+	else{$insfiles{$icurkey} = "$line";}
+    }
+}
+open(my $outinsfil,">>",$newinsfile);
+foreach my $inskey (keys %insfiles){
+    print $outinsfil ">$inskey\n$insfiles{$inskey}\n";
+}
+close $outinsfil;
+
+
+
+
 ##MATCHES
 ##analyse match nodes first as they include several species
 
+my %matfiles = ();
+my %newmatfiles = ();
 
+my $curkey = "";
+open MAF,"<$matfile" or die "can't open $matfile\n";
+while(<MAF>){
+    chomp;
+    my $line = $_;
+    if($line =~ /^>/){$curkey = substr($line,1);}
+    else{
+	$matfiles{$curkey} = $line;
+    }
+}
+
+open(my $outmatfil, ">>", $newmatfile);
 open FA,"<$matches" or die "can't open $matches\n";
 
 while(<FA>){
@@ -171,6 +239,7 @@ while(<FA>){
     my $Treestr = join('=', @T);
     my $speciestr = join('=',@S);
 
+    
 
 #####################only adding nodes#######################
 # unse findLCA instead of findParentofAll as findParent includes the deletions, but we want to have them explicitly    
@@ -179,9 +248,20 @@ while(<FA>){
     for(my $i=0;$i<scalar @leafsToAdd; $i++){
 	if(exists($plusnodes{$T[$leafsToAdd[$i]]})){$plusnodes{$T[$leafsToAdd[$i]]} += $num;}
 	else{$plusnodes{$T[$leafsToAdd[$i]]} = $num;}
+	if(exists($matfiles{$F[0]}))
+	{
+	    if(exists($newmatfiles{$T[$leafsToAdd[$i]]})){$newmatfiles{$T[$leafsToAdd[$i]]} = "$newmatfiles{$T[$leafsToAdd[$i]]},$matfiles{$F[0]}";}
+	    else{$newmatfiles{$T[$leafsToAdd[$i]]} = "$matfiles{$F[0]}";}
+	}
+	else{print STDERR "this species combination $F[0] should exist in matches!\n";}
     }
 }
 
+#print matfiles to check
+foreach my $matkey (keys %newmatfiles){
+    print $outmatfil ">$matkey\n$newmatfiles{$matkey}\n";
+}
+close $outmatfil;
 #deletions
 ############only deleting leaves############################
 open FD,"<$dels" or die "can't open $dels\n";
