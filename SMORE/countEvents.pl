@@ -647,6 +647,11 @@ while(<FPM>){
 }
 
 
+##remove intermediary files:
+my $cmdrmclusnames = "rm $matfile $insfile $dupfile $delfile $pdelfile $misfile $pmisfile $pmatfile $pinsfile";
+readpipe("$cmdrmclusnames");
+
+
 
 ##enter all the numbers in the tree
 ##each node has a tuple [a+i,-b,dx,py]
@@ -937,8 +942,6 @@ foreach my $oi (sort keys %numdiffs) {
 }
 print $outs "\n\n";
 
-
-##TODO add extra files for singletons and numdiffs?
 
 ####print output files for iTOL input
 my $treeout2 = "$iTOLout\/F0tree.txt";

@@ -38,7 +38,10 @@ Legend:
     --nomiss            do not check for missing anchors. in case of large
                         clusters, using --nomiss will speed up the runtime
     --verbose           print all intermediary files, thus clusters, graphs
-                        and duplication alignments
+                        and duplication alignments. Additionally,
+			this option will list clusters corresponding to the
+			numbers at the nodes in the resulting phylogenetic
+			tree. This is not (yet) possible for smore eat.
     --clus              print only intermediary cluster files
     --graph             print only intermediary graph files
     --aln               print only intermediary duplication alignment files

@@ -1061,8 +1061,8 @@ foreach my $pmif (sort keys %pseumissfiles) {
 close $outpmisfil;
 
 }
-#my $rmtmpcmd = "rm $pseudel2check $del2check $tmpfilelist";
-#readpipe("$rmtmpcmd");
+my $rmtmpcmd = "rm $pseudel2check $del2check $tmpfilelist";
+readpipe("$rmtmpcmd");
 
 
 #get output files which are the input to countEvents
