@@ -65,6 +65,15 @@ my @outlscmd = readpipe("$tmplscmd");
 my $del2check = "$outpath\/tmpfile\_deletionsCheck\.txt";
 my $pseudel2check = "$outpath\/tmpfile\_pseudeletionsCheck\.txt";
 
+my $verbstr = "";
+if($printall){$verbstr = " --verbose";}
+else{
+    if($printg){$verbstr = "$verbstr --graph";}
+    if($printc){$verbstr = "$verbstr --clus";}
+    if($printa){$verbstr = "$verbstr --aln";}
+}
+
+
 
 my %blocks = ();
 my %leftblocks = ();
@@ -781,12 +790,9 @@ foreach my $k (keys %blocks){
     my @newoutgraph = readpipe("$checkcmd");
     my $newgraphstr = $newoutgraph[0];
 
-    my $toprint = 0;
-    if($printa || $printall){$toprint = 1;}
     my $filetoprint = "$alnfolder\/alignment$k\.aln";
-
     #create alignment    
-    my $alncmd = "perl $toolpath\/createAlignments_fast2.pl $tmpfile1 $outpath $toolpath $seqsim $strucsim $mode $typenum $newicktree $leftanchor $rightanchor $del2check $pseudel2check $toprint $filetoprint $errors 2>> $errors";
+    my $alncmd = "perl $toolpath\/createAlignments_fast2.pl --file $tmpfile1 --out $outpath --altnw $toolpath -s $seqsim -p $strucsim --mode $mode --numtypes $typenum --newick $newicktree --left $leftanchor --right $rightanchor --delcheck $del2check --pdelcheck $pseudel2check --alnfile $filetoprint --err $errors $verbstr 2>> $errors";
 
     my @outaln = readpipe("$alncmd"); #this array contains: dup mat insertion pseins pseudomatch deletion missinganchor missinanchorpseu deletionpseu rems inrems
     my $rmcmd;
@@ -916,6 +922,12 @@ if(! $nocheck){
 	}
     }
 }
+
+my %delfiles =();
+my %missfiles = ();
+my %pseudelfiles = ();
+my %pseumissfiles = ();
+
 ##now, we check if anchors exist with
 open DC,"<$del2check" or die "can't open $del2check \n";
 while(<DC>){
@@ -942,11 +954,19 @@ while(<DC>){
 	my $misstr = join(',', @missings);
 	if(exists $misevents{$misstr}){$misevents{$misstr} += $mini;}
 	else{$misevents{$misstr} = $mini;}
+	if($printall){
+	    if(exists($missfiles{$misstr})){$missfiles{$misstr} = "$missfiles{$misstr}\,$ll2c[0]";}
+	    else{$missfiles{$misstr} = "$ll2c[0]";}
+	}
     }
     if(scalar @dells > 0){
 	my $delstr = join(',',@dells);
 	if(exists $delevents{$delstr}){$delevents{$delstr} += $mini;}
 	else{$delevents{$delstr} = $mini;}
+	if($printall){
+	    if(exists($delfiles{$delstr})){$delfiles{$delstr} = "$delfiles{$delstr}\,$ll2c[0]";}
+	    else{$delfiles{$delstr} = "$ll2c[0]";}
+	}
     }
    
 }
@@ -977,15 +997,70 @@ while(<PC>){
 	my $misstr = join(',', @missings);
 	if(exists $psemis{$misstr}){$psemis{$misstr} += $mini;}
 	else{$psemis{$misstr} = $mini;}
+	if($printall){
+	    if(exists($pseumissfiles{$misstr})){$pseumissfiles{$misstr} = "$pseumissfiles{$misstr}\,$ll2c[0]";}
+	    else{$pseumissfiles{$misstr} = "$ll2c[0]";}
+	}
     }
     if(scalar @dells > 0){
 	my $delstr = join(',',@dells);
 	if(exists $psedels{$delstr}){$psedels{$delstr} += $mini;}
 	else{$psedels{$delstr} = $mini;}
+	if($printall){
+	    if(exists($pseudelfiles{$delstr})){$pseudelfiles{$delstr} = "$pseudelfiles{$delstr}\,$ll2c[0]";}
+	    else{$pseudelfiles{$delstr} = "$ll2c[0]";}
+	}
     }
    
 }
 
+if($printall){
+my $outdelfile = "$outpath\/deletions_clusnames.txt";
+open(my $outdelfil,">>",$outdelfile);
+
+my $outpdelfile = "$outpath\/pseudodeletions_clusnames.txt";
+open(my $outpdelfil,">>",$outpdelfile);
+
+my $outmisfile = "$outpath\/missing_clusnames.txt";
+open(my $outmisfil,">>",$outmisfile);
+
+my $outpmisfile = "$outpath\/pseudomissing_clusnames.txt";
+open(my $outpmisfil,">>",$outpmisfile);
+
+foreach my $def (sort keys %delfiles) {
+    my @devs = split ',', $def;
+    @devs = sort @devs;
+    my $delstr = join(',',@devs);
+    print $outdelfil ">$delstr\n$delfiles{$def}\n";
+}
+close $outdelfil;
+
+
+foreach my $pdef (sort keys %pseudelfiles) {
+    my @devs = split ',', $pdef;
+    @devs = sort @devs;
+    my $delstr = join(',',@devs);
+    print $outpdelfil ">$delstr\n$pseudelfiles{$pdef}\n";
+}
+close $outpdelfil;
+
+foreach my $mif (sort keys %missfiles) {
+    my @devs = split ',', $mif;
+    @devs = sort @devs;
+    my $misstr = join(',',@devs);
+    print $outmisfil ">$misstr\n$missfiles{$mif}\n";
+}
+close $outmisfil;
+
+foreach my $pmif (sort keys %pseumissfiles) {
+    my @devs = split ',', $pmif;
+    @devs = sort @devs;
+    my $misstr = join(',',@devs);
+    print $outpmisfil ">$misstr\n$pseumissfiles{$pmif}\n";
+}
+close $outpmisfil;
+
+}
 #my $rmtmpcmd = "rm $pseudel2check $del2check $tmpfilelist";
 #readpipe("$rmtmpcmd");
 
@@ -1098,8 +1173,7 @@ my $cmdsum = "touch $outpath\/geneticEvents\.txt";
 readpipe("$cmdsum");
 my $cmdtree = "touch $outpath\/OutTree\.txt";
 readpipe("$cmdtree");
-my $countcmd = "perl $toolpath\/countEvents.pl
- $newicktree $allsinglestr $matchout $duplout $insout $pseout $psemisout $psedelout $pseinsout $delout $misout $outpath\/OutTree\.txt $outpath\/geneticEvents\.txt $allspecstr $allnonestr $outpath 2>> $errors";
+my $countcmd = "perl $toolpath\/countEvents.pl --newick $newicktree --singles $allsinglestr --match $matchout --dup $duplout --insert $insout --pseumat $pseout --pseumis $psemisout --pseudel $psedelout --pseuins $pseinsout --del $delout --mis $misout --outtree $outpath\/OutTree\.txt --sum $outpath\/geneticEvents\.txt --total $allspecstr --none $allnonestr --out $outpath $verbstr 2>> $errors";
 readpipe("$countcmd");
 
 my $avnum=0;

@@ -7,28 +7,58 @@ use strict;
 use warnings;
 use List::Util qw(any none first min max);
 use POSIX qw(strftime);
+use Getopt::Long qw(GetOptions);
 
-my $file = shift;
-my $outpath=shift;
-my $pathtonw = shift;
-my $seqlim = shift;
-my $strlim = shift;
-my $mode = shift;
-my $numdifftypes = shift;
-my $nwtree = shift;
-my $leftanchor = shift;
-my $rightanchor = shift;
-my $del2check = shift;
-my $pseudel2check = shift;
-my $toprint = shift;
-my $alnfile = shift;
-my $errorfile = shift;
 
-if(! $toprint){$toprint = 0;}
+
+
+my $file;
+my $outpath;
+my $pathtonw;
+my $seqlim;
+my $strlim;
+my $mode;
+my $numdifftypes;
+my $nwtree;
+my $leftanchor;
+my $rightanchor;
+my $del2check;
+my $pseudel2check;
+my $alnfilepath; #path to aln file to print
+my $errorfile;
+
+##options for verbose
+my $printall;
+my $printg;
+my $printa;
+my $printc;
+
+GetOptions(
+    'file=s' => \$file,
+    'out=s' => \$outpath,
+    'altnw=s' => \$pathtonw,
+    'seqsim|s=f' => \$seqlim,
+    'strucsim|p=f' => \$strlim,
+    'mode=f' => \$mode,
+    'numtypes=f' => \$numdifftypes,
+    'newick=s' => \$nwtree,
+    'left=s' => \$leftanchor,
+    'right=s' => \$rightanchor,
+    'delcheck=s' => \$del2check,
+    'pdelcheck=s' => \$pseudel2check,
+    'alnfile=s'=> \$alnfilepath,
+    'err=s' => \$errorfile,
+    ##options for verbose
+    'verbose' => \$printall,
+    'graph' => \$printg,
+    'aln' => \$printa,
+    'clus' => \$printc 
+    ) or die "error in createAlignments";
+
 
 my $aout;
-if($toprint == 1){
-    open($aout,">>",$alnfile);
+if($printall || $printa){
+    open($aout,">>",$alnfilepath);
 }
 
 
@@ -46,7 +76,8 @@ my %pseins = ();
 my %matfiles = ();
 my %insfiles = ();
 my %dupfiles = ();
-my %delfiles = ();
+my %pmatfiles = ();
+my %pinsfiles = ();
 
 my %remoldings = ();
 # The pairs of elements (separated with ':') are defined 
@@ -235,8 +266,16 @@ if(scalar (keys %species) == 1){
     my @SP = keys %species;
     if(exists($insevents{$SP[0]})){$insevents{$SP[0]}+=$numrealgenes;}
     else{$insevents{$SP[0]}=$numrealgenes;}
+    if($numrealgenes>0 && $printall){
+	if(exists $insfiles{$SP[0]}){$insfiles{$SP[0]} = "$insfiles{$SP[0]}\,$leftanchor\_$rightanchor";}
+	else{$insfiles{$SP[0]} = "$leftanchor\_$rightanchor";}
+    }
     if(exists($pseins{$SP[0]})){$pseins{$SP[0]}+=$numpgenes;}
     else{$pseins{$SP[0]}=$numpgenes;}
+    if($numpgenes>0 && $printall){
+	if(exists $pinsfiles{$SP[0]}){$pinsfiles{$SP[0]} = "$pinsfiles{$SP[0]}\,$leftanchor\_$rightanchor";}
+	else{$pinsfiles{$SP[0]} = "$leftanchor\_$rightanchor";}
+    }
 }
 else{
     ##for every species, sort nodes in the correct order and create the sequences to be aligned
@@ -298,10 +337,20 @@ else{
 	    else{$insevents{$k} = $zcount;}
 	    if(exists($psevents{$k})){$psevents{$k}+=$ecount;}
 	    else{$psevents{$k}=$ecount;}
+	    if($zcount > 0 && $printall)
+	    {
+		if(exists $insfiles{$k}){$insfiles{$k} = "$insfiles{$k}\,$leftanchor\_$rightanchor";}
+		else{$insfiles{$k} = "$leftanchor\_$rightanchor";}
+	    }
+	    if($ecount > 0 && $printall)
+	    {
+		if(exists $pinsfiles{$k}){$pinsfiles{$k} = "$pinsfiles{$k}\,$leftanchor\_$rightanchor";}
+		else{$pinsfiles{$k} = "$leftanchor\_$rightanchor";}
+	    }
 	    $jump=1;
 	    last;
 	}
-	if($toprint == 1){print $aout "\@$k\t$species{$k}\n";}
+	if($printall || $printa){print $aout "\@$k\t$species{$k}\n";}
 	my $match=0; #m
 	my $pseu=0; #s
 	my $dupl=0; #d
@@ -347,8 +396,8 @@ else{
             ##last of seq 2 align
 	    my $cmd1 = "$pathtonw/altNW 1 1 \"$newls1\" \"$newls2\"";
 	    my @out1 = readpipe("$cmd1");
-	    if($toprint == 1){print $aout ">$k2\t";}
-	    if($toprint == 1){print $aout "@out1";}
+	    if($printall || $printa){print $aout ">$k2\t";}
+	    if($printall || $printa){print $aout "@out1";}
 	    chomp(@out1);
 	    ##count duplication etc for each pos with ~ or - and write it down
 	    ##such that we take the max for event (all letters together)
@@ -530,29 +579,36 @@ else{
 	elsif(scalar @vals == 1){##singleton/insertion
 	    if(exists $insevents{$spstr}){$insevents{$spstr} += $vals[0];}
 	    else{$insevents{$spstr} = $vals[0];}
+	    if($printall){
 	    if(exists $insfiles{$spstr}){$insfiles{$spstr} = "$insfiles{$spstr}\,$leftanchor\_$rightanchor";}
 	    else{$insfiles{$spstr} = "$leftanchor\_$rightanchor";}
-
+	    }
 	}
 	elsif(none {$_ != $vals[0]} @vals)#check if all values are equal
 	{
 	    if(exists $matevents{$spstr}){$matevents{$spstr} += $vals[0];}
 	    else{$matevents{$spstr} = $vals[0];}
+	    if($printall){
 	    if(exists $matfiles{$spstr}){$matfiles{$spstr} = "$matfiles{$spstr}\,$leftanchor\_$rightanchor";}
 	    else{$matfiles{$spstr} = "$leftanchor\_$rightanchor";}
+	    }
 	}
 	else{##count duplications
 	    if(exists $matevents{$spstr}){$matevents{$spstr} += $mini;}
 	    else{$matevents{$spstr} = $mini;}
+	    if($printall){
 	    if(exists $matfiles{$spstr}){$matfiles{$spstr} = "$matfiles{$spstr}\,$leftanchor\_$rightanchor";}
 	    else{$matfiles{$spstr} = "$leftanchor\_$rightanchor";}
+	    }
 	    foreach my $kk (keys %spe2count){
 		my $diff = $spe2count{$kk} - $mini; 
 		if($diff > 0){
 		    if(exists $dupevents{$kk}){$dupevents{$kk} += $diff;}
 		    else{$dupevents{$kk} = $diff;}
+		    if($printall){
 		    if(exists $dupfiles{$kk}){$dupfiles{$kk} ="$dupfiles{$kk}\,$leftanchor\_$rightanchor";}
 		    else{$dupfiles{$kk} = "$leftanchor\_$rightanchor";}
+		    }
 		}
 	    }
 	}
@@ -566,21 +622,34 @@ else{
 	    if(scalar @pseuvals == 1){#singleton
 		if(exists $pseins{$psestr}){$pseins{$psestr} += $pseuvals[0];}
 		else{$pseins{$psestr} = $pseuvals[0];}
+		if($printall){
+		if(exists $pinsfiles{$psestr}){$pinsfiles{$psestr} = "$pinsfiles{$psestr}\,$leftanchor\_$rightanchor";}
+		else{$pinsfiles{$psestr} = "$leftanchor\_$rightanchor";}
+		}
 	    }
 	    elsif(none {$_ != $pseuvals[0]} @pseuvals)#all the same
 	    {
 		if(exists $psevents{$psestr}){$psevents{$psestr} += $pseuvals[0];}
 		else{$psevents{$psestr} = $pseuvals[0];}
+		if($printall){
+		    if(exists $pmatfiles{$psestr}){$pmatfiles{$psestr} = "$pmatfiles{$psestr}\,$leftanchor\_$rightanchor";}
+		    else{$pmatfiles{$psestr} = "$leftanchor\_$rightanchor";}
+		}
 	    }
 	    else{#add the minimum common value for the complete psestr and the remainings as singletons, as the duplications have been counted already
 		$pmin = min @pseuvals;
 		if(exists $psevents{$psestr}){$psevents{$psestr} += $pmin;}
 		else{$psevents{$psestr} = $pmin;}
+		if($printall){
+		    if(exists $pmatfiles{$psestr}){$pmatfiles{$psestr} = "$pmatfiles{$psestr}\,$leftanchor\_$rightanchor";}
+		    else{$pmatfiles{$psestr} = "$leftanchor\_$rightanchor";}
+		}		
 		foreach my $ppp (keys %pse2count){
 		    my $pdiff = $pse2count{$ppp} - $pmin;
 		    if($pdiff > 0){
 			if(exists $psevents{$ppp}){$psevents{$ppp} += $pdiff; }
-			else{$psevents{$ppp} = $pdiff;}	    
+			else{$psevents{$ppp} = $pdiff;}
+			##as this is usually duplications, we do not add them to pmatfiles or pinsfiles
 		    }
 		}
 	    
@@ -642,6 +711,7 @@ my $outstring = "";
 #instead of writing to files, we put all information in a string and return it
 #there is not too much information as its only the counts for one graph
 
+if($printall){
 my $outdupfile = "$outpath\/duplications_clusnames.txt";
 open(my $outdupfil,">>",$outdupfile);
 
@@ -651,14 +721,11 @@ open(my $outmatfil,">>",$outmatfile);
 my $outinsfile = "$outpath\/insertions_clusnames.txt";
 open(my $outinsfil,">>",$outinsfile);
 
+my $outpmatfile = "$outpath\/pseudomatches_clusnames.txt";
+open(my $outpmatfil,">>",$outpmatfile);
 
-foreach my $du (sort keys %dupevents) {
-    my @devs = split ',', $du;
-    @devs = sort @devs;
-    my $dustr = join(',',@devs);
-    $outstring = "$outstring\=$dustr\-$dupevents{$du}";
-}
-$outstring = "$outstring\n";
+my $outpinsfile = "$outpath\/pseudoinsertions_clusnames.txt";
+open(my $outpinsfil,">>",$outpinsfile);
 
 foreach my $duf (sort keys %dupfiles) {
     my @devs = split ',', $duf;
@@ -668,14 +735,6 @@ foreach my $duf (sort keys %dupfiles) {
 }
 close $outdupfil;
 
-foreach my $ma (sort keys %matevents) {
-    my @mevs = split ',', $ma;
-    @mevs = sort @mevs;
-    my $mastr = join(',',@mevs);
-    $outstring = "$outstring\=$mastr\-$matevents{$ma}";
-}
-$outstring = "$outstring\n";
-
 foreach my $maf (sort keys %matfiles) {
     my @maffs = split ',', $maf;
     @maffs = sort @maffs;
@@ -684,14 +743,6 @@ foreach my $maf (sort keys %matfiles) {
 }
 close $outmatfil;
 
-foreach my $in (sort keys %insevents) {
-    my @ievs = split ',', $in;
-    @ievs = sort @ievs;
-    my $instr = join(',',@ievs);
-    $outstring = "$outstring\=$instr\-$insevents{$in}";
-}
-$outstring = "$outstring\n";
-
 foreach my $inf (sort keys %insfiles) {
     my @inffs = split ',', $inf;
     @inffs = sort @inffs;
@@ -699,6 +750,52 @@ foreach my $inf (sort keys %insfiles) {
     print $outinsfil ">$instr\n$insfiles{$inf}\n";
 }
 close $outinsfil;
+
+foreach my $pmaf (sort keys %pmatfiles) {
+    my @maffs = split ',', $pmaf;
+    @maffs = sort @maffs;
+    my $pmastr = join(',',@maffs);
+    print $outpmatfil ">$pmastr\n$pmatfiles{$pmaf}\n";
+}
+close $outpmatfil;
+
+foreach my $pinf (sort keys %pinsfiles) {
+    my @inffs = split ',', $pinf;
+    @inffs = sort @inffs;
+    my $pinstr = join(',',@inffs);
+    print $outpinsfil ">$pinstr\n$pinsfiles{$pinf}\n";
+}
+close $outpinsfil;
+
+
+
+}
+
+foreach my $du (sort keys %dupevents) {
+    my @devs = split ',', $du;
+    @devs = sort @devs;
+    my $dustr = join(',',@devs);
+    $outstring = "$outstring\=$dustr\-$dupevents{$du}";
+}
+$outstring = "$outstring\n";
+
+
+foreach my $ma (sort keys %matevents) {
+    my @mevs = split ',', $ma;
+    @mevs = sort @mevs;
+    my $mastr = join(',',@mevs);
+    $outstring = "$outstring\=$mastr\-$matevents{$ma}";
+}
+$outstring = "$outstring\n";
+
+
+foreach my $in (sort keys %insevents) {
+    my @ievs = split ',', $in;
+    @ievs = sort @ievs;
+    my $instr = join(',',@ievs);
+    $outstring = "$outstring\=$instr\-$insevents{$in}";
+}
+$outstring = "$outstring\n";
 
 
 foreach my $pin (sort keys %pseins) {

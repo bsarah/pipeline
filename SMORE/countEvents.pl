@@ -9,24 +9,60 @@ use strict;
 use warnings;
 use List::Util qw(any none first);
 use POSIX qw(strftime);
+use Getopt::Long qw(GetOptions);
+
+my $treefile;
+my $singletoncount;
+my $matches;
+my $dupl;
+my $ins;
+my $pseudo; #matches
+my $pseumis;
+my $pseudels;
+my $pseuins;
+my $dels;
+my $misses;
+my $treeout;
+my $summary;
+my $totelemstr; ##for later, printing iTOL files, includes the total number of pseudogenes
+my $nonestr; ##for later, printing iTOL filesincludes the total number of pseudogenes
+my $outpath; ##for later, printing iTOL files
 
 
-my $treefile = shift;
-my $singletoncount = shift;
-my $matches = shift;
-my $dupl = shift;
-my $ins = shift;
-my $pseudo = shift; #matches
-my $pseumis = shift;
-my $pseudels = shift;
-my $pseuins = shift;
-my $dels = shift;
-my $misses = shift;
-my $treeout = shift;
-my $summary = shift;
-my $totelemstr = shift; ##for later, printing iTOL files, includes the total number of pseudogenes
-my $nonestr = shift; ##for later, printing iTOL filesincludes the total number of pseudogenes
-my $outpath = shift; ##for later, printing iTOL files
+##options for verbose
+my $printall;
+my $printg;
+my $printa;
+my $printc;
+
+
+GetOptions(
+    'newick=s' => \$treefile,
+    'out|o=s' => \$outpath,
+    'singles=s' => \$singletoncount,
+    'match=s' => \$matches,
+    'dup=s' => \$dupl,
+    'insert=s' => \$ins,
+    'pseumat=s' => \$pseudo,
+    'pseumis=s' => \$pseumis,
+    'pseudel=s' => \$pseudels,
+    'pseuins=s' => \$pseuins,
+    'del=s' => \$dels,
+    'mis=s' => \$misses,
+    'outtree=s' => \$treeout,
+    'sum=s' => \$summary,
+    'total=s' => \$totelemstr,
+    'none=s' => \$nonestr,
+    ##options for verbose
+    'verbose' => \$printall,
+    'graph' => \$printg,
+    'aln' => \$printa,
+    'clus' => \$printc 
+    ) or die "error in countEvents";
+
+
+
+
 
 open(my $outt,">>",$treeout);
 open(my $outs,">>",$summary);
@@ -42,12 +78,26 @@ my %singletons = ();
 my %missing_data = ();
 
 
+#these files only exist with --verbose option
 my $matfile = "$outpath\/matches_clusnames.txt";
 my $newmatfile = "$outpath\/matches_clusnames_summary.txt";
 my $insfile = "$outpath\/insertions_clusnames.txt";
 my $newinsfile = "$outpath\/insertions_clusnames_summary.txt";
 my $dupfile = "$outpath\/duplications_clusnames.txt";
 my $newdupfile = "$outpath\/duplications_clusnames_summary.txt";
+my $delfile = "$outpath\/deletions_clusnames.txt";
+my $newdelfile = "$outpath\/deletions_clusnames_summary.txt";
+my $pdelfile = "$outpath\/pseudodeletions_clusnames.txt";
+my $newpdelfile = "$outpath\/pseudodeletions_clusnames_summary.txt";
+my $misfile = "$outpath\/missing_clusnames.txt";
+my $newmisfile = "$outpath\/missing_clusnames_summary.txt";
+my $pmisfile = "$outpath\/pseudomissing_clusnames.txt";
+my $newpmisfile = "$outpath\/pseudomissing_clusnames_summary.txt";
+
+my $pmatfile = "$outpath\/pseudomatches_clusnames.txt";
+my $newpmatfile = "$outpath\/pseudomatches_clusnames_summary.txt";
+my $pinsfile = "$outpath\/pseudoinsertions_clusnames.txt";
+my $newpinsfile = "$outpath\/pseudoinsertions_clusnames_summary.txt";
 
 
 my $iTOLout = "$outpath\/data_iTOL";
@@ -112,6 +162,26 @@ if($rootid == -1){
 
 ##pseudogenes
 
+my %pmatfiles = ();
+my %newpmatfiles = ();
+my $outpmatfil;
+
+if($printall){
+my $pcurkey = "";
+open PMAF,"<$pmatfile" or die "can't open $pmatfile\n";
+while(<PMAF>){
+    chomp;
+    my $line = $_;
+    if($line =~ /^>/){$pcurkey = substr($line,1);}
+    else{
+	$pmatfiles{$pcurkey} = $line;
+    }
+}
+
+open($outpmatfil, ">>", $newpmatfile);
+}
+
+
 open PS,"<$pseudo" or die "can't open $pseudo\n";
 
 while(<PS>){
@@ -133,14 +203,24 @@ while(<PS>){
 	for(my $i=0;$i<scalar @pslcas;$i++){
 	    if(exists($pseudos{$T[$pslcas[$i]]})){$pseudos{$T[$pslcas[$i]]} += $psnum;}
 	    else{$pseudos{$T[$pslcas[$i]]} = $psnum;}
+	    if($printall){
+		if(exists($newpmatfiles{$T[$pslcas[$i]]})){$newpmatfiles{$T[$pslcas[$i]]} = "$newpmatfiles{$T[$pslcas[$i]]}\,$pmatfiles{$PS[0]}";}
+		else{$newpmatfiles{$T[$pslcas[$i]]} = "$pmatfiles{$PS[0]}";}
+	    }
 	}
     }
 }
-
+if($printall){
+foreach my $pmatkey (keys %newpmatfiles){
+    print $outpmatfil ">$pmatkey\n$newpmatfiles{$pmatkey}\n";
+}
+close $outpmatfil;
+}
 
 my %totcounts = (); #only for debugging if numbers in input files (matches...) fit
 
 ##Insertions and duplications: summarize clusnames files
+if($printall){
 
 my %dupfiles = ();
 my $dcurkey = "";
@@ -181,6 +261,25 @@ foreach my $inskey (keys %insfiles){
 close $outinsfil;
 
 
+my %pinsfiles = ();
+my $picurkey = "";
+open PIAF,"<$pinsfile" or die "can't open $pinsfile\n";
+while(<PIAF>){
+    chomp;
+    my $line = $_;
+    if($line =~ /^>/){$picurkey = substr($line,1);}
+    else{
+	if(exists($pinsfiles{$picurkey})){$pinsfiles{$picurkey} = "$pinsfiles{$picurkey}\,$line";}
+	else{$pinsfiles{$picurkey} = "$line";}
+    }
+}
+open(my $outpinsfil,">>",$newpinsfile);
+foreach my $pinskey (keys %pinsfiles){
+    print $outpinsfil ">$pinskey\n$pinsfiles{$pinskey}\n";
+}
+close $outpinsfil;
+
+}
 
 
 ##MATCHES
@@ -188,7 +287,9 @@ close $outinsfil;
 
 my %matfiles = ();
 my %newmatfiles = ();
+my $outmatfil;
 
+if($printall){
 my $curkey = "";
 open MAF,"<$matfile" or die "can't open $matfile\n";
 while(<MAF>){
@@ -200,9 +301,10 @@ while(<MAF>){
     }
 }
 
-open(my $outmatfil, ">>", $newmatfile);
-open FA,"<$matches" or die "can't open $matches\n";
+open($outmatfil, ">>", $newmatfile);
+}
 
+open FA,"<$matches" or die "can't open $matches\n";
 while(<FA>){
     chomp;
     my $line = $_;
@@ -248,22 +350,45 @@ while(<FA>){
     for(my $i=0;$i<scalar @leafsToAdd; $i++){
 	if(exists($plusnodes{$T[$leafsToAdd[$i]]})){$plusnodes{$T[$leafsToAdd[$i]]} += $num;}
 	else{$plusnodes{$T[$leafsToAdd[$i]]} = $num;}
-	if(exists($matfiles{$F[0]}))
+	if(exists($matfiles{$F[0]}) && $printall)
 	{
 	    if(exists($newmatfiles{$T[$leafsToAdd[$i]]})){$newmatfiles{$T[$leafsToAdd[$i]]} = "$newmatfiles{$T[$leafsToAdd[$i]]},$matfiles{$F[0]}";}
 	    else{$newmatfiles{$T[$leafsToAdd[$i]]} = "$matfiles{$F[0]}";}
 	}
-	else{print STDERR "this species combination $F[0] should exist in matches!\n";}
+	elsif($printall){print STDERR "this species combination $F[0] should exist in matches!\n";}
+	else{}
     }
 }
 
 #print matfiles to check
+if($printall){
 foreach my $matkey (keys %newmatfiles){
     print $outmatfil ">$matkey\n$newmatfiles{$matkey}\n";
 }
 close $outmatfil;
+}
 #deletions
 ############only deleting leaves############################
+
+my %delfiles = ();
+my %newdelfiles = ();
+my $outdelfil;
+
+if($printall){
+my $dcurkey = "";
+open DAF,"<$delfile" or die "can't open $delfile\n";
+while(<DAF>){
+    chomp;
+    my $line = $_;
+    if($line =~ /^>/){$dcurkey = substr($line,1);}
+    else{
+	$delfiles{$dcurkey} = $line;
+    }
+}
+
+open($outdelfil, ">>", $newdelfile);
+}
+
 open FD,"<$dels" or die "can't open $dels\n";
 
 while(<FD>){
@@ -287,11 +412,38 @@ while(<FD>){
     for(my $i=0;$i<scalar @leafsToDel; $i++){
 	if(exists($minusnodes{$leafsToDel[$i]})){$minusnodes{$leafsToDel[$i]} += $num;}
 	else{$minusnodes{$leafsToDel[$i]} = $num;}
+	if($printall){
+	    if(exists($newdelfiles{$leafsToDel[$i]})){$newdelfiles{$leafsToDel[$i]}="$newdelfiles{$leafsToDel[$i]}\,$delfiles{$F[0]}";}
+	    else{$newdelfiles{$leafsToDel[$i]}="$delfiles{$F[0]}";}
+	}
+    }
+}
+if($printall){
+foreach my $delkey (keys %newdelfiles){
+    print $outdelfil ">$delkey\n$newdelfiles{$delkey}\n";
+}
+close $outdelfil;
+}
+
+##pseudogenes
+my %pdelfiles = ();
+my %newpdelfiles = ();
+my $outpdelfil;
+
+if($printall){
+my $pdcurkey = "";
+open PDAF,"<$pdelfile" or die "can't open $pdelfile\n";
+while(<PDAF>){
+    chomp;
+    my $line = $_;
+    if($line =~ /^>/){$pdcurkey = substr($line,1);}
+    else{
+	$pdelfiles{$pdcurkey} = $line;
     }
 }
 
-
-##pseudogenes
+open($outpdelfil, ">>", $newpdelfile);
+}
 my %psdels = ();
 
 open FDP,"<$pseudels" or die "can't open $pseudels\n";
@@ -319,8 +471,20 @@ while(<FDP>){
     for(my $i=0;$i<scalar @pseuleafsToDel; $i++){
 	if(exists($psdels{$pseuleafsToDel[$i]})){$psdels{$pseuleafsToDel[$i]} += $pnum;}
 	else{$psdels{$pseuleafsToDel[$i]} = $pnum;}
+	if($printall){
+	    if(exists($newpdelfiles{$pseuleafsToDel[$i]})){$newpdelfiles{$pseuleafsToDel[$i]}="$newpdelfiles{$pseuleafsToDel[$i]}\,$pdelfiles{$FP[0]}";}
+	    else{$newpdelfiles{$pseuleafsToDel[$i]}="$pdelfiles{$FP[0]}";}
+	}
     }
 }
+if($printall){
+foreach my $pdelkey (keys %newpdelfiles){
+    print $outpdelfil ">$pdelkey\n$newpdelfiles{$pdelkey}\n";
+}
+close $outpdelfil;
+}
+
+
 
 my %pseusingles = ();
 
@@ -391,6 +555,33 @@ while(<FPI>){
 }
 
 #missing data
+my %misfiles = ();
+
+if($printall){
+    my $miscurkey = "";
+    open MIMAF,"<$misfile" or die "can't open $misfile\n";
+    while(<MIMAF>){
+	chomp;
+	my $line = $_;
+	if($line =~ /^>/){$miscurkey = substr($line,1);}
+	else{
+	    my @M = split ',', $miscurkey;
+	    for(my $m=0;$m < scalar @M;$m++){
+		if(exists($misfiles{$M[$m]})){$misfiles{$M[$m]}="$misfiles{$M[$m]}\,$line";}
+		else{$misfiles{$M[$m]}="$line";}
+	    }
+	}
+    }
+    open(my $outmisfil,">>",$newmisfile);    
+	
+    foreach my $miskey (keys %misfiles){
+	print $outmisfil ">$miskey\n$misfiles{$miskey}\n";
+    }
+    close $outmisfil;
+}
+
+
+
 open FM,"<$misses" or die "can't open $misses\n";
 
 while(<FM>){
@@ -404,14 +595,40 @@ while(<FM>){
     for(my $s = 0;$s<scalar @specs;$s++){
 	if(exists($missing_data{$specs[$s]})){$missing_data{$specs[$s]}+=$num;}
 	else{$missing_data{$specs[$s]}=$num;}
-
     }
-
 }
 
 
 
 ##pseumis
+my %pmisfiles = ();
+
+if($printall){
+    my $pmiscurkey = "";
+    open PMIMAF,"<$pmisfile" or die "can't open $pmisfile\n";
+    while(<PMIMAF>){
+	chomp;
+	my $line = $_;
+	if($line =~ /^>/){$pmiscurkey = substr($line,1);}
+	else{
+	    my @M = split ',', $pmiscurkey;
+	    for(my $m=0;$m < scalar @M;$m++){
+		if(exists($pmisfiles{$M[$m]})){$pmisfiles{$M[$m]}="$pmisfiles{$M[$m]}\,$line";}
+		else{$pmisfiles{$M[$m]}="$line";}
+	    }
+	}
+    }
+    open(my $outpmisfil,">>",$newpmisfile);    
+	
+    foreach my $pmiskey (keys %pmisfiles){
+	print $outpmisfil ">$pmiskey\n$pmisfiles{$pmiskey}\n";
+    }
+    close $outpmisfil;
+}
+
+
+
+
 my %psemis = ();
 
 open FPM,"<$pseumis" or die "can't open $pseumis\n";
