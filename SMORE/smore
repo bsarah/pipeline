@@ -364,6 +364,7 @@ if($mode eq "bake" || $mode eq "Bake"){
 	if($printc){$verbstr = "$verbstr --clus";}
 	if($printa){$verbstr = "$verbstr --aln";}
     }
+    $parastr = "$parastr --seqsim $seqsim --strucsim $strucsim";
     $parastr = "$parastr$verbstr";
     print $outs "with smore-toast-specific parameter: $parastr\n";
     my $toastcmd = "$perlpath\/perl $toolpath\/smoretoast.pl --tool $toolpath --out $outpath --python $pythonpath --perl $perlpath --prep $pathtocam --seqsim $seqsim --strucsim $strucsim --newick $formtree --join $joinmode --species $specieslist$checkformissing --err $toasterrors $verbstr 2>> $toasterrors";
@@ -551,6 +552,7 @@ elsif($mode eq "toast" || $mode eq "Toast")
 	if($printc){$verbstr = "$verbstr --clus";}
 	if($printa){$verbstr = "$verbstr --aln";}
     }
+    $parastr = "$parastr --seqsim $seqsim --strucsim $strucsim";
     $parastr = "$parastr$verbstr";
     print $outs "with parameter: $parastr\n";
     my $toastcmd = "$perlpath\/perl $toolpath\/smoretoast.pl --tool $toolpath --out $outpath --python $pythonpath --perl $perlpath --prep $pathtocam --seqsim $seqsim --strucsim $strucsim --newick $formtree --join $joinmode --species $specieslist$checkformissing --err $toasterrors $verbstr 2>> $toasterrors";
@@ -659,6 +661,7 @@ elsif($mode eq "roast" || $mode eq "Roast"){
 	if($printg){$verbstr = "$verbstr --graph";}
 	if($printa){$verbstr = "$verbstr --aln";}
     }
+    $parastr = "$parastr --seqsim $seqsim --strucsim $strucsim";
     $parastr = "$parastr$verbstr";
     print $outs "with parameter: $parastr\n";
     my $roastcmd = "$perlpath\/perl $toolpath\/smoreroast.pl --tool $toolpath --out $outpath --python $pythonpath --perl $perlpath --in $cluslistpath --seqsim $seqsim --strucsim $strucsim --newick $formtree --species $specieslist$checkformissing $verbstr";
